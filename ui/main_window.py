@@ -1737,53 +1737,56 @@ renderStations(initialStations);</script></body></html>"""
                 if is_new and private_blocks and self.tabs.currentIndex() != idx:
                     self._set_tab_unread(key)
 
-            # NUR der Tab „Alle“ wird hier aufgebaut.
-            # Wichtig: Die funktionierenden Raum- und Privat-Tabs sind die
-            # maßgebliche Quelle. Wir übernehmen deren bereits gefilterte
-            # aktuelle Inhalte, statt den gemeinsamen Abruf oder Parser für
-            # die anderen Tabs zu verändern.
+            # Tab „Alle“ wird ausschließlich aus dem AKTUELLEN WebService-
+            # Nachrichtenstrom aufgebaut. Die Raum- und Privat-Tabs bleiben
+            # davon vollständig getrennt. Das ist wichtig: Eine Nachricht darf
+            # nicht einmal aus einem Raum-Tab und ein zweites Mal aus einem
+            # Privat-Tab bzw. aus der lokalen Sofortanzeige übernommen werden.
             all_key = ("all", "all")
             all_index = self._ensure_tab(all_key, "Alle")
 
+            def _all_identity(block):
+                plain = self._plain(block)
+                # MsgId ist die sauberste Identität einer MeshCom-Nachricht.
+                msgid = re.search(r"\bMSGID\s*[:=]\s*([0-9A-F]+)", plain, re.IGNORECASE)
+                if msgid:
+                    return ("msgid", msgid.group(1).upper())
+                # Fallback: normalisierter kompletter Inhalt. Der Zeitstempel
+                # bleibt dabei erhalten, sodass zwei echte gleiche Texte zu
+                # unterschiedlichen Zeiten nicht zusammengelegt werden.
+                return ("text", re.sub(r"\s+", " ", plain).strip())
+
+            # Jeder WebService-Block wird genau einmal übernommen.
             all_blocks = []
-
-            # Aktuelle Inhalte exakt aus den funktionierenden Raum-Tabs holen.
-            for room in self._rooms():
-                key = ("room", room)
-                idx = self.tab_keys.get(key)
-                if idx is None:
-                    continue
-                view = self.tabs.widget(idx)
-                if isinstance(view, ChatView):
-                    rendered = view.toHtml()
-                    body_match = re.search(r"<body[^>]*>(.*?)</body>", rendered, re.IGNORECASE | re.DOTALL)
-                    body = body_match.group(1) if body_match else rendered
-                    if body.strip() and "Keine Nachrichten." not in self._plain(body):
-                        all_blocks.append(body)
-
-            # Aktuelle Inhalte exakt aus den funktionierenden Privat-Tabs holen.
-            for key, idx in list(self.tab_keys.items()):
-                if key[0] != "private":
-                    continue
-                view = self.tabs.widget(idx)
-                if isinstance(view, ChatView):
-                    rendered = view.toHtml()
-                    body_match = re.search(r"<body[^>]*>(.*?)</body>", rendered, re.IGNORECASE | re.DOTALL)
-                    body = body_match.group(1) if body_match else rendered
-                    if body.strip() and "Keine Nachrichten." not in self._plain(body):
-                        all_blocks.append(body)
-
-            # Positionskarten werden weiterhin zusätzlich aus dem aktuellen
-            # Abruf übernommen. Normale Nachrichten werden hier bewusst NICHT
-            # erneut aus dem Rohstrom genommen.
+            seen_all = set()
             for block in blocks:
-                if self._station_position_from_block(block) and block not in all_blocks:
-                    all_blocks.append(block)
+                key = _all_identity(block)
+                if key in seen_all:
+                    continue
+                seen_all.add(key)
+                all_blocks.append(block)
 
-            # Eigene Sendungen sofort unter „Alle“ anzeigen.
-            for local_block in self.local_all_messages:
-                if local_block not in all_blocks:
-                    all_blocks.append(local_block)
+            # Zusätzlich bekannte UDP-Positionskarten übernehmen, aber ebenfalls
+            # nur einmal. Die Positionsdaten selbst werden unabhängig davon in
+            # station_positions für die Karte gepflegt.
+            for block in self.udp_position_blocks:
+                key = _all_identity(block)
+                if key in seen_all:
+                    continue
+                seen_all.add(key)
+                all_blocks.append(block)
+
+            # Eine eigene lokale Kopie wird NICHT mehr zusätzlich angezeigt.
+            # Der Hotspot liefert die gesendete Nachricht über den WebService
+            # zurück. Genau diese eine Servermeldung ist die maßgebliche Anzeige
+            # und verhindert die bisherige Doppelanzeige bei normalen UND privaten
+            # Nachrichten.
+            self.local_all_messages.clear()
+
+            # Chronologisch sortieren. Dadurch stehen Nachrichten nach ihrem
+            # tatsächlichen WebService-Zeitstempel und nicht nach dem Zeitpunkt
+            # des lokalen Sendeklicks.
+            all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             self._update_tab_content(all_key, all_index, all_blocks)
 
@@ -1833,19 +1836,10 @@ renderStations(initialStations);</script></body></html>"""
             self.last_sent_time = timestamp
             self.last_private_sent = (target.upper(), text) if target and not target.isdigit() else None
 
-            # Nur „Alle“ bekommt die lokale Sofortanzeige der eigenen Sendung.
-            # Kein Raum- oder Privat-Tab wird dadurch verändert.
-            sender = html.escape(self.own_callsign or OWN_CALLSIGN)
-            target_label = html.escape(target or "")
-            body = html.escape(text)
-            local_block = (
-                f'<div class="message-row meshcom-local-sent" data-local-sent="1">'
-                f'<div class="message-bubble"><b>Von: {sender}'
-                f'{(" &gt; " + target_label) if target_label else ""}</b>'
-                f'<br>{body}</div></div>'
-            )
-            if local_block not in self.local_all_messages:
-                self.local_all_messages.append(local_block)
+            # Keine lokale Kopie mehr erzeugen. Die eigene Nachricht wird nach
+            # der Hotspot-Rückmeldung aus demselben WebService-Strom wie alle
+            # anderen Nachrichten angezeigt. Dadurch kann sie unter „Alle“ nicht
+            # ein zweites Mal auftauchen.
 
             self.send_log.setText(f"Letzter Sendeauftrag {timestamp}: → {target} | {text} | HTTP {method} 200")
             self.status.setText("Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung")
