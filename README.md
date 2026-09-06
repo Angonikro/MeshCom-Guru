@@ -188,7 +188,7 @@ Dort stehen zwei Funktionen zur Verfügung:
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.52**
+**Version 0.3.54**
 
 **By Goldisoft 2026**
 
@@ -316,7 +316,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.55**  
+**MeshCom-Guru v0.3.54**  
 **By Goldisoft 2026**
 
 
@@ -335,3 +335,5 @@ Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
+
+73 de DO2QG Andreas
