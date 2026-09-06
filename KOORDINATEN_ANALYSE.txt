@@ -1,0 +1,21 @@
+MeshCom-Guru v0.3.49 – Koordinatenanalyse
+
+Die Positionsanzeige ist eigenständig.
+
+Direkter UDP-Empfang:
+- type=pos
+- src
+- lat / long bzw. lon
+- lat_dir N/S
+- long_dir E/W
+
+Beispiel:
+{"src_type":"node","type":"pos","src":"DO2QG-1","lat":51.7383,"lat_dir":"N","long":9.0196,"long_dir":"E"}
+
+Verarbeitung:
+- _udp_coordinate() validiert und normalisiert die Koordinaten.
+- _handle_udp_packet() speichert sie in station_positions.
+- _update_map() erzeugt daraus die Marker-Liste.
+- _push_map_stations() aktualisiert Leaflet ohne MeshDash.
+
+Der Chat verwendet weiterhin den konfigurierten MeshCom-WebService. Das ist unabhängig vom UDP-Positionsweg.
