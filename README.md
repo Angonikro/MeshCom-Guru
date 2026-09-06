@@ -329,9 +329,10 @@ Anleitung und das Programm-Icon sind im Projekt enthalten.
 Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
 `docs/MeshCom-Guru_Anleitung_v0.3.53.pdf` bei.
 
-73 de DO2QG Andreas
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
+
+73 de DO2QG Andreas
