@@ -1,6 +1,20 @@
+# CHANGELOG – MeshCom-Guru
+
+## v0.3.55 – 06.09.2026
+
+### Änderungen
+- Oberfläche modernisiert und optisch überarbeitet.
+- Bestehende Funktionen und Bedienlogik von v0.3.54 beibehalten.
+- Anzeige neuer Nachrichten über rote Tabs wiederhergestellt.
+- Versionsnummer auf v0.3.55 erhöht.
+- Dokumentation und Release-Dateien auf v0.3.55 aktualisiert.
+
+### Stabilitätsbasis
+Die funktionierende v0.3.54 bleibt die funktionale Grundlage dieser Version. Die Änderungen in v0.3.55 betreffen primär die Benutzeroberfläche und die visuelle Benachrichtigung neuer Nachrichten.
+
 # Changelog
 
-## v0.3.54
+## v0.3.55
 - Tab **Alle** wird aus dem aktuellen WebService-Nachrichtenstrom aufgebaut.
 - Jede Nachricht wird dort nur einmal übernommen; Raum- und Privat-Tabs bleiben unverändert.
 - Die lokale Sofortkopie eigener Sendungen wurde entfernt, damit normale und private eigene Nachrichten nicht doppelt unter **Alle** erscheinen.

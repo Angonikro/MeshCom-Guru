@@ -1,17 +1,17 @@
-# GitHub-Release – MeshCom-Guru v0.3.54
+# GitHub-Release – MeshCom-Guru v0.3.55
 
 ## Release-Titel
-MeshCom-Guru v0.3.54
+MeshCom-Guru v0.3.55
 
 ## Tag
-v0.3.54
+v0.3.55
 
 ## Release-Asset
-`MeshCom-Guru_v0.3.54_GITHUB.zip`
+`MeshCom-Guru_v0.3.55_GITHUB.zip`
 
 ## Release-Hinweise
 
-MeshCom-Guru v0.3.54 ist der stabile Stand nach der erfolgreichen Korrektur des Tabs **Alle** und der Karten-/Koordinatenanzeige.
+MeshCom-Guru v0.3.55 ist der stabile Stand nach der erfolgreichen Korrektur des Tabs **Alle** und der Karten-/Koordinatenanzeige.
 
 - Normale Raum-Chats funktionieren.
 - Private Nachrichten funktionieren.

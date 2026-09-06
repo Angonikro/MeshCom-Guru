@@ -249,7 +249,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"MeshCom-Guru v{VERSION}")
-        self.resize(950, 720)
+        self.resize(1100, 780)
+        self.setMinimumSize(900, 650)
 
         settings = load_settings()
         self.current_theme = settings.get("theme", "dark").strip().lower()
@@ -633,28 +634,107 @@ class MainWindow(QMainWindow):
 
     # ---------- Theme ----------
     def _apply_theme(self, theme):
+        # Reines UI-Styling: Nachrichten-, Tab-, Karten- und Sende-Logik
+        # bleiben unverändert. Die Farben passen sich weiterhin dem
+        # gespeicherten Hell-/Dunkelmodus an.
         if theme == "light":
-            self.setStyleSheet(
-                "QMainWindow, QWidget { background:#f2f2f2; color:#202020; }"
-                "QLineEdit, QTextEdit, QTextBrowser { background:#fff; color:#202020; border:1px solid #aaa; }"
-                "QPushButton { background:#e6e6e6; color:#202020; border:1px solid #aaa; padding:5px 10px; }"
-                "QPushButton:hover { background:#dcdcdc; }"
-                "QTabWidget::pane { border:1px solid #aaa; }"
-                "QTabBar::tab { background:#ddd; padding:6px 12px; }"
-                "QTabBar::tab:selected { background:#fff; }"
-                "QCheckBox { color:#202020; }"
-            )
+            self.setStyleSheet(r"""
+                QMainWindow { background: #eef2f6; }
+                QWidget { background: #eef2f6; color: #202733; font-size: 10pt; }
+                QLabel { background: transparent; color: #303947; }
+                QLineEdit, QTextEdit, QTextBrowser {
+                    background: #ffffff; color: #202733;
+                    border: 1px solid #c7ced8; border-radius: 7px;
+                    padding: 7px 9px; selection-background-color: #5b8def;
+                }
+                QLineEdit:focus, QTextEdit:focus, QTextBrowser:focus {
+                    border: 2px solid #6d94df; padding: 6px 8px;
+                }
+                QPushButton {
+                    background: #ffffff; color: #263142;
+                    border: 1px solid #c5ccd6; border-radius: 7px;
+                    padding: 7px 14px; min-height: 20px;
+                }
+                QPushButton:hover { background: #e9eff9; border-color: #7898d4; }
+                QPushButton:pressed { background: #dce6f7; }
+                QTabWidget::pane {
+                    background: #ffffff; border: 1px solid #c7ced8;
+                    border-radius: 8px; top: -1px;
+                }
+                QTabBar::tab {
+                    background: #dfe5ed;
+                    border: 1px solid #c7ced8; border-bottom: none;
+                    border-top-left-radius: 7px; border-top-right-radius: 7px;
+                    padding: 8px 15px; margin-right: 2px;
+                }
+                QTabBar::tab:hover { background: #edf2f8; }
+                QTabBar::tab:selected {
+                    background: #ffffff; font-weight: 600;
+                }
+                QCheckBox { spacing: 7px; color: #303947; }
+                QCheckBox::indicator {
+                    width: 16px; height: 16px; border-radius: 4px;
+                    border: 1px solid #aeb8c6; background: #ffffff;
+                }
+                QCheckBox::indicator:checked { background: #5b8def; border-color: #5b8def; }
+                QMenuBar { background: #e4e9f0; color: #283344; padding: 3px; }
+                QMenuBar::item { padding: 6px 10px; border-radius: 5px; }
+                QMenuBar::item:selected { background: #d4deed; }
+                QMenu { background: #ffffff; color: #202733; border: 1px solid #c7ced8; padding: 4px; }
+                QMenu::item { padding: 7px 22px; border-radius: 4px; }
+                QMenu::item:selected { background: #e8eef8; }
+                QSlider::groove:horizontal { height: 5px; background: #cfd6e0; border-radius: 2px; }
+                QSlider::handle:horizontal { width: 15px; margin: -5px 0; border-radius: 8px; background: #5b8def; }
+            """)
         else:
-            self.setStyleSheet(
-                "QMainWindow, QWidget { background:#202020; color:#eee; }"
-                "QLineEdit, QTextEdit, QTextBrowser { background:#2b2b2b; color:#eee; border:1px solid #555; }"
-                "QPushButton { background:#333; color:#eee; border:1px solid #666; padding:5px 10px; }"
-                "QPushButton:hover { background:#404040; }"
-                "QTabWidget::pane { border:1px solid #555; }"
-                "QTabBar::tab { background:#333; padding:6px 12px; }"
-                "QTabBar::tab:selected { background:#2b2b2b; }"
-                "QCheckBox { color:#eee; }"
-            )
+            self.setStyleSheet(r"""
+                QMainWindow { background: #151922; }
+                QWidget { background: #151922; color: #edf1f7; font-size: 10pt; }
+                QLabel { background: transparent; color: #cdd5e1; }
+                QLineEdit, QTextEdit, QTextBrowser {
+                    background: #202632; color: #edf1f7;
+                    border: 1px solid #394354; border-radius: 7px;
+                    padding: 7px 9px; selection-background-color: #527fd6;
+                }
+                QLineEdit:focus, QTextEdit:focus, QTextBrowser:focus {
+                    border: 2px solid #648ee3; padding: 6px 8px;
+                }
+                QPushButton {
+                    background: #242b38; color: #edf1f7;
+                    border: 1px solid #414b5d; border-radius: 7px;
+                    padding: 7px 14px; min-height: 20px;
+                }
+                QPushButton:hover { background: #303a4b; border-color: #6688ca; }
+                QPushButton:pressed { background: #1d2531; }
+                QTabWidget::pane {
+                    background: #1d232e; border: 1px solid #394354;
+                    border-radius: 8px; top: -1px;
+                }
+                QTabBar::tab {
+                    background: #252c38;
+                    border: 1px solid #394354; border-bottom: none;
+                    border-top-left-radius: 7px; border-top-right-radius: 7px;
+                    padding: 8px 15px; margin-right: 2px;
+                }
+                QTabBar::tab:hover { background: #303948; }
+                QTabBar::tab:selected {
+                    background: #1d232e; font-weight: 600;
+                }
+                QCheckBox { spacing: 7px; color: #cdd5e1; }
+                QCheckBox::indicator {
+                    width: 16px; height: 16px; border-radius: 4px;
+                    border: 1px solid #4a5669; background: #202632;
+                }
+                QCheckBox::indicator:checked { background: #5f89df; border-color: #5f89df; }
+                QMenuBar { background: #1c222d; color: #dce3ed; padding: 3px; }
+                QMenuBar::item { padding: 6px 10px; border-radius: 5px; }
+                QMenuBar::item:selected { background: #303948; }
+                QMenu { background: #202632; color: #edf1f7; border: 1px solid #3b4658; padding: 4px; }
+                QMenu::item { padding: 7px 22px; border-radius: 4px; }
+                QMenu::item:selected { background: #303a4b; }
+                QSlider::groove:horizontal { height: 5px; background: #394354; border-radius: 2px; }
+                QSlider::handle:horizontal { width: 15px; margin: -5px 0; border-radius: 8px; background: #648ee3; }
+            """)
         self._sync_theme_actions()
 
     def _sync_theme_actions(self):
