@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.54
+- Neu GUI Oberfläche
+- Tab **Alle** wird aus dem aktuellen WebService-Nachrichtenstrom aufgebaut.
+- Jede Nachricht wird dort nur einmal übernommen; Raum- und Privat-Tabs bleiben unverändert.
+- Die lokale Sofortkopie eigener Sendungen wurde entfernt, damit normale und private eigene Nachrichten nicht doppelt unter **Alle** erscheinen.
+- Nachrichten unter **Alle** werden anhand ihres WebService-Zeitstempels chronologisch sortiert.
+- Karten-/Koordinatenlogik wurde für diesen Fix nicht verändert.
+
 ## v0.3.53
 - Neues Menü **Hilfe** in der Menüleiste.
 - **Hilfe → Anleitung** mit integrierter Kurzanleitung.

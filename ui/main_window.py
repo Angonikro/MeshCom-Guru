@@ -249,7 +249,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"MeshCom-Guru v{VERSION}")
-        self.resize(950, 720)
+        self.resize(1100, 780)
+        self.setMinimumSize(900, 650)
 
         settings = load_settings()
         self.current_theme = settings.get("theme", "dark").strip().lower()
@@ -633,28 +634,107 @@ class MainWindow(QMainWindow):
 
     # ---------- Theme ----------
     def _apply_theme(self, theme):
+        # Reines UI-Styling: Nachrichten-, Tab-, Karten- und Sende-Logik
+        # bleiben unverändert. Die Farben passen sich weiterhin dem
+        # gespeicherten Hell-/Dunkelmodus an.
         if theme == "light":
-            self.setStyleSheet(
-                "QMainWindow, QWidget { background:#f2f2f2; color:#202020; }"
-                "QLineEdit, QTextEdit, QTextBrowser { background:#fff; color:#202020; border:1px solid #aaa; }"
-                "QPushButton { background:#e6e6e6; color:#202020; border:1px solid #aaa; padding:5px 10px; }"
-                "QPushButton:hover { background:#dcdcdc; }"
-                "QTabWidget::pane { border:1px solid #aaa; }"
-                "QTabBar::tab { background:#ddd; padding:6px 12px; }"
-                "QTabBar::tab:selected { background:#fff; }"
-                "QCheckBox { color:#202020; }"
-            )
+            self.setStyleSheet(r"""
+                QMainWindow { background: #eef2f6; }
+                QWidget { background: #eef2f6; color: #202733; font-size: 10pt; }
+                QLabel { background: transparent; color: #303947; }
+                QLineEdit, QTextEdit, QTextBrowser {
+                    background: #ffffff; color: #202733;
+                    border: 1px solid #c7ced8; border-radius: 7px;
+                    padding: 7px 9px; selection-background-color: #5b8def;
+                }
+                QLineEdit:focus, QTextEdit:focus, QTextBrowser:focus {
+                    border: 2px solid #6d94df; padding: 6px 8px;
+                }
+                QPushButton {
+                    background: #ffffff; color: #263142;
+                    border: 1px solid #c5ccd6; border-radius: 7px;
+                    padding: 7px 14px; min-height: 20px;
+                }
+                QPushButton:hover { background: #e9eff9; border-color: #7898d4; }
+                QPushButton:pressed { background: #dce6f7; }
+                QTabWidget::pane {
+                    background: #ffffff; border: 1px solid #c7ced8;
+                    border-radius: 8px; top: -1px;
+                }
+                QTabBar::tab {
+                    background: #dfe5ed;
+                    border: 1px solid #c7ced8; border-bottom: none;
+                    border-top-left-radius: 7px; border-top-right-radius: 7px;
+                    padding: 8px 15px; margin-right: 2px;
+                }
+                QTabBar::tab:hover { background: #edf2f8; }
+                QTabBar::tab:selected {
+                    background: #ffffff; font-weight: 600;
+                }
+                QCheckBox { spacing: 7px; color: #303947; }
+                QCheckBox::indicator {
+                    width: 16px; height: 16px; border-radius: 4px;
+                    border: 1px solid #aeb8c6; background: #ffffff;
+                }
+                QCheckBox::indicator:checked { background: #5b8def; border-color: #5b8def; }
+                QMenuBar { background: #e4e9f0; color: #283344; padding: 3px; }
+                QMenuBar::item { padding: 6px 10px; border-radius: 5px; }
+                QMenuBar::item:selected { background: #d4deed; }
+                QMenu { background: #ffffff; color: #202733; border: 1px solid #c7ced8; padding: 4px; }
+                QMenu::item { padding: 7px 22px; border-radius: 4px; }
+                QMenu::item:selected { background: #e8eef8; }
+                QSlider::groove:horizontal { height: 5px; background: #cfd6e0; border-radius: 2px; }
+                QSlider::handle:horizontal { width: 15px; margin: -5px 0; border-radius: 8px; background: #5b8def; }
+            """)
         else:
-            self.setStyleSheet(
-                "QMainWindow, QWidget { background:#202020; color:#eee; }"
-                "QLineEdit, QTextEdit, QTextBrowser { background:#2b2b2b; color:#eee; border:1px solid #555; }"
-                "QPushButton { background:#333; color:#eee; border:1px solid #666; padding:5px 10px; }"
-                "QPushButton:hover { background:#404040; }"
-                "QTabWidget::pane { border:1px solid #555; }"
-                "QTabBar::tab { background:#333; padding:6px 12px; }"
-                "QTabBar::tab:selected { background:#2b2b2b; }"
-                "QCheckBox { color:#eee; }"
-            )
+            self.setStyleSheet(r"""
+                QMainWindow { background: #151922; }
+                QWidget { background: #151922; color: #edf1f7; font-size: 10pt; }
+                QLabel { background: transparent; color: #cdd5e1; }
+                QLineEdit, QTextEdit, QTextBrowser {
+                    background: #202632; color: #edf1f7;
+                    border: 1px solid #394354; border-radius: 7px;
+                    padding: 7px 9px; selection-background-color: #527fd6;
+                }
+                QLineEdit:focus, QTextEdit:focus, QTextBrowser:focus {
+                    border: 2px solid #648ee3; padding: 6px 8px;
+                }
+                QPushButton {
+                    background: #242b38; color: #edf1f7;
+                    border: 1px solid #414b5d; border-radius: 7px;
+                    padding: 7px 14px; min-height: 20px;
+                }
+                QPushButton:hover { background: #303a4b; border-color: #6688ca; }
+                QPushButton:pressed { background: #1d2531; }
+                QTabWidget::pane {
+                    background: #1d232e; border: 1px solid #394354;
+                    border-radius: 8px; top: -1px;
+                }
+                QTabBar::tab {
+                    background: #252c38;
+                    border: 1px solid #394354; border-bottom: none;
+                    border-top-left-radius: 7px; border-top-right-radius: 7px;
+                    padding: 8px 15px; margin-right: 2px;
+                }
+                QTabBar::tab:hover { background: #303948; }
+                QTabBar::tab:selected {
+                    background: #1d232e; font-weight: 600;
+                }
+                QCheckBox { spacing: 7px; color: #cdd5e1; }
+                QCheckBox::indicator {
+                    width: 16px; height: 16px; border-radius: 4px;
+                    border: 1px solid #4a5669; background: #202632;
+                }
+                QCheckBox::indicator:checked { background: #5f89df; border-color: #5f89df; }
+                QMenuBar { background: #1c222d; color: #dce3ed; padding: 3px; }
+                QMenuBar::item { padding: 6px 10px; border-radius: 5px; }
+                QMenuBar::item:selected { background: #303948; }
+                QMenu { background: #202632; color: #edf1f7; border: 1px solid #3b4658; padding: 4px; }
+                QMenu::item { padding: 7px 22px; border-radius: 4px; }
+                QMenu::item:selected { background: #303a4b; }
+                QSlider::groove:horizontal { height: 5px; background: #394354; border-radius: 2px; }
+                QSlider::handle:horizontal { width: 15px; margin: -5px 0; border-radius: 8px; background: #648ee3; }
+            """)
         self._sync_theme_actions()
 
     def _sync_theme_actions(self):
@@ -1737,53 +1817,56 @@ renderStations(initialStations);</script></body></html>"""
                 if is_new and private_blocks and self.tabs.currentIndex() != idx:
                     self._set_tab_unread(key)
 
-            # NUR der Tab „Alle“ wird hier aufgebaut.
-            # Wichtig: Die funktionierenden Raum- und Privat-Tabs sind die
-            # maßgebliche Quelle. Wir übernehmen deren bereits gefilterte
-            # aktuelle Inhalte, statt den gemeinsamen Abruf oder Parser für
-            # die anderen Tabs zu verändern.
+            # Tab „Alle“ wird ausschließlich aus dem AKTUELLEN WebService-
+            # Nachrichtenstrom aufgebaut. Die Raum- und Privat-Tabs bleiben
+            # davon vollständig getrennt. Das ist wichtig: Eine Nachricht darf
+            # nicht einmal aus einem Raum-Tab und ein zweites Mal aus einem
+            # Privat-Tab bzw. aus der lokalen Sofortanzeige übernommen werden.
             all_key = ("all", "all")
             all_index = self._ensure_tab(all_key, "Alle")
 
+            def _all_identity(block):
+                plain = self._plain(block)
+                # MsgId ist die sauberste Identität einer MeshCom-Nachricht.
+                msgid = re.search(r"\bMSGID\s*[:=]\s*([0-9A-F]+)", plain, re.IGNORECASE)
+                if msgid:
+                    return ("msgid", msgid.group(1).upper())
+                # Fallback: normalisierter kompletter Inhalt. Der Zeitstempel
+                # bleibt dabei erhalten, sodass zwei echte gleiche Texte zu
+                # unterschiedlichen Zeiten nicht zusammengelegt werden.
+                return ("text", re.sub(r"\s+", " ", plain).strip())
+
+            # Jeder WebService-Block wird genau einmal übernommen.
             all_blocks = []
-
-            # Aktuelle Inhalte exakt aus den funktionierenden Raum-Tabs holen.
-            for room in self._rooms():
-                key = ("room", room)
-                idx = self.tab_keys.get(key)
-                if idx is None:
-                    continue
-                view = self.tabs.widget(idx)
-                if isinstance(view, ChatView):
-                    rendered = view.toHtml()
-                    body_match = re.search(r"<body[^>]*>(.*?)</body>", rendered, re.IGNORECASE | re.DOTALL)
-                    body = body_match.group(1) if body_match else rendered
-                    if body.strip() and "Keine Nachrichten." not in self._plain(body):
-                        all_blocks.append(body)
-
-            # Aktuelle Inhalte exakt aus den funktionierenden Privat-Tabs holen.
-            for key, idx in list(self.tab_keys.items()):
-                if key[0] != "private":
-                    continue
-                view = self.tabs.widget(idx)
-                if isinstance(view, ChatView):
-                    rendered = view.toHtml()
-                    body_match = re.search(r"<body[^>]*>(.*?)</body>", rendered, re.IGNORECASE | re.DOTALL)
-                    body = body_match.group(1) if body_match else rendered
-                    if body.strip() and "Keine Nachrichten." not in self._plain(body):
-                        all_blocks.append(body)
-
-            # Positionskarten werden weiterhin zusätzlich aus dem aktuellen
-            # Abruf übernommen. Normale Nachrichten werden hier bewusst NICHT
-            # erneut aus dem Rohstrom genommen.
+            seen_all = set()
             for block in blocks:
-                if self._station_position_from_block(block) and block not in all_blocks:
-                    all_blocks.append(block)
+                key = _all_identity(block)
+                if key in seen_all:
+                    continue
+                seen_all.add(key)
+                all_blocks.append(block)
 
-            # Eigene Sendungen sofort unter „Alle“ anzeigen.
-            for local_block in self.local_all_messages:
-                if local_block not in all_blocks:
-                    all_blocks.append(local_block)
+            # Zusätzlich bekannte UDP-Positionskarten übernehmen, aber ebenfalls
+            # nur einmal. Die Positionsdaten selbst werden unabhängig davon in
+            # station_positions für die Karte gepflegt.
+            for block in self.udp_position_blocks:
+                key = _all_identity(block)
+                if key in seen_all:
+                    continue
+                seen_all.add(key)
+                all_blocks.append(block)
+
+            # Eine eigene lokale Kopie wird NICHT mehr zusätzlich angezeigt.
+            # Der Hotspot liefert die gesendete Nachricht über den WebService
+            # zurück. Genau diese eine Servermeldung ist die maßgebliche Anzeige
+            # und verhindert die bisherige Doppelanzeige bei normalen UND privaten
+            # Nachrichten.
+            self.local_all_messages.clear()
+
+            # Chronologisch sortieren. Dadurch stehen Nachrichten nach ihrem
+            # tatsächlichen WebService-Zeitstempel und nicht nach dem Zeitpunkt
+            # des lokalen Sendeklicks.
+            all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             self._update_tab_content(all_key, all_index, all_blocks)
 
@@ -1833,19 +1916,10 @@ renderStations(initialStations);</script></body></html>"""
             self.last_sent_time = timestamp
             self.last_private_sent = (target.upper(), text) if target and not target.isdigit() else None
 
-            # Nur „Alle“ bekommt die lokale Sofortanzeige der eigenen Sendung.
-            # Kein Raum- oder Privat-Tab wird dadurch verändert.
-            sender = html.escape(self.own_callsign or OWN_CALLSIGN)
-            target_label = html.escape(target or "")
-            body = html.escape(text)
-            local_block = (
-                f'<div class="message-row meshcom-local-sent" data-local-sent="1">'
-                f'<div class="message-bubble"><b>Von: {sender}'
-                f'{(" &gt; " + target_label) if target_label else ""}</b>'
-                f'<br>{body}</div></div>'
-            )
-            if local_block not in self.local_all_messages:
-                self.local_all_messages.append(local_block)
+            # Keine lokale Kopie mehr erzeugen. Die eigene Nachricht wird nach
+            # der Hotspot-Rückmeldung aus demselben WebService-Strom wie alle
+            # anderen Nachrichten angezeigt. Dadurch kann sie unter „Alle“ nicht
+            # ein zweites Mal auftauchen.
 
             self.send_log.setText(f"Letzter Sendeauftrag {timestamp}: → {target} | {text} | HTTP {method} 200")
             self.status.setText("Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung")
