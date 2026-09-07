@@ -24,7 +24,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Desktop-Launcher für Linux
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
-
+- Internet Links im Browser öffnen
 ---
 
 # Nachrichtenlänge
