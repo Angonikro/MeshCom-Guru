@@ -15,7 +15,7 @@ def load_settings():
     section = config["MeshCom"]
     changed = False
     defaults = {
-        "ip": "http://192.168.2.105",
+        "ip": "",
         "target": "",
         "filter_enabled": "0",
         "theme": "dark",

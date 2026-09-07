@@ -49,7 +49,7 @@ from version import VERSION
 CALLSIGN_RE = re.compile(r"\b[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\b", re.IGNORECASE)
 ROOM_RE = re.compile(r"(?:>|&gt;)\s*(\d{1,8})\b")
 TARGET_RE = re.compile(r"(?:>|&gt;)\s*([A-Z0-9]{1,6}(?:-[0-9]{1,2})?)\b", re.IGNORECASE)
-OWN_CALLSIGN = "DO2QG-1"  # eigener Rufzeichen-Tab darf niemals automatisch entstehen
+OWN_CALLSIGN = ""  # eigenes Rufzeichen kommt ausschließlich aus settings.ini
 
 
 DIRECT_HEADER_RE = re.compile(
@@ -246,11 +246,12 @@ class ChatView(QTextBrowser):
 
 class MainWindow(QMainWindow):
     udpPacketReceived = Signal(dict)
+    weatherUpdated = Signal(dict)
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"MeshCom-Guru v{VERSION}")
-        self.resize(1100, 780)
-        self.setMinimumSize(900, 650)
+        self.resize(1100, 930)
+        self.setMinimumSize(900, 930)
 
         settings = load_settings()
         self.current_theme = settings.get("theme", "dark").strip().lower()
@@ -260,9 +261,12 @@ class MainWindow(QMainWindow):
         self.sound_driver = settings.get("sound_driver", "auto").strip().lower() or "auto"
         self.sound_volume = max(0, min(100, int(settings.get("sound_volume", "70") or 70)))
         self.sound_file = settings.get("sound_file", "").strip()
+        self.weather_enabled = settings.get("weather_enabled", "0") == "1"
+        self._weather_fetch_in_progress = False
+        self.weather_data = {}
         self._sound_effect = None
         self._prepare_sound()
-        self.mesh = MeshCom(settings.get("ip", "http://192.168.2.105"))
+        self.mesh = MeshCom(settings.get("ip", ""))
         self.refresh_in_progress = False
         self.last_sent = None
         self.last_sent_time = None
@@ -289,7 +293,7 @@ class MainWindow(QMainWindow):
         self.udp_enabled = True
         self.udp_status = "UDP: wird gestartet …"
         self.udpPacketReceived.connect(self._handle_udp_packet)
-        self.own_callsign = settings.get("own_callsign", OWN_CALLSIGN).strip().upper() or OWN_CALLSIGN
+        self.own_callsign = settings.get("own_callsign", "").strip().upper()
         try:
             self.own_lat = float(settings.get("own_lat", ""))
             self.own_lon = float(settings.get("own_lon", ""))
@@ -301,6 +305,14 @@ class MainWindow(QMainWindow):
         self._build_ui(settings)
         self._apply_theme(self.current_theme)
         self._load_filter_fields(settings)
+        self._set_weather_panel_visible(self.weather_enabled)
+        self.weatherUpdated.connect(self._apply_weather_result)
+        # Wenn Wetterdaten dauerhaft aktiviert sind, beim Start automatisch
+        # eine frische WX-Information vom MeshCom-Node laden. Die kurze
+        # Verzögerung stellt sicher, dass das Hauptfenster und die Verbindung
+        # vollständig initialisiert sind.
+        if self.weather_enabled:
+            QTimer.singleShot(1500, self._refresh_weather)
 
         # Eigenständiger MeshCom-Positions-/Status-Empfang direkt per UDP.
         self._start_udp_listener(1799)
@@ -481,6 +493,13 @@ class MainWindow(QMainWindow):
         sound_action.triggered.connect(self.open_sound_settings)
         settings_menu.addAction(sound_action)
 
+        self.weather_action = QAction("Wetterdaten", self)
+        self.weather_action.setCheckable(True)
+        self.weather_action.setChecked(False)
+        self.weather_action.setToolTip("Wetterdaten-Fenster ein- oder ausblenden")
+        self.weather_action.toggled.connect(self._toggle_weather_panel)
+        settings_menu.addAction(self.weather_action)
+
         theme_menu = menu_bar.addMenu("Theme")
         dark_action = QAction("Dunkel", self)
         dark_action.setCheckable(True)
@@ -515,16 +534,16 @@ class MainWindow(QMainWindow):
         top_row.addStretch(1)
         top_row.addWidget(self.datetime_label)
 
-        self.ip_input = QLineEdit(settings.get("ip", "http://192.168.2.105"))
-        self.target_input = QLineEdit(settings.get("target", "262"))
+        self.ip_input = QLineEdit(settings.get("ip", ""))
+        self.target_input = QLineEdit(settings.get("target", ""))
         self.target_input.setPlaceholderText("Raum oder Ziel, z. B. 262 oder DL9ABC-1")
 
         form = QFormLayout()
         form.addRow("Hotspot IP", self.ip_input)
         form.addRow("Raum / Ziel", self.target_input)
 
-        self.own_callsign_input = QLineEdit(settings.get("own_callsign", OWN_CALLSIGN))
-        self.own_callsign_input.setPlaceholderText("eigenes Rufzeichen, z. B. DO2QG-1")
+        self.own_callsign_input = QLineEdit(settings.get("own_callsign", ""))
+        self.own_callsign_input.setPlaceholderText("eigenes Rufzeichen, z. B. DL9ABC-1")
         self.own_lat_input = QLineEdit(settings.get("own_lat", ""))
         self.own_lat_input.setPlaceholderText("Breitengrad, z. B. 51.93")
         self.own_lon_input = QLineEdit(settings.get("own_lon", ""))
@@ -562,6 +581,35 @@ class MainWindow(QMainWindow):
         filter_box.addWidget(self.filter_enabled)
         filter_box.addLayout(filter_row)
 
+        # ---------- Wetterdaten-Testfunktion ----------
+        self.weather_panel = QWidget()
+        weather_layout = QVBoxLayout(self.weather_panel)
+        weather_layout.setContentsMargins(0, 4, 0, 4)
+        weather_title = QLabel("Wetterdaten")
+        weather_title.setStyleSheet("font-weight: 600;")
+        weather_layout.addWidget(weather_title)
+
+        weather_row = QHBoxLayout()
+        weather_row.addWidget(QLabel("Stadt:"))
+        self.weather_city_input = QLineEdit()
+        self.weather_city_input.setPlaceholderText("Stadtname, z. B. Bielefeld")
+        self.weather_city_input.setText(settings.get("weather_city", ""))
+        weather_row.addWidget(self.weather_city_input, 1)
+        self.weather_refresh_button = QPushButton("Wetter aktualisieren")
+        self.weather_refresh_button.clicked.connect(self._refresh_weather)
+        weather_row.addWidget(self.weather_refresh_button)
+        self.weather_send_button = QPushButton("Wetter senden")
+        self.weather_send_button.clicked.connect(self._send_weather)
+        weather_row.addWidget(self.weather_send_button)
+        weather_layout.addLayout(weather_row)
+
+        self.weather_values_label = QLabel("Warte auf WX-Information …")
+        self.weather_values_label.setWordWrap(True)
+        weather_layout.addWidget(self.weather_values_label)
+        self.weather_status_label = QLabel("")
+        self.weather_status_label.setWordWrap(True)
+        weather_layout.addWidget(self.weather_status_label)
+
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._close_tab)
@@ -570,6 +618,9 @@ class MainWindow(QMainWindow):
         self.map_view = QWebEngineView() if QWebEngineView is not None else QLabel(
             "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
         )
+        # Die OSM-Karte soll deutlich höher sein: ca. 4 cm zusätzliche
+        # Kartenhöhe auf typischen 96-DPI-Desktops (rund 150 Pixel).
+        self.map_view.setMinimumHeight(300)
         self._map_ready = False
         self._map_pending_stations = []
         if QWebEngineView is not None:
@@ -623,6 +674,7 @@ class MainWindow(QMainWindow):
         settings_buttons.addWidget(self.node_info_button)
         layout.addLayout(settings_buttons)
         layout.addLayout(filter_box)
+        layout.addWidget(self.weather_panel)
         layout.addWidget(self.tabs, 1)
         layout.addWidget(QLabel("Nachricht:"))
 
@@ -790,7 +842,9 @@ class MainWindow(QMainWindow):
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
         section["sound_file"] = self.sound_file
-        section["own_callsign"] = self.own_callsign_input.text().strip().upper() or OWN_CALLSIGN
+        section["weather_enabled"] = "1" if getattr(self, "weather_enabled", False) else "0"
+        section["weather_city"] = self.weather_city_input.text().strip() if hasattr(self, "weather_city_input") else ""
+        section["own_callsign"] = self.own_callsign_input.text().strip().upper()
         section["own_lat"] = self.own_lat_input.text().strip()
         section["own_lon"] = self.own_lon_input.text().strip()
         for i, field in enumerate(self.filter_inputs, 1):
@@ -817,7 +871,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             self.status.setText("Fehler: Ungültige eigene Koordinaten")
             return
-        self.own_callsign = self._normalize_callsign(self.own_callsign_input.text()) or OWN_CALLSIGN
+        self.own_callsign = self._normalize_callsign(self.own_callsign_input.text())
         self.own_lat, self.own_lon = lat, lon
         self._write_settings()
         self.mesh = MeshCom(ip)
@@ -836,6 +890,131 @@ class MainWindow(QMainWindow):
         self._write_settings()
         self.update_messages()
 
+    # ---------- Wetterdaten ----------
+    def _toggle_weather_panel(self, enabled):
+        self.weather_enabled = bool(enabled)
+        if hasattr(self, "weather_panel"):
+            self.weather_panel.setVisible(self.weather_enabled)
+        if hasattr(self, "weather_action") and self.weather_action.isChecked() != self.weather_enabled:
+            self.weather_action.blockSignals(True)
+            self.weather_action.setChecked(self.weather_enabled)
+            self.weather_action.blockSignals(False)
+        if hasattr(self, "weather_city_input"):
+            self._write_settings()
+        if self.weather_enabled and hasattr(self, "weather_panel"):
+            self._refresh_weather()
+
+    def _set_weather_panel_visible(self, enabled):
+        self.weather_enabled = bool(enabled)
+        self.weather_panel.setVisible(self.weather_enabled)
+        if hasattr(self, "weather_action"):
+            self.weather_action.blockSignals(True)
+            self.weather_action.setChecked(self.weather_enabled)
+            self.weather_action.blockSignals(False)
+
+    @staticmethod
+    def _parse_wx_html(content):
+        """Read the WX table returned by MeshCom's /?page=wx endpoint."""
+        text = html.unescape(str(content or ""))
+        rows = {}
+        for match in re.finditer(r"<tr\b[^>]*>(.*?)</tr>", text, flags=re.I | re.S):
+            cells = re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", match.group(1), flags=re.I | re.S)
+            if len(cells) < 2:
+                continue
+            def clean(value):
+                value = re.sub(r"<[^>]+>", " ", value)
+                return " ".join(html.unescape(value).split())
+            key = clean(cells[0])
+            value = clean(cells[1])
+            if key:
+                rows[key.lower()] = value
+        aliases = {
+            "temperature": ("temperature", "temp", "temperatur"),
+            "humidity": ("humidity", "luftfeuchte", "hum"),
+            "qfe": ("qfe",),
+            "qnh": ("qnh",),
+        }
+        result = {}
+        for target, names in aliases.items():
+            for key, value in rows.items():
+                if any(key == name or key.startswith(name + " ") for name in names):
+                    result[target] = value
+                    break
+        return result
+
+    def _refresh_weather(self):
+        if self._weather_fetch_in_progress:
+            return
+        ip = self.ip_input.text().strip().rstrip("/") if hasattr(self, "ip_input") else ""
+        if not ip:
+            self.weather_values_label.setText("Keine Wetterwerte in der WX-Information gefunden")
+            self.weather_status_label.setText("Keine Hotspot-IP eingetragen")
+            return
+        self._weather_fetch_in_progress = True
+        self.weather_refresh_button.setEnabled(False)
+        self.weather_status_label.setText("WX-Information wird geladen …")
+        url = ip + "/"
+
+        def worker():
+            try:
+                import requests
+                response = requests.get(url, params={"page": "wx"}, timeout=8)
+                response.raise_for_status()
+                data = self._parse_wx_html(response.text)
+                data["url"] = response.url
+                if not all(data.get(k) for k in ("temperature", "humidity", "qfe", "qnh")):
+                    data["error"] = "Keine vollständigen WX-Werte in der Antwort gefunden."
+                self.weatherUpdated.emit(data)
+            except Exception as exc:
+                self.weatherUpdated.emit({"error": str(exc)})
+
+        threading.Thread(target=worker, name="MeshCom-Wetter", daemon=True).start()
+
+    def _apply_weather_result(self, data):
+        self._weather_fetch_in_progress = False
+        self.weather_refresh_button.setEnabled(True)
+        if data.get("error"):
+            self.weather_values_label.setText("Keine Wetterwerte in der WX-Information gefunden")
+            self.weather_status_label.setText(str(data["error"]))
+            return
+        self.weather_data = data
+        self.weather_values_label.setText(
+            f"Temperatur: {data.get('temperature', '–')} | "
+            f"Luftfeuchte: {data.get('humidity', '–')} | "
+            f"QFE: {data.get('qfe', '–')} | "
+            f"QNH: {data.get('qnh', '–')}"
+        )
+        self.weather_status_label.setText("WX-Information erfolgreich aus dem MeshCom-WebService gelesen")
+
+    def _send_weather(self):
+        if not self.weather_data:
+            self.status.setText("Keine Wetterdaten vorhanden – zuerst Wetter aktualisieren")
+            return
+        city = self.weather_city_input.text().strip()
+        if not city:
+            self.status.setText("Bitte zuerst einen Stadtnamen eingeben")
+            return
+        text = (
+            f"{city}: {self.weather_data.get('temperature', '–')} | "
+            f"Luftfeuchte {self.weather_data.get('humidity', '–')} | "
+            f"QFE {self.weather_data.get('qfe', '–')} | "
+            f"QNH {self.weather_data.get('qnh', '–')}"
+        )
+        if len(text) > 149:
+            self.status.setText("Wettermeldung ist länger als 149 Zeichen")
+            return
+        self.weather_send_button.setEnabled(False)
+        try:
+            _answer, _url, method = self.mesh.send_message(text, "")
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            self.send_log.setText(f"Letzter Wetter-Sendeauftrag {timestamp}: → alle | {text} | HTTP {method} 200")
+            self.status.setText("Wetterdaten ohne Raumangabe an den Hotspot übertragen")
+            self._write_settings()
+        except Exception as exc:
+            self.status.setText(f"Wetterdaten konnten nicht gesendet werden: {exc}")
+        finally:
+            self.weather_send_button.setEnabled(True)
+
     # ---------- Hilfe / Info ----------
     def open_help(self):
         """Show the built-in MeshCom-Guru user guide."""
@@ -849,7 +1028,7 @@ class MainWindow(QMainWindow):
         view.setHtml(f"""
         <h2>MeshCom-Guru v{VERSION}</h2>
         <h3>Kurzanleitung</h3>
-        <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-Hotspots eintragen, z. B. http://192.168.2.105.</p>
+        <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-Hotspots eintragen.</p>
         <p><b>Raum / Ziel:</b> Eine Raumnummer (z. B. 262) oder ein Rufzeichen für eine private Nachricht eintragen.</p>
         <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
         <p><b>Einstellungen speichern:</b> Speichert die aktuellen Einstellungen dauerhaft.</p>
@@ -861,7 +1040,7 @@ class MainWindow(QMainWindow):
         <p>Empfangene MeshCom-Positionsdaten werden eigenständig über UDP Port 1799 empfangen und auf der Karte dargestellt. MeshCom-Guru benötigt dafür keine Zusammenarbeit mit MeshDash.</p>
         <h3>Menü</h3>
         <p><b>Datei:</b> Einstellungen speichern, Nachrichten aktualisieren und Programm beenden.</p>
-        <p><b>Einstellungen:</b> Sound-Einstellungen.</p>
+        <p><b>Einstellungen:</b> Sound-Einstellungen und die Testfunktion <b>Wetterdaten</b>. Bei aktiviertem Wetterfenster werden die WX-Werte des verbundenen MeshCom-Nodes angezeigt. Mit einer eingetragenen Stadt können die Werte ohne Raumangabe gesendet werden.</p>
         <p><b>Theme:</b> Dunkles oder helles Erscheinungsbild.</p>
         <p><b>Hilfe → Info:</b> Versions- und Urheberinformation.</p>
         <h3>Installation</h3>
@@ -922,7 +1101,8 @@ class MainWindow(QMainWindow):
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Node Information")
-        dialog.resize(760, 620)
+        dialog.resize(900, 750)
+        dialog.setMinimumSize(820, 650)
         layout = QVBoxLayout(dialog)
 
         view = QWebEngineView(dialog)
@@ -1415,7 +1595,7 @@ class MainWindow(QMainWindow):
         """Return sender and destination for a genuine MeshCom direct message.
 
         MeshCom nodes can prepend several callsigns to the sender side, e.g.
-        ``DM3KS-12,DO2QG-1>DO2QG-1``.  The FIRST callsign is the sender.
+        ``DL9ABC-1,DL1XYZ-1>DL1XYZ-1``.  The FIRST callsign is the sender.
 
         Parsing is deliberately done on the plain, HTML-decoded message text.
         This makes the detection independent of whether the node writes ``>``
@@ -1457,7 +1637,7 @@ class MainWindow(QMainWindow):
 
         def protect_anchor(match):
             # Dashboard-Links können mehrere Rufzeichen in EINEM <a>-Element
-            # enthalten (z. B. "DL9ABC-1,DO2QG-1"). Dieses komplette Element
+            # enthalten (z. B. "DL9ABC-1,DL1XYZ-1"). Dieses komplette Element
             # darf nicht nur mit dem ersten Rufzeichen verknüpft werden.
             # Stattdessen machen wir jedes enthaltene Rufzeichen einzeln
             # anklickbar, damit genau das angeklickte Rufzeichen den passenden
@@ -1556,7 +1736,7 @@ class MainWindow(QMainWindow):
         participants = self._private_participants(block)
         if not participants:
             return False
-        if participants[0].upper() == OWN_CALLSIGN:
+        if self.own_callsign and participants[0].upper() == self.own_callsign.upper():
             return True
         # Der rechte Teil des Direkt-Headers ist das Ziel der eigenen Sendung.
         if participants[1].upper() != target.upper():
@@ -1760,7 +1940,7 @@ renderStations(initialStations);</script></body></html>"""
         for callsign,(lat,lon) in sorted(self.station_positions.items()):
             stations.append({"callsign":callsign,"lat":lat,"lon":lon,"own":callsign.upper()==self.own_callsign.upper(),"last_heard":self.station_last_heard.get(callsign.upper(),"")})
         if self.own_lat is not None and self.own_lon is not None:
-            own_call=self.own_callsign or OWN_CALLSIGN
+            own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
             stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True})
         # Die Karte wird nicht neu geladen. Die Stationsdaten werden jedoch
@@ -1828,7 +2008,7 @@ renderStations(initialStations);</script></body></html>"""
                     # Das eigene Rufzeichen darf niemals durch das vom Node
                     # zurückgelieferte Echo oder einen Header als neuer
                     # eingehender Privat-Chat geöffnet werden.
-                    if sender.upper() == OWN_CALLSIGN:
+                    if self.own_callsign and sender.upper() == self.own_callsign.upper():
                         continue
                     if not CALLSIGN_RE.fullmatch(sender):
                         continue
