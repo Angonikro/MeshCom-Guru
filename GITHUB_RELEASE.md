@@ -28,5 +28,8 @@ MeshCom-Guru v0.3.55 baut auf dem stabilen v0.3.54-Stand auf und ergänzt die Be
 - Node-Informationen und Kartenanzeige bleiben erhalten.
 - Linux- und Windows-Startdateien sowie Desktop-Launcher sind enthalten.
 
+## Windows-Abhängigkeiten
+Unter Windows wird Python 3.10 bis 3.14 unterstützt. Die benötigte Qt-WebEngine-Unterstützung wird über `PySide6-Addons[webengine]` installiert. Das veraltete Paket `PySide6-WebEngine` wird nicht mehr verwendet.
+
 ## Wichtig
 Dieses Paket enthält den vollständigen Projektordner `MeshCom/`, README, CHANGELOG, VERSION, `version.py`, Linux-/Windows-Startdateien, Desktop-Launcher, integrierte Hilfe/Info, PDF-Anleitung und die benötigten Projektdateien.

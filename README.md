@@ -4,14 +4,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-Getestet auf einem Raspberry Pi 500 .
-
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -26,7 +18,7 @@ Getestet auf einem Raspberry Pi 500 .
 - Desktop-Launcher für Linux
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
-- Internet Links im Browser öffnen
+
 ---
 
 # Nachrichtenlänge
@@ -153,7 +145,7 @@ Der eigentliche Projektordner muss **MeshCom** heißen.
 
 ## 2. Python installieren
 
-Für Windows wird eine aktuelle Python-3-Version benötigt.
+Für Windows wird Python **3.10 bis 3.14** benötigt. Die aktuelle PySide6-Version 6.11.2 unterstützt diese Python-Versionen.
 
 Bei der Python-Installation sollte **Add Python to PATH** aktiviert werden.
 
@@ -171,6 +163,10 @@ Danach:
 python -m pip install -r requirements.txt
 ```
 
+Die Kartenfunktion benötigt Qt WebEngine. Dieses wird bei der Installation automatisch über `PySide6-Addons[webengine]` bereitgestellt.
+
+**Hinweis:** `PySide6-WebEngine` wird nicht mehr als eigenes Paket verwendet.
+
 ## 4. MeshCom-Guru starten
 
 Die mitgelieferte Windows-Startdatei kann verwendet werden:
@@ -184,6 +180,8 @@ Alternativ:
 ```bat
 python main.py
 ```
+
+Die mitgelieferte `run_windows.bat` prüft die Python-Version, installiert die benötigten Pakete und startet anschließend MeshCom-Guru.
 
 ---
 
@@ -239,7 +237,6 @@ Je nach übertragenen Daten können unter anderem folgende Informationen vorhand
 - Temperatur
 - weitere Telemetriedaten
 - Positionsdaten
-- Einstellungen
 
 ---
 
@@ -352,5 +349,3 @@ Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
