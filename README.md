@@ -3,7 +3,7 @@
 **Version 0.3.55**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-GETESTET AUF EINEM Raspberry Pi500 .
+Getestet auf einem Raspberry Pi500 .
 
 
 ![MeshCom-Guru](meshcom-guru.png)
