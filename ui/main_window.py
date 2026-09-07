@@ -20,7 +20,7 @@ try:
     from PySide6.QtMultimedia import QSoundEffect
 except Exception:
     QSoundEffect = None
-from PySide6.QtGui import QAction, QTextCursor
+from PySide6.QtGui import QAction, QTextCursor, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -235,7 +235,7 @@ class ChatView(QTextBrowser):
             call = value.rsplit("/", 1)[-1]
             self.callsignClicked.emit(call)
         elif value.startswith(("http://", "https://")):
-            QApplication.clipboard().setText(value)
+            QDesktopServices.openUrl(QUrl(value))
 
     def scroll_to_bottom(self):
         cursor = self.textCursor()
@@ -589,6 +589,17 @@ class MainWindow(QMainWindow):
 
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Nachricht eingeben …")
+        self.message_input.setMaxLength(149)
+
+        # Zeichenzähler für MeshCom-Nachrichten: maximal 149 Zeichen.
+        self.message_counter = QLabel("0/149")
+        self.message_counter.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.message_counter.setMinimumWidth(48)
+        self.message_counter.setToolTip("Maximal 149 Zeichen")
+        self.message_input.textChanged.connect(self._update_message_counter)
+
         self.send_button = QPushButton("Senden")
         self.update_button = QPushButton("Aktualisieren")
         self.send_button.clicked.connect(self.send)
@@ -614,7 +625,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(filter_box)
         layout.addWidget(self.tabs, 1)
         layout.addWidget(QLabel("Nachricht:"))
-        layout.addWidget(self.message_input)
+
+        message_row = QHBoxLayout()
+        message_row.addWidget(self.message_input, 1)
+        message_row.addWidget(self.message_counter)
+        layout.addLayout(message_row)
+
         layout.addLayout(buttons)
         layout.addWidget(self.send_log)
         layout.addWidget(self.status)
@@ -622,6 +638,14 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
+
+    def _update_message_counter(self, text):
+        """Update the visible character counter for the 149-character limit."""
+        self.message_counter.setText(f"{len(text)}/149")
+        if len(text) >= 149:
+            self.message_counter.setToolTip("Maximale Länge erreicht: 149 Zeichen")
+        else:
+            self.message_counter.setToolTip(f"Noch {149 - len(text)} Zeichen frei")
 
     def _load_filter_fields(self, settings):
         for i, field in enumerate(self.filter_inputs, 1):
@@ -1464,7 +1488,29 @@ class MainWindow(QMainWindow):
                 return text
             return f'<a href="meshcom://call/{html.escape(text.upper())}">{html.escape(text)}</a>'
 
+        # Plain-Text-Internetlinks anklickbar machen. Bereits vorhandene HTML-Tags
+        # bleiben unangetastet. Satzzeichen am Ende werden nicht Teil des Links.
+        URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+
+        def link_url(match):
+            raw = match.group(0)
+            trailing = ""
+            while raw and raw[-1] in ".,!?;:)\\]}":
+                trailing = raw[-1] + trailing
+                raw = raw[:-1]
+            if not raw:
+                return match.group(0)
+            safe_url = html.escape(raw, quote=True)
+            return f'<a href="{safe_url}">{html.escape(raw)}</a>{html.escape(trailing)}'
+
         parts = re.split(r"(<[^>]+>)", block)
+        for i in range(0, len(parts), 2):
+            # URLs zuerst verlinken. Die anschließende Rufzeichen-Erkennung läuft
+            # nur noch außerhalb der erzeugten <a>-Tags.
+            parts[i] = URL_RE.sub(link_url, parts[i])
+        result_with_urls = "".join(parts)
+
+        parts = re.split(r"(<[^>]+>)", result_with_urls)
         for i in range(0, len(parts), 2):
             parts[i] = CALLSIGN_RE.sub(repl, parts[i])
         result = "".join(parts)
@@ -1906,7 +1952,9 @@ renderStations(initialStations);</script></body></html>"""
         if not text:
             self.status.setText("Keine Nachricht eingegeben")
             return
-
+        if len(text) > 149:
+            self.status.setText("Nachricht darf maximal 149 Zeichen lang sein")
+            return
 
         self.send_button.setEnabled(False)
         try:

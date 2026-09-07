@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.54**
+**Version 0.3.55**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 
 ## Inhalt
 
@@ -22,6 +16,20 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Info**-Fenster mit Programmversion
 - Linux- und Windows-Startdateien
 - Desktop-Launcher für Linux
+- Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
+- Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
+
+---
+
+# Nachrichtenlänge
+
+MeshCom-Nachrichten dürfen maximal **149 Zeichen** enthalten. Das Nachrichtenfeld begrenzt die Eingabe automatisch auf 149 Zeichen. Rechts im Eingabefeld zeigt ein Live-Zähler jederzeit die aktuelle Länge an, zum Beispiel `0/149`, `24/149`, `57/149` oder `149/149`.
+
+Damit ist sofort sichtbar, wie viele Zeichen noch zur Verfügung stehen.
+
+## Internetlinks im Chat
+
+Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Links dargestellt. Ein Klick auf einen Link mit `http://` oder `https://` öffnet die Adresse im Standard-Webbrowser des Systems.
 
 ---
 
@@ -188,7 +196,7 @@ Dort stehen zwei Funktionen zur Verfügung:
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.54**
+**Version 0.3.52**
 
 **By Goldisoft 2026**
 
@@ -329,11 +337,9 @@ Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
 Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
-`docs/MeshCom-Guru_Anleitung_v0.3.55.pdf` bei.
+`docs/MeshCom-Guru_Anleitung_v0.3.54.pdf` bei.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

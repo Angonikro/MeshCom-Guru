@@ -1,7 +1,16 @@
 # Changelog
 
+## v0.3.55 – 149-Zeichen-Begrenzung und Live-Zeichenzähler
+
+- Nachrichten können jetzt maximal **149 Zeichen** lang sein.
+- Das Nachrichten-Eingabefeld begrenzt die Eingabe automatisch auf 149 Zeichen.
+- Rechts im Eingabefeld wurde ein Live-Zeichenzähler ergänzt (`0/149`, `24/149`, `57/149` usw.).
+- Bei Erreichen von 149 Zeichen wird die maximale Länge sichtbar angezeigt.
+- Zusätzlich wird beim Senden geprüft, dass keine Nachricht länger als 149 Zeichen ist.
+- Internetlinks (`http://` und `https://`) im Chat werden automatisch anklickbar dargestellt und öffnen beim Anklicken den Standard-Webbrowser.
+- Die funktionierenden Chat-, Privatnachrichten-, **Alle**-, Node-Info- sowie Karten-/Koordinatenfunktionen bleiben erhalten.
+
 ## v0.3.54
-- Neu GUI Oberfläche
 - Tab **Alle** wird aus dem aktuellen WebService-Nachrichtenstrom aufgebaut.
 - Jede Nachricht wird dort nur einmal übernommen; Raum- und Privat-Tabs bleiben unverändert.
 - Die lokale Sofortkopie eigener Sendungen wurde entfernt, damit normale und private eigene Nachrichten nicht doppelt unter **Alle** erscheinen.
