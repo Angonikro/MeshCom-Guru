@@ -239,6 +239,7 @@ Je nach übertragenen Daten können unter anderem folgende Informationen vorhand
 - Temperatur
 - weitere Telemetriedaten
 - Positionsdaten
+- Einstellungen
 
 ---
 
