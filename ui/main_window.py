@@ -276,6 +276,18 @@ class MainWindow(QMainWindow):
         self.last_private_sent = None
         # Nur für den Gesamtstrom „Alle“: eigene Sendungen lokal merken.
         self.local_all_messages = []
+        # Lokaler Nachrichtenpuffer: Der WebService liefert je nach Node/
+        # Dashboard teilweise nur ein begrenztes Zeitfenster. Nachrichten, die
+        # bereits einmal empfangen wurden, dürfen deshalb beim nächsten Refresh
+        # nicht aus der lokalen Anzeige verschwinden. Die Darstellung wird bei
+        # jedem Refresh aus diesem Puffer aufgebaut.
+        self.message_cache = {}
+        # Beim Programmstart werden die bereits vom WebService vorhandenen
+        # Nachrichten nur als Startbestand gemerkt. Sie sollen nach einem
+        # Neustart nicht wieder in den Raum-Tabs erscheinen. Erst Nachrichten,
+        # die nach diesem ersten Abgleich neu eintreffen, werden übernommen.
+        self.startup_message_identities = set()
+        self.initial_message_sync_done = False
         self.tab_keys = {}
         self.tab_hashes = {}
         self.unread = set()
@@ -1581,13 +1593,81 @@ class MainWindow(QMainWindow):
         return re.sub(r"[ \t]+", " ", text).strip()
 
     @classmethod
+    def _normalized_plain(cls, block):
+        """Return decoded visible text with harmless HTML-entity noise removed."""
+        text = cls._plain(block)
+        # Some WebService responses arrive double-escaped (e.g. &amp;#...;).
+        # Decode a second time so semantically identical cards get the same key.
+        for _ in range(2):
+            decoded = html.unescape(text)
+            if decoded == text:
+                break
+            text = decoded
+        return re.sub(r"\s+", " ", text).strip()
+
+    @classmethod
+    def _message_identity(cls, block):
+        """Return a stable semantic identity for one received MeshCom message.
+
+        The WebService can return the same message with slightly different HTML
+        wrappers or entity escaping.  Using the complete HTML/visible block as a
+        cache key therefore created duplicates.  Prefer MSGID; otherwise use the
+        timestamp, sender/room header and actual visible message text.
+        """
+        plain = cls._normalized_plain(block)
+        if not plain:
+            return None
+        match = re.search(r"\bMSGID\s*[:=]\s*([0-9A-F]+)", plain, re.IGNORECASE)
+        if match:
+            return ("msgid", match.group(1).upper())
+
+        timestamp = cls._timestamp_from_block(block) or ""
+        header = re.search(
+            r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)*)"
+            r"\s*>\s*(?P<target>\d{1,8})\b",
+            plain, re.IGNORECASE,
+        )
+        if header:
+            h = re.sub(r"\s+", "", header.group(0)).upper()
+            body = plain[header.end():].strip()
+            # Remove a repeated timestamp that may occur after the header.
+            body = re.sub(
+                r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*",
+                "", body, flags=re.IGNORECASE,
+            )
+            return ("room", timestamp, h, re.sub(r"\s+", " ", body).strip())
+
+        # Direct/private message without a numeric room.
+        direct = re.search(
+            r"[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\s*>\s*"
+            r"[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\b",
+            plain, re.IGNORECASE,
+        )
+        if direct:
+            return ("direct", timestamp, re.sub(r"\s+", "", direct.group(0)).upper(),
+                    re.sub(r"\s+", " ", plain[direct.end():]).strip())
+
+        return ("text", timestamp, plain)
+
+    @classmethod
     def _room_from_block(cls, block):
-        match = ROOM_RE.search(block)
+        # Always parse the decoded visible text. Searching raw HTML can mistake
+        # unrelated '>' characters or escaped markup for a room destination.
+        plain = cls._normalized_plain(block)
+        match = re.search(
+            r"(?:[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?(?:\s*,\s*)?)+"
+            r"\s*>\s*(\d{1,8})\b",
+            plain, re.IGNORECASE,
+        )
         return match.group(1) if match else ""
 
     @classmethod
     def _target_from_block(cls, block):
-        match = TARGET_RE.search(block)
+        plain = cls._normalized_plain(block)
+        match = re.search(
+            r">\s*([A-Z0-9]{1,8}(?:-[0-9]{1,2})?)\b",
+            plain, re.IGNORECASE,
+        )
         return match.group(1).upper() if match else ""
 
     @classmethod
@@ -1705,6 +1785,43 @@ class MainWindow(QMainWindow):
 
     def _room_blocks(self, blocks, room):
         return [b for b in blocks if self._room_from_block(b) == str(room)]
+
+    @classmethod
+    def _all_display_identity(cls, block):
+        """Return the normalized callsign and text used by the ``Alle`` tab.
+
+        This duplicate check is intentionally used ONLY by ``Alle``.  The
+        WebService may render the same message with different HTML entities
+        before the callsign.  After decoding those entities, the callsign and
+        visible message text can be compared independently by the caller.
+        """
+        plain = cls._normalized_plain(block)
+        if not plain:
+            return None
+
+        header = re.search(
+            r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)*)"
+            r"\s*>\s*(?P<target>\d{1,8}|\*|ALL)(?=\s|$)",
+            plain, re.IGNORECASE,
+        )
+        if header:
+            # The FIRST callsign is the actual sender.  Ignore any harmless
+            # icon/entity characters which the dashboard may place before it.
+            sender_match = re.search(CALLSIGN_RE.pattern, header.group("left"), re.IGNORECASE)
+            sender = cls._normalize_callsign(sender_match.group(0)) if sender_match else ""
+
+            body = plain[header.end():].strip()
+            body = re.sub(
+                r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*",
+                "", body, flags=re.IGNORECASE,
+            )
+            body = re.sub(r"\s+", " ", body).strip()
+            return (sender.upper(), body.casefold())
+
+        # Position/status cards or unusual layouts without a normal room
+        # header still get a stable text key.  They do not affect the room tabs.
+        return ("", re.sub(r"\s+", " ", plain).strip().casefold())
+
 
     def _private_blocks(self, blocks, callsign):
         # Private chats dürfen ausschließlich echte Direktnachrichten enthalten.
@@ -1978,14 +2095,37 @@ renderStations(initialStations);</script></body></html>"""
             self._ensure_room_tabs()
             # Der HTTP-Nachrichtenstrom bleibt für Chat/Privatnachrichten zuständig.
             # UDP-Positionsdaten werden separat und in Echtzeit verarbeitet.
-            display_blocks = blocks
-            visible_blocks = self._filter_blocks(display_blocks)
+            #
+            # WICHTIG: Nicht mehr nur den aktuellen WebService-Ausschnitt anzeigen.
+            # Manche MeshCom-WebService-Antworten enthalten ältere Nachrichten
+            # später nicht mehr. Ohne lokalen Puffer würden diese Nachrichten bei
+            # jedem Refresh aus dem Chat verschwinden. Bereits bekannte Nachrichten
+            # werden deshalb dauerhaft für die laufende Sitzung gehalten.
+            # Beim ersten Abruf nach einem Programmstart wird der vom
+            # WebService bereits vorhandene Bestand nur als Startbestand
+            # registriert. Dadurch starten ALLE Raum-Tabs leer – genauso wie
+            # Raum 10 bisher. Erst ab dem zweiten Abruf werden wirklich neue
+            # Nachrichten in den lokalen Sitzungspuffer übernommen.
+            if not self.initial_message_sync_done:
+                for block in blocks:
+                    identity = self._message_identity(block)
+                    if identity:
+                        self.startup_message_identities.add(identity)
+                self.initial_message_sync_done = True
+            else:
+                for block in blocks:
+                    identity = self._message_identity(block)
+                    if identity and identity not in self.startup_message_identities:
+                        self.message_cache[identity] = block
+
+            cached_blocks = list(self.message_cache.values())
+            cached_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             # Configured room tabs.
             for room in self._rooms():
                 key = ("room", room)
                 idx = self._ensure_tab(key, f"Raum {room}")
-                room_blocks = self._room_blocks(blocks, room)
+                room_blocks = self._room_blocks(cached_blocks, room)
                 self._update_tab_content(key, idx, room_blocks)
 
             # Bereits geöffnete Privat-Tabs weiter aktualisieren.
@@ -1993,7 +2133,7 @@ renderStations(initialStations);</script></body></html>"""
             # Automatisch angelegt werden sie nur, wenn der betreffende Block keine
             # Raum-ID besitzt und damit tatsächlich wie eine Direktnachricht aussieht.
             private_targets = set()
-            for block in blocks:
+            for block in cached_blocks:
                 # A private tab is created only for a real direct message.
                 # The FIRST callsign of CALL1>CALL2 is the sender and is the
                 # name of the automatic private-chat tab.
@@ -2020,7 +2160,7 @@ renderStations(initialStations);</script></body></html>"""
                         # unterdrücken. Wenn sich der Inhalt inzwischen geändert hat,
                         # ist tatsächlich eine neue Nachricht eingetroffen: Tab wieder
                         # öffnen und den alten Schließ-Marker entfernen.
-                        closed_rendered = self._render_blocks(self._private_blocks(blocks, sender))
+                        closed_rendered = self._render_blocks(self._private_blocks(cached_blocks, sender))
                         closed_digest = hashlib.sha1(
                             closed_rendered.encode("utf-8", errors="ignore")
                         ).hexdigest()
@@ -2038,60 +2178,103 @@ renderStations(initialStations);</script></body></html>"""
                 key = ("private", target)
                 is_new = key not in self.tab_keys
                 idx = self._ensure_tab(key, target)
-                private_blocks = self._private_blocks(blocks, target)
+                private_blocks = self._private_blocks(cached_blocks, target)
                 self._update_tab_content(key, idx, private_blocks)
                 if is_new and private_blocks and self.tabs.currentIndex() != idx:
                     self._set_tab_unread(key)
 
-            # Tab „Alle“ wird ausschließlich aus dem AKTUELLEN WebService-
-            # Nachrichtenstrom aufgebaut. Die Raum- und Privat-Tabs bleiben
-            # davon vollständig getrennt. Das ist wichtig: Eine Nachricht darf
-            # nicht einmal aus einem Raum-Tab und ein zweites Mal aus einem
-            # Privat-Tab bzw. aus der lokalen Sofortanzeige übernommen werden.
+            # Tab „Alle“ basiert ebenfalls auf dem lokalen Nachrichtenpuffer.
+            # Dadurch verschwinden Nachrichten nicht mehr nur deshalb, weil der
+            # WebService sie bei einer späteren Abfrage nicht mehr zurückliefert.
             all_key = ("all", "all")
             all_index = self._ensure_tab(all_key, "Alle")
-
-            def _all_identity(block):
-                plain = self._plain(block)
-                # MsgId ist die sauberste Identität einer MeshCom-Nachricht.
-                msgid = re.search(r"\bMSGID\s*[:=]\s*([0-9A-F]+)", plain, re.IGNORECASE)
-                if msgid:
-                    return ("msgid", msgid.group(1).upper())
-                # Fallback: normalisierter kompletter Inhalt. Der Zeitstempel
-                # bleibt dabei erhalten, sodass zwei echte gleiche Texte zu
-                # unterschiedlichen Zeiten nicht zusammengelegt werden.
-                return ("text", re.sub(r"\s+", " ", plain).strip())
-
-            # Jeder WebService-Block wird genau einmal übernommen.
-            all_blocks = []
-            seen_all = set()
-            for block in blocks:
-                key = _all_identity(block)
-                if key in seen_all:
-                    continue
-                seen_all.add(key)
-                all_blocks.append(block)
+            all_blocks = list(cached_blocks)
 
             # Zusätzlich bekannte UDP-Positionskarten übernehmen, aber ebenfalls
             # nur einmal. Die Positionsdaten selbst werden unabhängig davon in
             # station_positions für die Karte gepflegt.
+            seen_all = {self._message_identity(b) for b in all_blocks if self._message_identity(b)}
             for block in self.udp_position_blocks:
-                key = _all_identity(block)
-                if key in seen_all:
+                key = self._message_identity(block)
+                if key and key in seen_all:
                     continue
-                seen_all.add(key)
+                if key:
+                    seen_all.add(key)
                 all_blocks.append(block)
 
-            # Eine eigene lokale Kopie wird NICHT mehr zusätzlich angezeigt.
-            # Der Hotspot liefert die gesendete Nachricht über den WebService
-            # zurück. Genau diese eine Servermeldung ist die maßgebliche Anzeige
-            # und verhindert die bisherige Doppelanzeige bei normalen UND privaten
-            # Nachrichten.
+            # Eine eigene lokale Kopie wird NICHT zusätzlich erzeugt. Eigene
+            # Nachrichten kommen weiterhin über den normalen WebService zurück.
             self.local_all_messages.clear()
 
-            # Chronologisch sortieren. Dadurch stehen Nachrichten nach ihrem
-            # tatsächlichen WebService-Zeitstempel und nicht nach dem Zeitpunkt
-            # des lokalen Sendeklicks.
+            # Nur für „Alle“: dieselbe Room-Nachricht kann vom WebService
+            # in zwei HTML-Varianten geliefert werden (z. B. einmal mit einem
+            # zusätzlichen HTML-Entity/Icon vor dem Rufzeichen). Diese Varianten
+            # werden hier als identisch behandelt. Die Raum-Tabs werden bewusst
+            # NICHT verändert.
+            unique_all = []
+            seen_all_pairs = set()
+            seen_all_fallback = set()
+            for block in all_blocks:
+                # Die spezielle Dublettenprüfung darf NUR auf Nachrichten
+                # angewendet werden, die selbst an „Alle“ gerichtet sind
+                # (z. B. >* / >ALL). Nachrichten aus Raum-Tabs werden zwar
+                # unter „Alle“ mit angezeigt, dürfen aber niemals mit dieser
+                # Prüfung untereinander oder mit einer Alle-Nachricht
+                # verglichen werden.
+                plain_block = self._normalized_plain(block)
+                all_target = re.search(
+                    r"\s*>\s*(?:\*|ALL)(?=\s|$)", plain_block, re.IGNORECASE
+                ) is not None
+                if not all_target:
+                    unique_all.append(block)
+                    continue
+
+                identity = self._all_display_identity(block)
+                if identity is None:
+                    unique_all.append(block)
+                    continue
+
+                callsign, text_key = identity
+
+                # Vorgabe für „Alle“: Rufzeichen UND Nachrichtentext müssen
+                # gemeinsam übereinstimmen, damit ein Eintrag als Duplikat
+                # verworfen wird. Nur eines von beiden darf niemals genügen:
+                # gleicher Rufname + anderer Text bleibt sichtbar und
+                # anderer Rufname + gleicher Text bleibt ebenfalls sichtbar.
+                # Bei „Alle“ kann derselbe Absender vom WebService mit
+                # zusätzlichen Zeichen/HTML-Entities vor dem Rufzeichen
+                # geliefert werden, z. B. „DO2QG-1>*“ und „✓ DO2QG-1>*“.
+                # Deshalb reicht ein einfacher String-Schlüssel nicht immer.
+                # Zwei Einträge gelten als Duplikat, wenn der normalisierte
+                # Nachrichtentext gleich ist und das jeweils erkannte
+                # Rufzeichen im anderen Rufzeichen-Feld enthalten ist.
+                # Damit bleiben unterschiedliche Texte desselben Rufzeichens
+                # sowie gleiche Texte verschiedener Rufzeichen sichtbar.
+                if callsign and text_key:
+                    duplicate = False
+                    for old_callsign, old_text in seen_all_pairs:
+                        if old_text != text_key:
+                            continue
+                        a = re.sub(r"[^A-Z0-9-]", "", callsign.upper())
+                        b = re.sub(r"[^A-Z0-9-]", "", old_callsign.upper())
+                        if a and b and (a in b or b in a):
+                            duplicate = True
+                            break
+                    if duplicate:
+                        continue
+                    seen_all_pairs.add((callsign.upper(), text_key))
+                else:
+                    # Für ungewöhnliche Karten/Status-Blöcke ohne vollständige
+                    # Rufzeichen+Text-Kombination weiterhin nur exakt identische
+                    # Fallback-Daten unterdrücken.
+                    fallback = (callsign.upper(), text_key)
+                    if fallback in seen_all_fallback:
+                        continue
+                    seen_all_fallback.add(fallback)
+                unique_all.append(block)
+            all_blocks = unique_all
+
+            # Chronologisch sortieren.
             all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             self._update_tab_content(all_key, all_index, all_blocks)

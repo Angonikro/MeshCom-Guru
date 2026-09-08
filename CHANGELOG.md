@@ -1,4 +1,16 @@
-# Changelog
+# CHANGELOG
+
+## v0.3.57 – Nachrichtenstabilität und saubere Benutzereinstellungen
+
+- Nachrichten bleiben während der laufenden Sitzung erhalten, auch wenn sie später nicht mehr vom WebService geliefert werden.
+- Nachrichten werden chronologisch dargestellt und nicht unnötig doppelt übernommen.
+- Der Tab „Alle“ unterdrückt doppelt gelieferte Alle-Nachrichten anhand des normalisierten Rufzeichens und Nachrichtentextes.
+- Unterschiedliche HTML-/Icon-Darstellungen eines Rufzeichens werden für die Dublettenprüfung normalisiert.
+- Nachrichten aus normalen Räumen werden nicht von der speziellen Alle-Dublettenprüfung erfasst.
+- Nach einem Neustart beginnen alle Raum-Tabs mit einem leeren lokalen Nachrichtenbestand.
+- Persönliche Einstellungen werden unter `~/.MeshCom/settings.ini` gespeichert.
+- Beim ersten Start werden nur neutrale Standardwerte erzeugt; persönliche Rufzeichen, Hotspot-IP und Räume werden nicht fest in den Programmcode eingebaut.
+- Bestehende Node-Info-, Wetter-, Karten- und Privatnachrichten-Funktionen bleiben erhalten.
 
 ## v0.3.56 – Wetterdaten, Kartenansicht und Release
 

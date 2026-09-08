@@ -1,0 +1,12 @@
+2026-09-08 17:44:12 {"dst": "*", "firmware": "4.35", "fw_sub": "s", "msg": "Hallo", "msg_id": "690F61DF", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
+2026-09-08 17:44:50 {"dst": "10", "firmware": 35, "fw_sub": "p", "msg": "nö, vielleicht sind links verboten?", "msg_id": "7D4F0170", "rssi": 0, "snr": 0, "src": "DO1CCV-1", "src_type": "udp", "type": "msg"}
+2026-09-08 17:45:12 {"dst": "10", "firmware": "4.35", "fw_sub": "s", "msg": "warte mal", "msg_id": "690F61E0", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
+2026-09-08 17:45:26 {"dst": "10", "firmware": 35, "fw_sub": "p", "msg": "jupp", "msg_id": "7D4F0171", "rssi": 0, "snr": 0, "src": "DO1CCV-1", "src_type": "udp", "type": "msg"}
+2026-09-08 17:45:44 {"dst": "10", "firmware": "4.35", "fw_sub": "s", "msg": "vielleicht geht es so https://angonikro.github.io/MeshCom-Guru/", "msg_id": "690F61E1", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
+2026-09-08 17:46:13 {"dst": "10", "firmware": "4.35", "fw_sub": "s", "msg": "und ?", "msg_id": "690F61E2", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
+2026-09-08 17:46:54 {"alt": 1155, "aprs_symbol": "_", "aprs_symbol_group": "/", "batt": 100, "firmware": 35, "fw_sub": "p", "hw_id": 3, "lat": 51.7688, "lat_dir": "N", "long": 9.0795, "long_dir": "E", "msg": "", "msg_id": "4F986282", "rssi": -96, "snr": 4, "src": "DL1YAU-12", "src_type": "lora", "type": "pos"}
+2026-09-08 17:46:54 {"batt": 100, "co2": 0, "gas": 0, "hum": 100, "qfe": 0, "qnh": 1005.7, "src": "DL1YAU-12", "src_type": "lora", "temp1": 25, "temp2": 0, "type": "tele"}
+2026-09-08 17:47:08 {"dst": "10", "firmware": "4.35", "fw_sub": "s", "msg": "ich lade maldie neue version hoch", "msg_id": "690F61E3", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
+2026-09-08 17:48:09 {"dst": "10", "firmware": 35, "fw_sub": "p", "msg": "jetzt seh ich ein link", "msg_id": "7D4F0172", "rssi": 0, "snr": 0, "src": "DO1CCV-1", "src_type": "udp", "type": "msg"}
+2026-09-08 17:48:13 {"dst": "*", "firmware": 0, "fw_sub": "#", "msg": "{CET}2026-09-08 15:48:11", "msg_id": "6A9F6C44", "rssi": 0, "snr": 0, "src": "OE1XAR-33", "src_type": "udp", "type": "msg"}
+2026-09-08 17:51:40 {"dst": "10", "firmware": "4.35", "fw_sub": "s", "msg": "gut , ich bin mal weg , muss die neue version hochladen und rasen mähen , viel spaß beim testen", "msg_id": "690F61E4", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}

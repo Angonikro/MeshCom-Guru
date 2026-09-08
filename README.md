@@ -1,12 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.56**
+**Version 0.3.57**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -32,11 +28,21 @@ Unter **Einstellungen → Wetterdaten** kann die Wetteranzeige aktiviert werden.
 
 Wenn am MeshCom-Node ein **BME280 oder BMP280 Wettermodul** erkannt wird, können die Wetterinformationen genutzt werden. Der eingegebene **Stadtname** wird zusammen mit den aktuellen Wetterwerten über **Wetter senden** ohne Raumangabe übertragen.
 
-Ist die Wetterfunktion aktiviert, wird die WX-Information nach jedem Programmstart automatisch neu geladen. Die Funktion ist in v0.3.56 weiterhin als **Testfunktion** gedacht.
+Ist die Wetterfunktion aktiviert, wird die WX-Information nach jedem Programmstart automatisch neu geladen. Die Funktion ist in v0.3.57 weiterhin als **Testfunktion** gedacht.
 
 # OSM-Karte
 
-Die OSM-/Leaflet-Kartenansicht wurde in v0.3.56 vergrößert und bietet mehr sichtbare Kartenfläche.
+Die OSM-/Leaflet-Kartenansicht wurde in v0.3.57 vergrößert und bietet mehr sichtbare Kartenfläche.
+
+# Persönliche Einstellungen
+
+Die persönliche Konfiguration wird benutzerbezogen unter folgendem Pfad gespeichert:
+
+```text
+~/.MeshCom/settings.ini
+```
+
+Die Programmdateien selbst bleiben unter `/usr/share/MeshCom`. Beim ersten Start werden nur neutrale Standardwerte angelegt; persönliche Rufzeichen, Hotspot-IP und Räume werden nicht fest in den Programmdateien vorgegeben.
 
 # Debian-Paket
 
@@ -229,7 +235,7 @@ Dort stehen zwei Funktionen zur Verfügung:
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.56**
+**Version 0.3.57**
 
 **By Goldisoft 2026**
 
@@ -357,7 +363,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.56**  
+**MeshCom-Guru v0.3.57**  
 **By Goldisoft 2026**
 
 
@@ -370,7 +376,7 @@ Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
 Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
-`docs/MeshCom-Guru_Anleitung_v0.3.56.pdf` bei.
+`docs/MeshCom-Guru_Anleitung_v0.3.57.pdf` bei.
 
 
 ## Hilfe und Info

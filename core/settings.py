@@ -2,7 +2,10 @@ from pathlib import Path
 import configparser
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SETTINGS_FILE = BASE_DIR / "data" / "settings.ini"
+# Persönliche Einstellungen liegen immer im Benutzerverzeichnis.
+# Die Programmdateien unter /usr/share/MeshCom bleiben unverändert.
+USER_CONFIG_DIR = Path.home() / ".MeshCom"
+SETTINGS_FILE = USER_CONFIG_DIR / "settings.ini"
 
 
 def load_settings():
