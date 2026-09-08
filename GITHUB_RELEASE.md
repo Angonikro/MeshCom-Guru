@@ -1,14 +1,12 @@
-# MeshCom-Guru v0.3.57
+# MeshCom-Guru v0.3.58
 
 ## Release
 
-Diese Version enthält die stabilisierte Nachrichtenanzeige und die bereinigte Speicherung persönlicher Einstellungen.
+Diese Version enthält die aktuellen Verbesserungen für Wetter senden, Raumfilter und Kartenanzeige.
 
-### Wichtige Änderungen
-- Nachrichten bleiben während der Sitzung erhalten.
-- „Alle“ verhindert doppelte Alle-Nachrichten trotz unterschiedlicher HTML-/Icon-Darstellung.
-- Raum-Tabs starten nach einem Neustart leer.
-- Persönliche Einstellungen liegen unter `~/.MeshCom/settings.ini`.
-- Keine persönlichen Rufzeichen, Hotspot-IP oder fest vorgegebenen Räume im Code.
+### Änderungen
+- Wetterdaten werden beim Senden in dem Raum übertragen, in dem man sich aktuell befindet.
+- Fehler im Raumfilter behoben; die Raumfilterung funktioniert korrekt.
+- Die Entfernung von der eigenen Station zu anderen Stationen wird im jeweiligen Kartenmarker angezeigt.
 
 Der oberste Projektordner des Archivs ist `MeshCom/`.

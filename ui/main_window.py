@@ -1,5 +1,6 @@
 import configparser
 import hashlib
+import math
 import html
 import re
 import os
@@ -1015,12 +1016,31 @@ class MainWindow(QMainWindow):
         if len(text) > 149:
             self.status.setText("Wettermeldung ist länger als 149 Zeichen")
             return
+        # Wetterdaten immer an das Ziel des aktuell geöffneten Chats senden.
+        # Dadurch gehen sie nicht mehr grundsätzlich an "alle":
+        # Raum-Tab -> Raum, Privat-Tab -> Rufzeichen, Tab "Alle" -> leer/all.
+        current_index = self.tabs.currentIndex()
+        current_key = self._key_for_index(current_index)
+        if current_key and current_key[0] in {"room", "private"}:
+            weather_target = current_key[1]
+        elif current_key and current_key[0] == "all":
+            weather_target = ""
+        else:
+            # Fallback für sonstige Tabs (z. B. Karte): das bisherige
+            # Eingabefeld verwenden, ohne das bestehende Sendeverhalten
+            # anderer Nachrichten zu verändern.
+            weather_target = self.target_input.text().strip()
+
         self.weather_send_button.setEnabled(False)
         try:
-            _answer, _url, method = self.mesh.send_message(text, "")
+            _answer, _url, method = self.mesh.send_message(text, weather_target)
             timestamp = datetime.now().strftime("%H:%M:%S")
-            self.send_log.setText(f"Letzter Wetter-Sendeauftrag {timestamp}: → alle | {text} | HTTP {method} 200")
-            self.status.setText("Wetterdaten ohne Raumangabe an den Hotspot übertragen")
+            display_target = weather_target if weather_target else "alle"
+            self.send_log.setText(f"Letzter Wetter-Sendeauftrag {timestamp}: → {display_target} | {text} | HTTP {method} 200")
+            if weather_target:
+                self.status.setText(f"Wetterdaten an {weather_target} übertragen")
+            else:
+                self.status.setText("Wetterdaten ohne Raumangabe an den Hotspot übertragen")
             self._write_settings()
         except Exception as exc:
             self.status.setText(f"Wetterdaten konnten nicht gesendet werden: {exc}")
@@ -1866,8 +1886,22 @@ class MainWindow(QMainWindow):
             return blocks
         rooms = self._rooms()
         if not rooms:
-            return []
-        return [b for b in blocks if self._room_from_block(b) in rooms]
+            return [b for b in blocks if self._is_all_target(b)]
+        # Bei aktivem Raumfilter bleiben die gespeicherten Räume sichtbar.
+        # Zusätzlich müssen Nachrichten, die ausdrücklich an „Alle“
+        # (>* bzw. >ALL) gerichtet sind, weiterhin im Tab „Alle“ erscheinen.
+        return [
+            b for b in blocks
+            if self._room_from_block(b) in rooms or self._is_all_target(b)
+        ]
+
+    @classmethod
+    def _is_all_target(cls, block):
+        """Return True for messages explicitly addressed to the global 'Alle' target."""
+        plain = cls._normalized_plain(block)
+        return re.search(
+            r"\s*>\s*(?:\*|ALL)(?=\s|$)", plain, re.IGNORECASE
+        ) is not None
 
     # ---------- Karte / Positionsdaten ----------
     @classmethod
@@ -2015,11 +2049,18 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,att
 const markerLayer=L.layerGroup().addTo(map);
 let firstRender=true;
 function esc(v){return String(v).replace(/[&<>]/g,'');}
+function formatDistance(km){
+  if(km===null || km===undefined || !isFinite(km)) return '';
+  if(km < 1) return Math.round(km*1000)+' m';
+  return km.toFixed(1)+' km';
+}
 function renderStations(stations){
   const hadStations=markerLayer.getLayers().length>0;
   markerLayer.clearLayers();
   stations.forEach(s=>{const m=L.marker([s.lat,s.lon]).addTo(markerLayer);const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
-    m.bindPopup('<b>'+esc(s.callsign)+'</b><br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
+    const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
+    const distanceText=distance && !s.own ? '<br><b>Entfernung:</b> '+esc(distance) : '';
+    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+'<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
   });
   setTimeout(()=>map.invalidateSize(),50);
   if(firstRender && !hadStations){
@@ -2053,13 +2094,30 @@ renderStations(initialStations);</script></body></html>"""
     def _update_map(self):
         if QWebEngineView is None or not hasattr(self, "map_view"):
             return
+
+        def distance_km(lat1, lon1, lat2, lon2):
+            # Great-circle distance (Haversine), measured from the user's own
+            # configured position to each station.
+            try:
+                r = 6371.0088
+                p1, p2 = math.radians(float(lat1)), math.radians(float(lat2))
+                dp = math.radians(float(lat2) - float(lat1))
+                dl = math.radians(float(lon2) - float(lon1))
+                a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+                return r * 2 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1 - a)))
+            except Exception:
+                return None
+
         stations=[]
         for callsign,(lat,lon) in sorted(self.station_positions.items()):
-            stations.append({"callsign":callsign,"lat":lat,"lon":lon,"own":callsign.upper()==self.own_callsign.upper(),"last_heard":self.station_last_heard.get(callsign.upper(),"")})
+            distance = None
+            if self.own_lat is not None and self.own_lon is not None:
+                distance = distance_km(self.own_lat, self.own_lon, lat, lon)
+            stations.append({"callsign":callsign,"lat":lat,"lon":lon,"own":callsign.upper()==self.own_callsign.upper(),"last_heard":self.station_last_heard.get(callsign.upper(),""),"distance_km":distance})
         if self.own_lat is not None and self.own_lon is not None:
             own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
-            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True})
+            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0})
         # Die Karte wird nicht neu geladen. Die Stationsdaten werden jedoch
         # gepuffert, bis Leaflet/JavaScript nach setHtml() vollständig bereit ist.
         self._push_map_stations(stations)
@@ -2188,13 +2246,28 @@ renderStations(initialStations);</script></body></html>"""
             # WebService sie bei einer späteren Abfrage nicht mehr zurückliefert.
             all_key = ("all", "all")
             all_index = self._ensure_tab(all_key, "Alle")
-            all_blocks = list(cached_blocks)
+            # Der Raumfilter gilt auch für den Gesamt-Tab „Alle“:
+            # - Filter AUS: unverändert alle bekannten Nachrichten anzeigen.
+            # - Filter EIN: ausschließlich Nachrichten aus den gespeicherten Räumen
+            #   anzeigen. Die übrigen Tabs und die eigentliche Nachrichtenablage
+            #   bleiben davon unberührt.
+            all_blocks = self._filter_blocks(cached_blocks)
 
             # Zusätzlich bekannte UDP-Positionskarten übernehmen, aber ebenfalls
             # nur einmal. Die Positionsdaten selbst werden unabhängig davon in
             # station_positions für die Karte gepflegt.
             seen_all = {self._message_identity(b) for b in all_blocks if self._message_identity(b)}
             for block in self.udp_position_blocks:
+                # Bei aktivem Raumfilter dürfen auch diese Zusatzblöcke nur in
+                # „Alle“ erscheinen, wenn sie einem gespeicherten Raum zugeordnet
+                # werden können. Bei deaktiviertem Filter bleibt das bisherige
+                # Verhalten vollständig erhalten.
+                if (
+                    self.filter_enabled.isChecked()
+                    and self._room_from_block(block) not in self._rooms()
+                    and not self._is_all_target(block)
+                ):
+                    continue
                 key = self._message_identity(block)
                 if key and key in seen_all:
                     continue

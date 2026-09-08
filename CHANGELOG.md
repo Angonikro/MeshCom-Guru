@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.3.58 – Wetterraum, Raumfilter und Entfernungsanzeige
+
+- **Wetter senden:** Wetterdaten werden jetzt in dem Raum gesendet, in dem man sich aktuell befindet.
+- **Raumfilter:** Fehler bei der Filterung der Räume behoben; der Raumfilter funktioniert jetzt korrekt.
+- **Kartenmarker:** Bei den Markern der anderen Stationen wird jetzt die Entfernung zur eigenen Station angezeigt. Die Entfernung wird aus den eigenen GPS-Koordinaten und den Koordinaten der jeweiligen Station berechnet.
+
 ## v0.3.57 – Nachrichtenstabilität und saubere Benutzereinstellungen
 
 - Nachrichten bleiben während der laufenden Sitzung erhalten, auch wenn sie später nicht mehr vom WebService geliefert werden.

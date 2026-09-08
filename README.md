@@ -1,12 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.57**
+**Version 0.3.58**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -239,7 +235,7 @@ Dort stehen zwei Funktionen zur Verfügung:
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.57**
+**Version 0.3.58**
 
 **By Goldisoft 2026**
 
@@ -256,6 +252,18 @@ Die vorhandenen Tabs ermöglichen die getrennte Anzeige von:
 - privaten Nachrichten
 
 Nachrichten können über das Eingabefeld erstellt und mit **Senden** übertragen werden.
+
+### Wetter senden
+
+Die Wetterfunktion sendet die aktuelle Wetterinformation jetzt in den Raum, in dem man sich aktuell befindet.
+
+### Raumfilter
+
+Der Raumfilter filtert die Nachrichten jetzt korrekt nach den gespeicherten Räumen.
+
+### Kartenentfernung
+
+Bei anderen Stationen wird im Kartenmarker zusätzlich die Entfernung zur eigenen Station angezeigt, sofern eigene GPS-Koordinaten vorhanden sind.
 
 ---
 
@@ -367,7 +375,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.57**  
+**MeshCom-Guru v0.3.58**  
 **By Goldisoft 2026**
 
 

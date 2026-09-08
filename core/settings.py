@@ -1,5 +1,6 @@
 from pathlib import Path
 import configparser
+import shutil
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Persönliche Einstellungen liegen immer im Benutzerverzeichnis.
@@ -11,6 +12,10 @@ SETTINGS_FILE = USER_CONFIG_DIR / "settings.ini"
 def load_settings():
     config = configparser.ConfigParser()
     SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if not SETTINGS_FILE.exists():
+        template = BASE_DIR / "data" / "settings.ini"
+        if template.exists():
+            shutil.copyfile(template, SETTINGS_FILE)
     if SETTINGS_FILE.exists():
         config.read(SETTINGS_FILE, encoding="utf-8")
     if "MeshCom" not in config:
