@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QCheckBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -655,6 +656,14 @@ class MainWindow(QMainWindow):
         self.message_input.setPlaceholderText("Nachricht eingeben …")
         self.message_input.setMaxLength(149)
 
+        # Emoji-Auswahl für Nachrichten. Die Auswahl ist bewusst lokal und
+        # verändert die bestehende Sende-/Empfangslogik nicht.
+        self.emoji_button = QPushButton("😊")
+        self.emoji_button.setFixedWidth(46)
+        self.emoji_button.setToolTip("Emoji einfügen")
+        self.emoji_button.clicked.connect(self._toggle_emoji_picker)
+        self._emoji_picker = None
+
         # Zeichenzähler für MeshCom-Nachrichten: maximal 149 Zeichen.
         self.message_counter = QLabel("0/149")
         self.message_counter.setAlignment(
@@ -693,6 +702,7 @@ class MainWindow(QMainWindow):
 
         message_row = QHBoxLayout()
         message_row.addWidget(self.message_input, 1)
+        message_row.addWidget(self.emoji_button)
         message_row.addWidget(self.message_counter)
         layout.addLayout(message_row)
 
@@ -711,6 +721,63 @@ class MainWindow(QMainWindow):
             self.message_counter.setToolTip("Maximale Länge erreicht: 149 Zeichen")
         else:
             self.message_counter.setToolTip(f"Noch {149 - len(text)} Zeichen frei")
+
+    def _toggle_emoji_picker(self):
+        """Open/close the compact emoji picker above the message field."""
+        if self._emoji_picker is not None and self._emoji_picker.isVisible():
+            self._emoji_picker.close()
+            return
+
+        picker = QDialog(self, Qt.WindowType.Popup)
+        picker.setWindowTitle("Emoji")
+        picker.setModal(False)
+        picker.setFixedWidth(440)
+        picker.setMaximumHeight(315)
+
+        emojis = [
+            "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣",
+            "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰",
+            "😘", "😎", "🤩", "🤔", "😐", "😏", "😢", "😭",
+            "😡", "😱", "👍", "👎", "👏", "🙌", "🙏", "💪",
+            "❤️", "💯", "🔥", "⭐", "🎉", "☀️", "☕", "🍺",
+            "🚗", "🚲", "🏠", "📡", "📍", "🌍", "⛰️", "🐕",
+        ]
+
+        grid = QGridLayout(picker)
+        grid.setContentsMargins(8, 8, 8, 8)
+        grid.setHorizontalSpacing(5)
+        grid.setVerticalSpacing(5)
+
+        for i, emoji in enumerate(emojis):
+            button = QPushButton(emoji)
+            button.setFixedSize(50, 46)
+            button.setStyleSheet("font-size: 23px; padding: 0px;")
+            button.setToolTip(f"{emoji} einfügen")
+            button.clicked.connect(lambda checked=False, value=emoji: self._insert_emoji(value))
+            grid.addWidget(button, i // 8, i % 8)
+
+        self._emoji_picker = picker
+        picker.finished.connect(lambda _result: self._clear_emoji_picker())
+
+        # Das Fenster erscheint direkt über der Eingabezeile.
+        pos = self.emoji_button.mapToGlobal(self.emoji_button.rect().topLeft())
+        x = max(0, pos.x() - picker.width() + self.emoji_button.width())
+        y = max(0, pos.y() - picker.maximumHeight() - 6)
+        picker.move(x, y)
+        picker.show()
+
+    def _insert_emoji(self, emoji):
+        """Insert an emoji at the current cursor position."""
+        if len(self.message_input.text()) + len(emoji) > 149:
+            self.status.setText("Emoji passt nicht mehr in die 149 Zeichen")
+            return
+        self.message_input.insert(emoji)
+        if self._emoji_picker is not None and self._emoji_picker.isVisible():
+            self._emoji_picker.close()
+        self.message_input.setFocus()
+
+    def _clear_emoji_picker(self):
+        self._emoji_picker = None
 
     def _load_filter_fields(self, settings):
         for i, field in enumerate(self.filter_inputs, 1):

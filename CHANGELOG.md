@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.3.59 – Emoji-Unterstützung
+
+- **Emoji-Anzeige vergrößert:** Die Smileys im Auswahlfenster sind jetzt etwas größer und dadurch beim Auswählen besser erkennbar, ohne den Picker unnötig groß zu machen.
+- **Emoji-Auswahl:** Neben dem Nachrichtenfeld gibt es einen 😊-Button.
+- **Emoji-Picker:** Ein kompaktes Auswahlfenster bietet häufig verwendete Smileys und Symbole.
+- **Einfügen an Cursorposition:** Das ausgewählte Emoji wird direkt in die aktuelle Nachricht eingefügt.
+- **149-Zeichen-Limit:** Die bestehende Nachrichtenbegrenzung bleibt aktiv; ein Emoji wird nicht eingefügt, wenn dadurch die Grenze überschritten würde.
+- **Sende-/Empfangslogik:** Die bestehende MeshCom-Kommunikation wurde nicht verändert.
+
+
 ## v0.3.58 – Wetterraum, Raumfilter und Entfernungsanzeige
 
 - **Wetter senden:** Wetterdaten werden jetzt in dem Raum gesendet, in dem man sich aktuell befindet.

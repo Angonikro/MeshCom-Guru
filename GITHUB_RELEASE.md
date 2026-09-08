@@ -1,12 +1,16 @@
-# MeshCom-Guru v0.3.58
+# MeshCom-Guru v0.3.59
 
 ## Release
 
-Diese Version enthält die aktuellen Verbesserungen für Wetter senden, Raumfilter und Kartenanzeige.
+Diese Version erweitert das Nachrichtenfeld um eine kompakte Emoji-Auswahl.
 
 ### Änderungen
-- Wetterdaten werden beim Senden in dem Raum übertragen, in dem man sich aktuell befindet.
-- Fehler im Raumfilter behoben; die Raumfilterung funktioniert korrekt.
-- Die Entfernung von der eigenen Station zu anderen Stationen wird im jeweiligen Kartenmarker angezeigt.
+- 😊-Button direkt neben dem Nachrichtenfeld.
+- Kompakter Emoji-Picker mit gut erkennbaren Smileys und Symbolen.
+- Emoji wird an der aktuellen Cursorposition eingefügt.
+- Der Emoji-Picker schließt sich nach der Auswahl automatisch.
+- Das bestehende Limit von 149 Zeichen bleibt erhalten.
+- Die bestehende MeshCom-Sende-/Empfangslogik wurde nicht verändert.
+- Wetter-, Raumfilter-, Karten-, Node-Info- und Privatnachrichten-Funktionen bleiben erhalten.
 
 Der oberste Projektordner des Archivs ist `MeshCom/`.
