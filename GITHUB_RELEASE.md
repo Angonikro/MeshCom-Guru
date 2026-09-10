@@ -1,36 +1,33 @@
-# MeshCom-Guru v0.3.61
+# MeshCom-Guru v0.3.62
 
-## Release v0.3.61
+## Release v0.3.62
 
-Diese Version vereinheitlicht die Chat-Darstellung der normalen Raum-Tabs mit dem bereits funktionierenden Privat-Chat.
+v0.3.62 ist der aktualisierte Release-Stand von MeshCom-Guru. Neben den vorhandenen Funktionen wurden die integrierte Anleitung und die Projektdokumentation vollständig an den aktuellen Code angepasst.
 
-### Änderungen
-- Normale Raum-Tabs verwenden jetzt dieselbe Bubble-Anordnung wie der Privat-Chat.
-- Eigene Nachrichten werden rechts in **Grün** dargestellt.
-- Empfangene Nachrichten werden links in **Blau** dargestellt.
-- Kompakte `CALLSIGN>RAUM`-Antworten des MeshCom-WebService werden korrekt zerlegt.
-- Absender, Zielraum und Nachricht werden sauber getrennt angezeigt.
-- Der Tab **„Alle“ bleibt unverändert** und verwendet ausdrücklich nicht die neue Raum-Bubble-Darstellung.
-- Bestehende Funktionen wie Privat-Chats, Karte, Monitor, MH, Wetter, Filter und Node-Info bleiben erhalten.
+### Aktueller Funktionsumfang
 
-### Projektarchiv
+- Raum-Chats und Privat-Chats
+- Tab „Alle“
+- einheitliche Chat-Bubbles in normalen Räumen
+- Privat-Sendestatus mit **⏳** und echtem Empfänger-ACK **✓✓**
+- **⚡ Schnelltexte**
+- **😊 Emoji-Picker**
+- 149-Zeichen-Limit mit Live-Zähler
+- anklickbare HTTP-/HTTPS-Links
+- **📡 Monitor** mit ALLE / MSG / POS / TEL / ACK
+- **📋 MH – Most Recently Heard**
+- OSM-/Leaflet-Karte und Positionsdaten
+- Node Info
+- Wetterdaten / WX
+- Sound-Einstellungen
+- Hell-/Dunkel-Theme
+- Raumfilter bis zu fünf Räume
+- persönliche Einstellungen unter `~/.MeshCom/settings.ini`
+- Linux-, Windows- und Debian-Startwege
 
-- `MeshCom-Guru_v0.3.61_GITHUB.zip`
-- Der oberste Projektordner im Archiv ist exakt `MeshCom/`.
-- Persönliche Einstellungen werden nicht im Projekt gespeichert, sondern unter `~/.MeshCom/settings.ini` angelegt.
-- `data/default_settings.ini` enthält nur neutrale Standardwerte.
+### Release-Dateien
 
-### Start
-
-**Linux:**
-
-```bash
-chmod +x run_linux.sh
-./run_linux.sh
-```
-
-**Windows:** `run_windows.bat` starten.
-
-### Hinweis für GitHub
-
-Dieses ZIP ist das vollständige Projektarchiv für den GitHub-Release. Die Release-Beschreibung kann direkt aus diesem Dokument übernommen werden.
+- oberster Projektordner im Archiv: `MeshCom/`
+- persönliche Einstellungen nicht im Projektarchiv
+- Debian-Ziel: `/usr/share/MeshCom`
+- neue PDF-Anleitung: `docs/MeshCom-Guru_Anleitung_v0.3.62.pdf`

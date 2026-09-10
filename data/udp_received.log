@@ -1,2 +1,2 @@
-2026-09-10 05:47:32 {"dst": "262", "firmware": "4.35", "fw_sub": "s", "msg": "test", "msg_id": "690F6010", "rssi": 0, "snr": 0, "src": "DO2QG-1", "src_type": "node", "type": "msg"}
-2026-09-10 05:47:51 {"dst": "262", "firmware": 35, "fw_sub": "s", "msg": "test", "msg_id": "C118526F", "rssi": -55, "snr": 6, "src": "DO2QG-11", "src_type": "lora", "type": "msg"}
+2026-09-10 15:35:20 {"alt": 344, "aprs_symbol": "-", "aprs_symbol_group": "\\\\", "batt": 100, "firmware": 35, "fw_sub": "p", "hw_id": 39, "lat": 51.7585, "lat_dir": "N", "long": 7.3873, "long_dir": "E", "msg": "", "msg_id": "A2659333", "rssi": -96, "snr": 4, "src": "DB0SEP-12,DM0DOS-11,DL1YAU-12", "src_type": "lora", "type": "pos"}
+2026-09-10 15:35:20 {"batt": 100, "co2": 0, "gas": 0, "hum": 0, "qfe": 0, "qnh": 0, "src": "DB0SEP-12,DM0DOS-11,DL1YAU-12", "src_type": "lora", "temp1": 0, "temp2": 0, "type": "tele"}

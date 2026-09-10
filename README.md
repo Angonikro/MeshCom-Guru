@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.61**
+**Version 0.3.62**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -28,6 +22,22 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+
+## Aktueller Funktionsumfang v0.3.62
+
+- Raum-Chats, Privat-Chats und Tab „Alle“
+- Einheitliche Chat-Bubbles in normalen Raum-Tabs
+- Privat-Sendestatus: **⏳** bis zum echten Empfänger-ACK, danach **✓✓**
+- **⚡ Schnelltexte** mit Verwaltung und dauerhaftem Speichern
+- **😊 Emoji-Picker** mit 149-Zeichen-Limit
+- **📡 Monitor** für UDP 1799 mit ALLE / MSG / POS / TEL / ACK, Suche, Pause und Auto-Scroll
+- **📋 MH – Most Recently Heard** mit Rufzeichen, Entfernung, RSSI, SNR, Batterie und letztem Empfang
+- OSM-/Leaflet-Karte und Positionsdaten
+- Node Info
+- Wetterdaten / WX
+- Sound-Einstellungen und Hell-/Dunkel-Theme
+- Raumfilter für bis zu fünf Räume
+- persönliche Einstellungen unter `~/.MeshCom/settings.ini`
 
 ---
 
@@ -404,5 +414,3 @@ Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

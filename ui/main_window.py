@@ -1765,7 +1765,7 @@ class MainWindow(QMainWindow):
         """Show the built-in MeshCom-Guru user guide."""
         dialog = QDialog(self)
         dialog.setWindowTitle("MeshCom-Guru – Anleitung")
-        dialog.resize(760, 620)
+        dialog.resize(800, 680)
         layout = QVBoxLayout(dialog)
 
         view = QTextBrowser(dialog)
@@ -1773,24 +1773,62 @@ class MainWindow(QMainWindow):
         view.setHtml(f"""
         <h2>MeshCom-Guru v{VERSION}</h2>
         <h3>Kurzanleitung</h3>
-        <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-Hotspots eintragen.</p>
+
+        <h3>Verbindung und Einstellungen</h3>
+        <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
         <p><b>Raum / Ziel:</b> Eine Raumnummer (z. B. 262) oder ein Rufzeichen für eine private Nachricht eintragen.</p>
         <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
-        <p><b>Einstellungen speichern:</b> Speichert die aktuellen Einstellungen dauerhaft.</p>
-        <p><b>Node Info aufrufen:</b> Öffnet die Node-Information des verbundenen MeshCom-WebService.</p>
-        <h3>Nachrichten</h3>
-        <p>Über die Raumfilter können bis zu fünf Räume ausgewählt werden. Mit <b>Aktualisieren</b> werden neue Nachrichten abgerufen.</p>
-        <p>Mit <b>Senden</b> wird eine Nachricht an den eingetragenen Raum bzw. das Ziel übertragen.</p>
-        <h3>Karte und Positionen</h3>
-        <p>Empfangene MeshCom-Positionsdaten werden eigenständig über UDP Port 1799 empfangen und auf der Karte dargestellt. MeshCom-Guru benötigt dafür keine Zusammenarbeit mit MeshDash.</p>
-        <h3>Menü</h3>
-        <p><b>Datei:</b> Einstellungen speichern, Nachrichten aktualisieren und Programm beenden.</p>
-        <p><b>Einstellungen:</b> Sound-Einstellungen und die Testfunktion <b>Wetterdaten</b>. Bei aktiviertem Wetterfenster werden die WX-Werte des verbundenen MeshCom-Nodes angezeigt. Mit einer eingetragenen Stadt können die Werte ohne Raumangabe gesendet werden.</p>
-        <p><b>Theme:</b> Dunkles oder helles Erscheinungsbild.</p>
-        <p><b>Hilfe → Info:</b> Versions- und Urheberinformation.</p>
+        <p><b>Einstellungen speichern:</b> Speichert die persönlichen Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
+        <p>Beim ersten Start werden nur neutrale Standardwerte aus <code>data/default_settings.ini</code> übernommen.</p>
+
+        <h3>Nachrichten und Räume</h3>
+        <p>Über den Nachrichtenfilter können bis zu <b>fünf Räume</b> ausgewählt werden. Mit <b>Aktualisieren</b> werden Nachrichten vom MeshCom-WebService abgerufen.</p>
+        <p>Mit <b>Senden</b> wird eine Nachricht an den eingetragenen Raum oder das private Ziel übertragen.</p>
+        <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Zähler zeigt die aktuelle Länge an.</p>
+        <p>Im Chat werden Nachrichten als Bubbles dargestellt. Eigene Nachrichten und empfangene Nachrichten werden unterschiedlich angeordnet.</p>
+        <p>Internetadressen mit <code>http://</code> oder <code>https://</code> können direkt angeklickt werden.</p>
+
+        <h3>Privat-Chat und Sendestatus</h3>
+        <p>Im Privat-Chat zeigt eine frisch gesendete Nachricht zunächst <b>⏳</b>. Ein reines Node-Echo gilt noch nicht als Zustellung.</p>
+        <p>Erst ein erkannter Empfänger-ACK kann den Status auf <b>✓✓</b> setzen.</p>
+
+        <h3>⚡ Schnelltexte</h3>
+        <p>Mit <b>⚡ Schnelltexte</b> können häufig verwendete Texte eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet den Text nicht automatisch.</p>
+
+        <h3>😊 Emojis</h3>
+        <p>Der Emoji-Picker fügt ein ausgewähltes Emoji an der Cursorposition ein. Das 149-Zeichen-Limit bleibt aktiv.</p>
+
+        <h3>📡 Monitor</h3>
+        <p>Der Monitor zeigt empfangene MeshCom-UDP-Pakete auf <b>Port 1799</b>. Verfügbare Filter: <b>ALLE, MSG, POS, TEL, ACK</b>.</p>
+        <p>Zusätzlich stehen Suche, Pause, Auto-Scroll und Leeren zur Verfügung. Die Detailansicht zeigt unter anderem Zeit, Typ, Von, Nach, RSSI und SNR.</p>
+
+        <h3>📋 MH – Most Recently Heard</h3>
+        <p>MH sammelt zuletzt gehörte Stationen aus dem empfangenen UDP-Datenstrom. Angezeigt werden unter anderem Rufzeichen, Entfernung, RSSI, SNR, Batterie und letzter Empfang.</p>
+        <p>Die Entfernung wird – sofern Koordinaten vorhanden sind – aus der eigenen Position und der Position der Station berechnet. Das eigene Rufzeichen wird nicht als fremde Station eingetragen.</p>
+
+        <h3>🗺 Karte und Positionsdaten</h3>
+        <p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt. Stationsdaten werden auch während des Kartenstarts zwischengespeichert.</p>
+
+        <h3>🌤 Wetterdaten</h3>
+        <p>Unter <b>Einstellungen → Wetterdaten</b> kann die WX-Anzeige aktiviert werden. Die WX-Information des verbundenen MeshCom-Nodes kann geladen und aktualisiert werden.</p>
+        <p>Angezeigt werden Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Die Funktion ist für Nodes mit geeigneter Wetterhardware wie BME280/BMP280 vorgesehen.</p>
+
+        <h3>🔊 Sound</h3>
+        <p>Unter <b>Einstellungen → Sound-Einstellungen</b> können Benachrichtigungston, Audiotreiber, Lautstärke und eine eigene WAV-Datei eingestellt werden.</p>
+
+        <h3>Theme</h3>
+        <p>Das Erscheinungsbild kann zwischen <b>Dunkel</b> und <b>Hell</b> umgeschaltet werden.</p>
+
+        <h3>Node Info</h3>
+        <p><b>Node Info aufrufen</b> öffnet die Node-Information des verbundenen MeshCom-WebService.</p>
+
         <h3>Installation</h3>
-        <p><b>Linux:</b> Im Projektordner <code>./run_linux.sh</code> ausführen. Für einen Desktop-Eintrag <code>./install_desktop_launcher.sh</code> verwenden.</p>
-        <p><b>Windows:</b> <code>run_windows.bat</code> starten. Python und die Pakete aus <code>requirements.txt</code> müssen installiert sein.</p>
+        <p><b>Linux ZIP:</b> Projektordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten.</p>
+        <p><b>Windows:</b> <code>run_windows.bat</code> starten.</p>
+        <p><b>Debian:</b> Das Paket installiert das Programm nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+
+        <h3>Hilfe → Info</h3>
+        <p>Zeigt Versions- und Urheberinformationen.</p>
         """)
         layout.addWidget(view, 1)
 
@@ -2542,7 +2580,15 @@ class MainWindow(QMainWindow):
                 if actual not in {"*", "ALL", "CQCQCQ"} or expected not in {"", "*", "ALL", "CQCQCQ"}:
                     continue
             msg["seq"] = str(seq)
-            msg["status"] = "sent"
+            # In privaten Chats bleibt die Sanduhr auch nach dem eigenen
+            # Node-Echo stehen. Erst ein echter Empfänger-ACK darf auf ✓✓
+            # wechseln. In den normalen Räumen bleibt das bisherige Verhalten
+            # mit ✓ nach dem Echo unverändert.
+            target_type = str(msg.get("target", "")).strip()
+            if target_type and not target_type.isdigit():
+                msg["status"] = "pending"
+            else:
+                msg["status"] = "sent"
             return msg
         return None
 
