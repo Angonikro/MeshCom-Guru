@@ -12,7 +12,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF
+from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF, QTranslator, QLibraryInfo
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
 except Exception:
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QFileDialog,
     QCheckBox,
+    QColorDialog,
     QFormLayout,
     QAbstractItemView,
     QHeaderView,
@@ -40,6 +41,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QSizePolicy,
     QMainWindow,
+    QMenu,
     QScrollArea,
     QPushButton,
     QTabWidget,
@@ -115,6 +117,8 @@ def _meshcom_extract_coordinates(raw):
     return None
 
 
+from i18n import tr, set_language, ui_text
+
 class BubbleWidget(QWidget):
     """Compact WhatsApp-style message bubble with a small inward tail."""
     def __init__(self, text, outgoing=False, parent=None):
@@ -178,19 +182,71 @@ class BubbleWidget(QWidget):
 class ChatView(QScrollArea):
     callsignClicked = Signal(str)
 
+    def set_chat_colors(self, background, text):
+        """Apply the common background everywhere; text color is only for 'Alle'."""
+        self.chat_background = self._normalize_color(background)
+        self.chat_text_color = self._normalize_color(text)
+        is_all = getattr(self, "_mesh_key", (None, None)) == ("all", "all")
+
+        self.setStyleSheet(
+            f"QScrollArea {{ background: {self.chat_background}; border: none; }} "
+            "QScrollBar:vertical { width: 12px; }"
+        )
+        if is_all:
+            self._html_view.setStyleSheet(
+                f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
+            )
+        else:
+            # Keep the existing room/private bubble typography completely intact.
+            self._html_view.setStyleSheet(
+                f"QTextBrowser {{ background: {self.chat_background}; border: none; }}"
+            )
+        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
+
+        if is_all:
+            for bubble in getattr(self, "_bubble_rows", []):
+                try:
+                    bubble.label.setStyleSheet(
+                        f"background: transparent; color: {self.chat_text_color}; border: none;"
+                    )
+                except Exception:
+                    pass
+
+        if not self._bubble_mode and is_all:
+            current = self._html_view.toHtml()
+            if current:
+                current = re.sub(
+                    r"background\s*:\s*#[0-9a-fA-F]{6}",
+                    f"background:{self.chat_background}", current, count=1
+                )
+                current = re.sub(
+                    r"color\s*:\s*#[0-9a-fA-F]{6}",
+                    f"color:{self.chat_text_color}", current
+                )
+                self._html_view.setHtml(current)
+        self.viewport().update()
+        self.update()
+
+    @staticmethod
+    def _normalize_color(value):
+        color = QColor(str(value or "#101722").strip())
+        return color.name(QColor.NameFormat.HexRgb) if color.isValid() else "#101722"
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.chat_background = "#101722"
+        self.chat_text_color = "#e6edf3"
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setStyleSheet("QScrollArea { background: #101722; border: none; } QScrollBar:vertical { width: 12px; }")
+        self.setStyleSheet(f"QScrollArea {{ background: {self.chat_background}; border: none; }} QScrollBar:vertical {{ width: 12px; }}")
         self._html_view = QTextBrowser()
         self._html_view.setReadOnly(True)
         self._html_view.setOpenLinks(False)
         self._html_view.setOpenExternalLinks(False)
         self._html_view.anchorClicked.connect(self._anchor_clicked)
-        self._html_view.setStyleSheet("QTextBrowser { background: #101722; border: none; }")
+        self._html_view.setStyleSheet(f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}")
         self._bubble_container = QWidget()
         self._bubble_layout = QVBoxLayout(self._bubble_container)
         self._bubble_layout.setContentsMargins(10, 8, 10, 8)
@@ -210,6 +266,21 @@ class ChatView(QScrollArea):
     def _bubble_link_activated(self, url):
         self._anchor_clicked(QUrl(str(url)))
 
+    def set_chat_background(self, color):
+        """Apply the common chat background immediately to this view."""
+        self.chat_background = str(color or "#101722")
+        self.setStyleSheet(f"QScrollArea {{ background: {self.chat_background}; border: none; }} QScrollBar:vertical {{ width: 12px; }}")
+        self._html_view.setStyleSheet(f"QTextBrowser {{ background: {self.chat_background}; border: none; }}")
+        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
+        # Re-render current HTML with the new body background immediately.
+        if not self._bubble_mode:
+            current = self._html_view.toHtml()
+            if current:
+                current = re.sub(r"background\s*:\s*#[0-9a-fA-F]{6}", f"background:{self.chat_background}", current, count=1)
+                self._html_view.setHtml(current)
+        self.viewport().update()
+        self.update()
+
     def setHtml(self, html_text, *args):
         # Do not force the user back to the bottom on every 5-second refresh.
         # If the user has scrolled up, keep that position.  Only follow the
@@ -223,6 +294,7 @@ class ChatView(QScrollArea):
         was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
         self._bubble_mode = False
         self.setWidget(self._html_view)
+        html_text = re.sub(r"background\s*:\s*#[0-9a-fA-F]{6}", f"background:{self.chat_background}", str(html_text), count=1)
         self._html_view.setHtml(html_text)
         def restore_html_scroll():
             new_bar = self._html_view.verticalScrollBar()
@@ -244,10 +316,13 @@ class ChatView(QScrollArea):
         # widget per semantic message, so refreshes cannot create duplicates.
         old = self._bubble_container
         self._bubble_container = QWidget()
-        self._bubble_container.setStyleSheet("background: #101722;")
+        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
         self._bubble_layout = QVBoxLayout(self._bubble_container)
         self._bubble_layout.setContentsMargins(10, 8, 10, 8)
         self._bubble_layout.setSpacing(8)
+        # Keep the message stack at the bottom when it is shorter than the viewport.
+        # No stretch item is used: this avoids shifting/scrolling the bubble stack.
+        self._bubble_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
         self.setWidget(self._bubble_container)
         self._bubble_rows = []
 
@@ -271,7 +346,6 @@ class ChatView(QScrollArea):
                     row.addStretch(1)
                 self._bubble_layout.addLayout(row)
                 self._bubble_rows.append(bubble)
-        self._bubble_layout.addStretch(1)
         self._bubble_container.adjustSize()
         self._bubble_container.updateGeometry()
         self._update_bubble_container_height()
@@ -314,6 +388,17 @@ class ChatView(QScrollArea):
 class MainWindow(QMainWindow):
     udpPacketReceived = Signal(dict)
     weatherUpdated = Signal(dict)
+    @staticmethod
+    def _normalize_chat_color(value):
+        """Return a valid #RRGGBB color for chat settings."""
+        try:
+            color = QColor(str(value or "#101722").strip())
+            if color.isValid():
+                return color.name(QColor.NameFormat.HexRgb)
+        except Exception:
+            pass
+        return "#101722"
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"MeshCom-Guru v{VERSION}")
@@ -321,6 +406,17 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 930)
 
         settings = load_settings()
+        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en") else "de"
+        set_language(self.language)
+        # Let Qt translate its own standard context menus (Undo/Copy/Paste/...).
+        # This is safer than intercepting ContextMenu events with a global
+        # event filter and avoids shutdown/segmentation-fault side effects.
+        self._qt_translator = QTranslator(self)
+        self._qt_translator_loaded = False
+        self._apply_qt_translation(self.language)
+        self.chat_background = self._normalize_chat_color(settings.get("chat_background", "#101722"))
+        self.chat_text_color = self._normalize_chat_color(settings.get("chat_text_color", "#e6edf3"))
+        self._all_chat_views = []
         self.current_theme = settings.get("theme", "dark").strip().lower()
         if self.current_theme not in {"light", "dark"}:
             self.current_theme = "dark"
@@ -396,6 +492,7 @@ class MainWindow(QMainWindow):
 
         self._build_menu()
         self._build_ui(settings)
+        self._apply_language_ui()
         self._apply_theme(self.current_theme)
         self._load_filter_fields(settings)
         self._set_weather_panel_visible(self.weather_enabled)
@@ -680,7 +777,7 @@ class MainWindow(QMainWindow):
             for col in (4, 5):
                 self.monitor_table.item(row_index, col).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.monitor_count_label.setText(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert")
+        self.monitor_count_label.setText(ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert"))
         if self.monitor_autoscroll and rows:
             self.monitor_table.scrollToBottom()
 
@@ -699,7 +796,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_monitor_pause(self):
         self.monitor_paused = not self.monitor_paused
-        self.monitor_pause_button.setText("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+        self.monitor_pause_button.setText(ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause"))
 
     def _clear_monitor(self):
         self.monitor_rows.clear()
@@ -809,7 +906,7 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.mh_table.setItem(i, col, item)
         if hasattr(self, "mh_count_label"):
-            self.mh_count_label.setText(f"{len(rows)} Station(en)")
+            self.mh_count_label.setText(ui_text(f"{len(rows)} Station(en)"))
 
     def _clear_mh(self):
         self.mh_stations.clear()
@@ -888,19 +985,10 @@ class MainWindow(QMainWindow):
                 self.udp_position_blocks.append(block)
                 self.udp_position_blocks = self.udp_position_blocks[-100:]
             self._update_map()
-            self.status.setText(f"Position empfangen: {callsign} {coords[0]:.6f}, {coords[1]:.6f} | {self.udp_status}")
+            self.status.setText(ui_text(f"Position empfangen: {callsign} {coords[0]:.6f}, {coords[1]:.6f} | {self.udp_status}"))
             return
         # Textpakete werden weiterhin über HTTP dargestellt; UDP dient hier
         # vor allem dazu, Positions-/Statuspakete in Echtzeit zu übernehmen.
-
-    def closeEvent(self, event):
-        self.udp_stop.set()
-        if self.udp_socket is not None:
-            try:
-                self.udp_socket.close()
-            except Exception:
-                pass
-        super().closeEvent(event)
 
     # ---------- UI ----------
     def _build_menu(self):
@@ -921,9 +1009,20 @@ class MainWindow(QMainWindow):
         file_menu.addAction(exit_action)
 
         settings_menu = menu_bar.addMenu("Einstellungen")
+
+        language_action = QAction("Sprache / Language …", self)
+        language_action.triggered.connect(self.open_language_dialog)
+        settings_menu.addAction(language_action)
+        self.language_action = language_action
+
         sound_action = QAction("Sound-Einstellungen", self)
         sound_action.triggered.connect(self.open_sound_settings)
         settings_menu.addAction(sound_action)
+
+        chat_bg_action = QAction("Chat-Farben …", self)
+        chat_bg_action.triggered.connect(self._choose_chat_background)
+        settings_menu.addAction(chat_bg_action)
+        self.chat_bg_action = chat_bg_action
 
         self.weather_action = QAction("Wetterdaten", self)
         self.weather_action.setCheckable(True)
@@ -1024,7 +1123,7 @@ class MainWindow(QMainWindow):
         weather_row = QHBoxLayout()
         weather_row.addWidget(QLabel("Stadt:"))
         self.weather_city_input = QLineEdit()
-        self.weather_city_input.setPlaceholderText("Stadtname, z. B. Bielefeld")
+        self.weather_city_input.setPlaceholderText(ui_text("Stadtname, z. B. Bielefeld"))
         self.weather_city_input.setText(settings.get("weather_city", ""))
         weather_row.addWidget(self.weather_city_input, 1)
         self.weather_refresh_button = QPushButton("Wetter aktualisieren")
@@ -1341,6 +1440,7 @@ class MainWindow(QMainWindow):
         buttons.accepted.connect(lambda: self._save_quick_texts(fields, dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
+        self._apply_language_ui()
         dialog.exec()
 
     def _use_quick_text(self, text, dialog=None):
@@ -1358,7 +1458,7 @@ class MainWindow(QMainWindow):
         values = [field.text().strip()[:149] for field in fields if field.text().strip()]
         self.quick_texts = values
         self._write_settings()
-        self.status.setText("Schnelltexte gespeichert")
+        self.status.setText(ui_text("Schnelltexte gespeichert"))
         dialog.accept()
 
     def _toggle_emoji_picker(self):
@@ -1408,7 +1508,7 @@ class MainWindow(QMainWindow):
     def _insert_emoji(self, emoji):
         """Insert an emoji at the current cursor position."""
         if len(self.message_input.text()) + len(emoji) > 149:
-            self.status.setText("Emoji passt nicht mehr in die 149 Zeichen")
+            self.status.setText(ui_text("Emoji passt nicht mehr in die 149 Zeichen"))
             return
         self.message_input.insert(emoji)
         if self._emoji_picker is not None and self._emoji_picker.isVisible():
@@ -1545,6 +1645,120 @@ class MainWindow(QMainWindow):
         self._write_settings()
         self.status.setText("Theme gespeichert: " + ("Dunkel" if theme == "dark" else "Hell"))
 
+    # ---------- Chat-Farben ----------
+    def _update_chat_color_preview(self, preview, background, text):
+        background = self._normalize_chat_color(background)
+        text = self._normalize_chat_color(text)
+        preview.setStyleSheet(
+            f"QTextBrowser {{ background: {background}; color: {text}; "
+            "border: 1px solid #777; border-radius: 6px; padding: 8px; }}"
+        )
+        preview.setHtml(
+            f"<div style='color:{text};'><b>16:25&nbsp;&nbsp;DB0ABC:</b> Hallo zusammen!</div>"
+            f"<div style='color:{text}; margin-top:6px;'><b>16:26&nbsp;&nbsp;DL1ABC:</b> 73 und schönen Abend!</div>"
+            f"<div style='color:{text}; margin-top:6px;'><b>16:27&nbsp;&nbsp;DB0ABC:</b> Dies ist die Vorschau.</div>"
+        )
+
+    def _choose_chat_background(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Chat-Farben")
+        dialog.resize(520, 430)
+        layout = QVBoxLayout(dialog)
+
+        info = QLabel("Gemeinsame Farben für alle Räume und Chat-Ansichten:")
+        layout.addWidget(info)
+
+        preview = QTextBrowser(dialog)
+        preview.setReadOnly(True)
+        preview.setMinimumHeight(120)
+        preview.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        layout.addWidget(preview)
+
+        bg_row = QHBoxLayout()
+        bg_label = QLabel("Chat-Hintergrund:")
+        bg_preview = QLabel()
+        bg_preview.setFixedSize(70, 30)
+        bg_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bg_button = QPushButton("🎨 Farbe auswählen …")
+        bg_row.addWidget(bg_label)
+        bg_row.addWidget(bg_preview)
+        bg_row.addWidget(bg_button, 1)
+        layout.addLayout(bg_row)
+
+        text_row = QHBoxLayout()
+        text_label = QLabel("Schriftfarbe für „Alle“:")
+        text_preview = QLabel()
+        text_preview.setFixedSize(70, 30)
+        text_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_button = QPushButton("✏️ Farbe auswählen …")
+        text_row.addWidget(text_label)
+        text_row.addWidget(text_preview)
+        text_row.addWidget(text_button, 1)
+        layout.addLayout(text_row)
+
+        reset = QPushButton("🔄 Standard wiederherstellen")
+        layout.addWidget(reset)
+
+        def refresh():
+            bg = self.chat_background
+            fg = self.chat_text_color
+            bg_preview.setText(bg)
+            bg_preview.setStyleSheet(f"background:{bg}; color:{'#ffffff' if QColor(bg).lightness() < 160 else '#000000'}; border:1px solid #777; border-radius:5px;")
+            text_preview.setText(fg)
+            text_preview.setStyleSheet(f"background:{bg}; color:{fg}; border:1px solid #777; border-radius:5px;")
+            self._update_chat_color_preview(preview, bg, fg)
+
+        def pick_bg():
+            color = QColorDialog.getColor(QColor(self.chat_background), dialog, "Chat-Hintergrundfarbe")
+            if color.isValid():
+                self._set_chat_colors_live(background=color.name(QColor.NameFormat.HexRgb))
+                refresh()
+
+        def pick_text():
+            color = QColorDialog.getColor(QColor(self.chat_text_color), dialog, "Chat-Schriftfarbe")
+            if color.isValid():
+                self._set_chat_colors_live(text=color.name(QColor.NameFormat.HexRgb))
+                refresh()
+
+        def do_reset():
+            self._set_chat_colors_live(background="#000000", text="#ffffff")
+            refresh()
+
+        bg_button.clicked.connect(pick_bg)
+        text_button.clicked.connect(pick_text)
+        reset.clicked.connect(do_reset)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        refresh()
+        self._apply_language_ui()
+        dialog.exec()
+
+    def _set_chat_colors_live(self, background=None, text=None):
+        if background is not None:
+            self.chat_background = self._normalize_chat_color(background)
+        if text is not None:
+            self.chat_text_color = self._normalize_chat_color(text)
+        self._write_settings()
+
+        views = []
+        for view in getattr(self, "_all_chat_views", []):
+            if view is not None and view not in views:
+                views.append(view)
+        for i in range(self.tabs.count()):
+            view = self.tabs.widget(i)
+            if view is not None and hasattr(view, "set_chat_colors") and view not in views:
+                views.append(view)
+        for view in views:
+            try:
+                view.set_chat_colors(self.chat_background, self.chat_text_color)
+            except Exception:
+                pass
+        self.status.setText(
+            f"Chat-Farben geändert: Hintergrund {self.chat_background} (alle Chats), Schrift {self.chat_text_color} (nur „Alle“) – {len(views)} Ansichten"
+        )
+
     # ---------- Settings ----------
     def _write_settings(self):
         config = configparser.ConfigParser()
@@ -1557,6 +1771,9 @@ class MainWindow(QMainWindow):
         section["target"] = self.target_input.text().strip()
         section["filter_enabled"] = "1" if self.filter_enabled.isChecked() else "0"
         section["theme"] = self.current_theme
+        section["chat_background"] = self.chat_background
+        section["chat_text_color"] = self.chat_text_color
+        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
@@ -1579,10 +1796,116 @@ class MainWindow(QMainWindow):
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             config.write(f)
 
+    def open_language_dialog(self):
+        """Show a small, explicit Deutsch/English language selector."""
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QComboBox, QPushButton
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("language_title"))
+        layout = QVBoxLayout(dialog)
+        label = QLabel(tr("language"))
+        combo = QComboBox()
+        combo.addItem(tr("german"), "de")
+        combo.addItem(tr("english"), "en")
+        combo.setCurrentIndex(0 if getattr(self, "language", "de") == "de" else 1)
+        layout.addWidget(label)
+        layout.addWidget(combo)
+        button = QPushButton("OK")
+        button.clicked.connect(dialog.accept)
+        layout.addWidget(button)
+        self._apply_language_ui()
+        if dialog.exec():
+            self._set_ui_language(combo.currentData())
+
+    def _apply_qt_translation(self, language):
+        app = QApplication.instance()
+        if app is None:
+            return
+        if self._qt_translator_loaded:
+            app.removeTranslator(self._qt_translator)
+            self._qt_translator_loaded = False
+        # English is Qt's source language, so no Qt translator is needed.
+        if language != "de":
+            return
+        try:
+            path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+            if self._qt_translator.load("qtbase_de", path):
+                app.installTranslator(self._qt_translator)
+                self._qt_translator_loaded = True
+        except Exception:
+            pass
+
+    def _set_ui_language(self, language):
+        """Save and immediately apply the selected UI language."""
+        language = language if language in ("de", "en") else "de"
+        self.language = language
+        set_language(language)
+        self._apply_qt_translation(language)
+        self._write_settings()
+        self._apply_language_ui()
+        self.status.setText(tr("Einstellungen gespeichert"))
+
+    def _apply_language_ui(self):
+        """Translate visible static UI elements without touching user/received data."""
+        try:
+            # Menus and actions
+            for action in self.findChildren(QAction):
+                text = action.text()
+                if text:
+                    action.setText(ui_text(text))
+                tip = action.toolTip()
+                if tip:
+                    action.setToolTip(ui_text(tip))
+            for menu in self.findChildren(QMenu):
+                if menu.title():
+                    menu.setTitle(ui_text(menu.title()))
+        except Exception:
+            pass
+
+        # Static widgets
+        for widget in self.findChildren(QWidget):
+            if isinstance(widget, (QPushButton, QLabel, QCheckBox)):
+                text = widget.text() if hasattr(widget, "text") else ""
+                if text:
+                    widget.setText(ui_text(text))
+            if isinstance(widget, QLineEdit):
+                ph = widget.placeholderText()
+                if ph:
+                    widget.setPlaceholderText(ui_text(ph))
+            tip = widget.toolTip()
+            if tip:
+                widget.setToolTip(ui_text(tip))
+
+        # Combo-box labels/items
+        for combo in self.findChildren(QComboBox):
+            for i in range(combo.count()):
+                combo.setItemText(i, ui_text(combo.itemText(i)))
+
+        # Tab labels: only static UI tabs are translated; private callsigns stay untouched.
+        if hasattr(self, "tabs"):
+            for i in range(self.tabs.count()):
+                title = self.tabs.tabText(i)
+                if title == "Alle" or title == "All":
+                    self.tabs.setTabText(i, tr("Alle"))
+                elif title.startswith("Raum ") or title.startswith("Room "):
+                    num = title.split()[-1]
+                    self.tabs.setTabText(i, ("Room " if self.language == "en" else "Raum ") + num)
+                elif title == "Karte" or title == "Map":
+                    self.tabs.setTabText(i, tr("Karte"))
+                elif title == "📡 Monitor":
+                    self.tabs.setTabText(i, tr("📡 Monitor"))
+                elif title == "📋 MH":
+                    self.tabs.setTabText(i, tr("📋 MH"))
+
+        # Table headers
+        if hasattr(self, "monitor_table"):
+            self.monitor_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Zeit", "Typ", "Von", "Nach", "RSSI", "SNR", "Information"]])
+        if hasattr(self, "mh_table"):
+            self.mh_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Rufzeichen", "Entfernung", "RSSI", "SNR", "Batterie", "Zuletzt gehört"]])
+
     def save_all_settings(self):
         ip = self.ip_input.text().strip().rstrip("/")
         if not ip:
-            self.status.setText("Fehler: Keine Hotspot-IP eingetragen")
+            self.status.setText(ui_text("Fehler: Keine Hotspot-IP eingetragen"))
             return
         try:
             lat_text = self.own_lat_input.text().strip().replace(",", ".")
@@ -1595,7 +1918,7 @@ class MainWindow(QMainWindow):
             else:
                 lat = lon = None
         except ValueError:
-            self.status.setText("Fehler: Ungültige eigene Koordinaten")
+            self.status.setText(ui_text("Fehler: Ungültige eigene Koordinaten"))
             return
         self.own_callsign = self._normalize_callsign(self.own_callsign_input.text())
         self.own_lat, self.own_lon = lat, lon
@@ -1603,14 +1926,14 @@ class MainWindow(QMainWindow):
         self.mesh = MeshCom(ip)
         self._ensure_room_tabs()
         self._update_map()
-        self.status.setText("Einstellungen gespeichert")
+        self.status.setText(ui_text("Einstellungen gespeichert"))
 
     def save_filter_settings(self):
         self._write_settings()
         self._ensure_room_tabs()
         self.update_messages()
         rooms = self._rooms()
-        self.status.setText("Filter gespeichert: " + (", ".join(rooms) if rooms else "keine Räume"))
+        self.status.setText(ui_text("Filter gespeichert: " + (", ".join(rooms) if rooms else "keine Räume")))
 
     def _filter_toggled(self, _enabled):
         self._write_settings()
@@ -1673,12 +1996,12 @@ class MainWindow(QMainWindow):
             return
         ip = self.ip_input.text().strip().rstrip("/") if hasattr(self, "ip_input") else ""
         if not ip:
-            self.weather_values_label.setText("Keine Wetterwerte in der WX-Information gefunden")
-            self.weather_status_label.setText("Keine Hotspot-IP eingetragen")
+            self.weather_values_label.setText(ui_text("Keine Wetterwerte in der WX-Information gefunden"))
+            self.weather_status_label.setText(ui_text("Keine Hotspot-IP eingetragen"))
             return
         self._weather_fetch_in_progress = True
         self.weather_refresh_button.setEnabled(False)
-        self.weather_status_label.setText("WX-Information wird geladen …")
+        self.weather_status_label.setText(ui_text("WX-Information wird geladen …"))
         url = ip + "/"
 
         def worker():
@@ -1700,25 +2023,25 @@ class MainWindow(QMainWindow):
         self._weather_fetch_in_progress = False
         self.weather_refresh_button.setEnabled(True)
         if data.get("error"):
-            self.weather_values_label.setText("Keine Wetterwerte in der WX-Information gefunden")
+            self.weather_values_label.setText(ui_text("Keine Wetterwerte in der WX-Information gefunden"))
             self.weather_status_label.setText(str(data["error"]))
             return
         self.weather_data = data
         self.weather_values_label.setText(
-            f"Temperatur: {data.get('temperature', '–')} | "
-            f"Luftfeuchte: {data.get('humidity', '–')} | "
-            f"QFE: {data.get('qfe', '–')} | "
-            f"QNH: {data.get('qnh', '–')}"
+            f"{ui_text('Temperatur:')} {data.get('temperature', '–')} | "
+            f"{ui_text('Luftfeuchte:')} {data.get('humidity', '–')} | "
+            f"{ui_text('QFE:')} {data.get('qfe', '–')} | "
+            f"{ui_text('QNH:')} {data.get('qnh', '–')}"
         )
-        self.weather_status_label.setText("WX-Information erfolgreich aus dem MeshCom-WebService gelesen")
+        self.weather_status_label.setText(ui_text("WX-Information erfolgreich aus dem MeshCom-WebService gelesen"))
 
     def _send_weather(self):
         if not self.weather_data:
-            self.status.setText("Keine Wetterdaten vorhanden – zuerst Wetter aktualisieren")
+            self.status.setText(ui_text("Keine Wetterdaten vorhanden – zuerst Wetter aktualisieren"))
             return
         city = self.weather_city_input.text().strip()
         if not city:
-            self.status.setText("Bitte zuerst einen Stadtnamen eingeben")
+            self.status.setText(ui_text("Bitte zuerst einen Stadtnamen eingeben"))
             return
         text = (
             f"{city}: {self.weather_data.get('temperature', '–')} | "
@@ -1727,7 +2050,7 @@ class MainWindow(QMainWindow):
             f"QNH {self.weather_data.get('qnh', '–')}"
         )
         if len(text) > 149:
-            self.status.setText("Wettermeldung ist länger als 149 Zeichen")
+            self.status.setText(ui_text("Wettermeldung ist länger als 149 Zeichen"))
             return
         # Wetterdaten immer an das Ziel des aktuell geöffneten Chats senden.
         # Dadurch gehen sie nicht mehr grundsätzlich an "alle":
@@ -1751,87 +2074,123 @@ class MainWindow(QMainWindow):
             display_target = weather_target if weather_target else "alle"
             self.send_log.setText(f"Letzter Wetter-Sendeauftrag {timestamp}: → {display_target} | {text} | HTTP {method} 200")
             if weather_target:
-                self.status.setText(f"Wetterdaten an {weather_target} übertragen")
+                self.status.setText(ui_text(f"Wetterdaten an {weather_target} übertragen"))
             else:
-                self.status.setText("Wetterdaten ohne Raumangabe an den Hotspot übertragen")
+                self.status.setText(ui_text("Wetterdaten ohne Raumangabe an den Hotspot übertragen"))
             self._write_settings()
         except Exception as exc:
-            self.status.setText(f"Wetterdaten konnten nicht gesendet werden: {exc}")
+            self.status.setText(ui_text(f"Wetterdaten konnten nicht gesendet werden: {exc}"))
         finally:
             self.weather_send_button.setEnabled(True)
 
     # ---------- Hilfe / Info ----------
     def open_help(self):
-        """Show the built-in MeshCom-Guru user guide."""
+        """Show the built-in MeshCom-Guru user guide in the selected language."""
         dialog = QDialog(self)
-        dialog.setWindowTitle("MeshCom-Guru – Anleitung")
+        is_en = False
+        try:
+            from i18n import get_language
+            is_en = get_language() == "en"
+        except Exception:
+            pass
+        dialog.setWindowTitle("MeshCom-Guru – User guide" if is_en else "MeshCom-Guru – Anleitung")
         dialog.resize(800, 680)
         layout = QVBoxLayout(dialog)
-
         view = QTextBrowser(dialog)
         view.setOpenExternalLinks(True)
-        view.setHtml(f"""
-        <h2>MeshCom-Guru v{VERSION}</h2>
-        <h3>Kurzanleitung</h3>
 
-        <h3>Verbindung und Einstellungen</h3>
-        <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
-        <p><b>Raum / Ziel:</b> Eine Raumnummer (z. B. 262) oder ein Rufzeichen für eine private Nachricht eintragen.</p>
-        <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
-        <p><b>Einstellungen speichern:</b> Speichert die persönlichen Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
-        <p>Beim ersten Start werden nur neutrale Standardwerte aus <code>data/default_settings.ini</code> übernommen.</p>
-
-        <h3>Nachrichten und Räume</h3>
-        <p>Über den Nachrichtenfilter können bis zu <b>fünf Räume</b> ausgewählt werden. Mit <b>Aktualisieren</b> werden Nachrichten vom MeshCom-WebService abgerufen.</p>
-        <p>Mit <b>Senden</b> wird eine Nachricht an den eingetragenen Raum oder das private Ziel übertragen.</p>
-        <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Zähler zeigt die aktuelle Länge an.</p>
-        <p>Im Chat werden Nachrichten als Bubbles dargestellt. Eigene Nachrichten und empfangene Nachrichten werden unterschiedlich angeordnet.</p>
-        <p>Internetadressen mit <code>http://</code> oder <code>https://</code> können direkt angeklickt werden.</p>
-
-        <h3>Privat-Chat und Sendestatus</h3>
-        <p>Im Privat-Chat zeigt eine frisch gesendete Nachricht zunächst <b>⏳</b>. Ein reines Node-Echo gilt noch nicht als Zustellung.</p>
-        <p>Erst ein erkannter Empfänger-ACK kann den Status auf <b>✓✓</b> setzen.</p>
-
-        <h3>⚡ Schnelltexte</h3>
-        <p>Mit <b>⚡ Schnelltexte</b> können häufig verwendete Texte eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet den Text nicht automatisch.</p>
-
-        <h3>😊 Emojis</h3>
-        <p>Der Emoji-Picker fügt ein ausgewähltes Emoji an der Cursorposition ein. Das 149-Zeichen-Limit bleibt aktiv.</p>
-
-        <h3>📡 Monitor</h3>
-        <p>Der Monitor zeigt empfangene MeshCom-UDP-Pakete auf <b>Port 1799</b>. Verfügbare Filter: <b>ALLE, MSG, POS, TEL, ACK</b>.</p>
-        <p>Zusätzlich stehen Suche, Pause, Auto-Scroll und Leeren zur Verfügung. Die Detailansicht zeigt unter anderem Zeit, Typ, Von, Nach, RSSI und SNR.</p>
-
-        <h3>📋 MH – Most Recently Heard</h3>
-        <p>MH sammelt zuletzt gehörte Stationen aus dem empfangenen UDP-Datenstrom. Angezeigt werden unter anderem Rufzeichen, Entfernung, RSSI, SNR, Batterie und letzter Empfang.</p>
-        <p>Die Entfernung wird – sofern Koordinaten vorhanden sind – aus der eigenen Position und der Position der Station berechnet. Das eigene Rufzeichen wird nicht als fremde Station eingetragen.</p>
-
-        <h3>🗺 Karte und Positionsdaten</h3>
-        <p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt. Stationsdaten werden auch während des Kartenstarts zwischengespeichert.</p>
-
-        <h3>🌤 Wetterdaten</h3>
-        <p>Unter <b>Einstellungen → Wetterdaten</b> kann die WX-Anzeige aktiviert werden. Die WX-Information des verbundenen MeshCom-Nodes kann geladen und aktualisiert werden.</p>
-        <p>Angezeigt werden Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Die Funktion ist für Nodes mit geeigneter Wetterhardware wie BME280/BMP280 vorgesehen.</p>
-
-        <h3>🔊 Sound</h3>
-        <p>Unter <b>Einstellungen → Sound-Einstellungen</b> können Benachrichtigungston, Audiotreiber, Lautstärke und eine eigene WAV-Datei eingestellt werden.</p>
-
-        <h3>Theme</h3>
-        <p>Das Erscheinungsbild kann zwischen <b>Dunkel</b> und <b>Hell</b> umgeschaltet werden.</p>
-
-        <h3>Node Info</h3>
-        <p><b>Node Info aufrufen</b> öffnet die Node-Information des verbundenen MeshCom-WebService.</p>
-
-        <h3>Installation</h3>
-        <p><b>Linux ZIP:</b> Projektordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten.</p>
-        <p><b>Windows:</b> <code>run_windows.bat</code> starten.</p>
-        <p><b>Debian:</b> Das Paket installiert das Programm nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
-
-        <h3>Hilfe → Info</h3>
-        <p>Zeigt Versions- und Urheberinformationen.</p>
-        """)
+        if is_en:
+            guide = f"""
+            <h2>MeshCom-Guru v{VERSION}</h2>
+            <h3>Quick guide</h3>
+            <h3>Connection and settings</h3>
+            <p><b>Hotspot IP:</b> Enter the IP address of the MeshCom WebService.</p>
+            <p><b>Room / Target:</b> Enter a room number such as 262 or a callsign for a private message.</p>
+            <p><b>Own station / GPS:</b> Enter your own callsign and optionally latitude and longitude.</p>
+            <p><b>Save settings:</b> Stores personal settings in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Language</h3>
+            <p>Use <b>Settings → Language / Sprache …</b> to switch between German and English. The selection is stored and restored after restart.</p>
+            <h3>Messages and rooms</h3>
+            <p>The message filter supports up to <b>five rooms</b>. <b>Refresh</b> retrieves messages from the MeshCom WebService. <b>Send</b> transmits a message to the selected room or private target.</p>
+            <p>Messages are limited to <b>149 characters</b>. The live counter shows the current length.</p>
+            <p>Normal room chats use message bubbles. The <b>All</b> tab keeps its separate display.</p>
+            <p><b>Bubble position:</b> The first and last visible messages are aligned from the bottom of the chat area. With only one or a few messages, the bubbles start at the bottom. When the chat contains more messages than fit on screen, normal scrolling is used; manual scrolling is not overridden by new messages.</p>
+            <h3>Chat colors</h3>
+            <p>Under <b>Settings → Chat colors …</b> you can choose a shared background for all chat views. The text color is applied only to <b>All</b>. Normal room bubbles keep their existing text colors.</p>
+            <p><b>Restore defaults</b> sets the chat colors to black background and white text.</p>
+            <h3>Input-field context menu</h3>
+            <p>Right-click an input field to use standard commands such as Undo, Redo, Cut, Copy, Paste, Delete and Select All. These commands follow the selected interface language.</p>
+            <h3>Private chat and delivery status</h3>
+            <p>A freshly sent private message first shows <b>⏳</b>. Only a recognized recipient ACK changes the status to <b>✓✓</b>.</p>
+            <h3>⚡ Quick texts</h3>
+            <p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically.</p>
+            <h3>😊 Emojis</h3>
+            <p>The emoji picker inserts the selected emoji at the cursor position. The 149-character limit remains active.</p>
+            <h3>📡 Monitor</h3>
+            <p>The Monitor displays received MeshCom UDP packets on <b>port 1799</b>. Filters include <b>ALL, MSG, POS, TEL, ACK</b>, plus search, pause, auto-scroll and clear.</p>
+            <h3>📋 MH – Most Recently Heard</h3>
+            <p>MH lists recently heard stations with callsign, distance, RSSI, SNR, battery and last heard time where available.</p>
+            <h3>🗺 Map and position data</h3>
+            <p>Position data is processed through UDP 1799 and displayed on the OSM/Leaflet map.</p>
+            <h3>🌤 Weather data</h3>
+            <p>The WX display shows temperature, humidity, QFE and QNH when supplied by the WebService. It is intended for suitable weather hardware such as BME280/BMP280.</p>
+            <h3>🔊 Sound and theme</h3>
+            <p>Sound notifications and the light/dark theme can be configured in the settings.</p>
+            <h3>Node Info</h3>
+            <p><b>Open Node Info</b> opens the information of the connected MeshCom WebService.</p>
+            <h3>Installation</h3>
+            <p><b>Linux ZIP:</b> Extract the <code>MeshCom</code> folder and run <code>./run_linux.sh</code>.</p>
+            <p><b>Windows:</b> Run <code>run_windows.bat</code>.</p>
+            <p><b>Debian:</b> The package installs to <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Help → About</h3><p>Shows version and program information.</p>
+            """
+        else:
+            guide = f"""
+            <h2>MeshCom-Guru v{VERSION}</h2>
+            <h3>Kurzanleitung</h3>
+            <h3>Verbindung und Einstellungen</h3>
+            <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
+            <p><b>Raum / Ziel:</b> Eine Raumnummer wie 262 oder ein Rufzeichen für eine private Nachricht eintragen.</p>
+            <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
+            <p><b>Einstellungen speichern:</b> Speichert die persönlichen Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Sprache</h3>
+            <p>Unter <b>Einstellungen → Sprache / Language …</b> kann zwischen Deutsch und English gewechselt werden. Die Auswahl wird gespeichert und nach dem Neustart wieder geladen.</p>
+            <h3>Nachrichten und Räume</h3>
+            <p>Der Nachrichtenfilter unterstützt bis zu <b>fünf Räume</b>. Mit <b>Aktualisieren</b> werden Nachrichten vom MeshCom-WebService abgerufen. Mit <b>Senden</b> wird eine Nachricht an den ausgewählten Raum oder das private Ziel übertragen.</p>
+            <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Live-Zähler zeigt die aktuelle Länge.</p>
+            <p>Normale Raum-Chats verwenden Nachrichten-Bubbles. Der Tab <b>Alle</b> behält seine eigene Darstellung.</p>
+            <p><b>Position der Bubbles:</b> Die erste bzw. letzte sichtbare Nachricht wird am unteren Rand des Chatbereichs ausgerichtet. Bei nur einer oder wenigen Nachrichten beginnen die Bubbles unten. Sind mehr Nachrichten vorhanden als in den sichtbaren Bereich passen, steht normales Scrollen zur Verfügung; beim manuellen Hochscrollen wird die Position nicht durch neue Nachrichten überschrieben.</p>
+            <h3>Chat-Farben</h3>
+            <p>Unter <b>Einstellungen → Chat-Farben …</b> kann ein gemeinsamer Hintergrund für alle Chat-Ansichten gewählt werden. Die Schriftfarbe gilt nur für <b>Alle</b>. Die normalen Raum-Bubbles behalten ihre bisherigen Textfarben.</p>
+            <p><b>Standard wiederherstellen</b> setzt die Chat-Farben auf schwarzen Hintergrund und weiße Schrift zurück.</p>
+            <h3>Kontextmenü in Eingabefeldern</h3>
+            <p>Mit der rechten Maustaste können in Eingabefeldern Standardbefehle wie Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen verwendet werden. Die Begriffe folgen der gewählten Sprache.</p>
+            <h3>Privat-Chat und Sendestatus</h3>
+            <p>Eine frisch gesendete private Nachricht zeigt zunächst <b>⏳</b>. Erst ein erkannter Empfänger-ACK setzt den Status auf <b>✓✓</b>.</p>
+            <h3>⚡ Schnelltexte</h3>
+            <p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet den Text nicht automatisch.</p>
+            <h3>😊 Emojis</h3>
+            <p>Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein. Das 149-Zeichen-Limit bleibt aktiv.</p>
+            <h3>📡 Monitor</h3>
+            <p>Der Monitor zeigt empfangene MeshCom-UDP-Pakete auf <b>Port 1799</b>. Filter: <b>ALLE, MSG, POS, TEL, ACK</b>, zusätzlich Suche, Pause, Auto-Scroll und Leeren.</p>
+            <h3>📋 MH – Most Recently Heard</h3>
+            <p>MH zeigt zuletzt gehörte Stationen mit Rufzeichen, Entfernung, RSSI, SNR, Batterie und letzter Empfangszeit, sofern vorhanden.</p>
+            <h3>🗺 Karte und Positionsdaten</h3>
+            <p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt.</p>
+            <h3>🌤 Wetterdaten</h3>
+            <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Vorgesehen ist die Funktion für geeignete Wetterhardware wie BME280/BMP280.</p>
+            <h3>🔊 Sound und Theme</h3>
+            <p>Benachrichtigungston und Hell-/Dunkel-Theme können in den Einstellungen konfiguriert werden.</p>
+            <h3>Node Info</h3>
+            <p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
+            <h3>Installation</h3>
+            <p><b>Linux ZIP:</b> Den Projektordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten.</p>
+            <p><b>Windows:</b> <code>run_windows.bat</code> starten.</p>
+            <p><b>Debian:</b> Das Paket installiert nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Hilfe → Info</h3><p>Zeigt Versions- und Programminformationen.</p>
+            """
+        view.setHtml(guide)
         layout.addWidget(view, 1)
-
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(dialog.reject)
         buttons.accepted.connect(dialog.accept)
@@ -1857,6 +2216,7 @@ class MainWindow(QMainWindow):
         close_btn = QPushButton("OK")
         close_btn.clicked.connect(dialog.accept)
         layout.addWidget(close_btn)
+        self._apply_language_ui()
         dialog.exec()
 
     # ---------- Node Information ----------
@@ -1877,9 +2237,9 @@ class MainWindow(QMainWindow):
             try:
                 from PySide6.QtGui import QDesktopServices
                 QDesktopServices.openUrl(QUrl(url))
-                self.status.setText("Node Information im Standard-Browser geöffnet")
+                self.status.setText(ui_text("Node Information im Standard-Browser geöffnet"))
             except Exception as exc:
-                self.status.setText(f"Node Info konnte nicht geöffnet werden: {exc}")
+                self.status.setText(ui_text(f"Node Info konnte nicht geöffnet werden: {exc}"))
             return
 
         dialog = QDialog(self)
@@ -1907,6 +2267,7 @@ class MainWindow(QMainWindow):
                 "Node Information geladen" if ok else "Node Information konnte nicht geladen werden"
             )
         )
+        self._apply_language_ui()
         dialog.exec()
 
     # ---------- Sound ----------
@@ -2043,6 +2404,7 @@ class MainWindow(QMainWindow):
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
 
+        self._apply_language_ui()
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.sound_enabled = enabled.isChecked()
             self.sound_driver = str(driver.currentData() or "auto")
@@ -2050,7 +2412,7 @@ class MainWindow(QMainWindow):
             self.sound_file = file_input.text().strip()
             self._prepare_sound()
             self._write_settings()
-            self.status.setText("Sound-Einstellungen gespeichert")
+            self.status.setText(ui_text("Sound-Einstellungen gespeichert"))
 
     @staticmethod
     def _choose_sound_file(target):
@@ -2102,11 +2464,22 @@ class MainWindow(QMainWindow):
                 self.tab_hashes.pop(key, None)
                 self.unread.discard(key)
 
+        # These room tabs are created after the main UI is built (while the
+        # saved filter settings are loaded). Apply the selected language here
+        # too, so they do not remain with their German source labels.
+        self._apply_language_ui()
+
     def _ensure_tab(self, key, title=None):
         if key in self.tab_keys:
             return self.tab_keys[key]
         view = ChatView()
+        view.set_chat_colors(self.chat_background, self.chat_text_color)
         view._mesh_key = key
+        # Keep a direct registry of every chat view.  This is intentionally
+        # independent of the current tab index, so every room is updated
+        # immediately when the common background color changes.
+        if view not in self._all_chat_views:
+            self._all_chat_views.append(view)
         view.callsignClicked.connect(self.open_private_chat)
         index = self.tabs.addTab(view, title or key[1])
         self.tab_keys[key] = index
@@ -2134,7 +2507,7 @@ class MainWindow(QMainWindow):
         self.unread.discard(key)
         self.closed_private[key[1].upper()] = closed_hash
         self._reindex_tabs()
-        self.status.setText(f"Privatchat geschlossen: {key[1]}")
+        self.status.setText(ui_text(f"Privatchat geschlossen: {key[1]}"))
 
     def _reindex_tabs(self):
         self.tab_keys = {}
@@ -2193,7 +2566,7 @@ class MainWindow(QMainWindow):
         index = self._ensure_tab(key, callsign)
         self.tabs.setCurrentIndex(index)
         self.target_input.setText(callsign)
-        self.status.setText(f"Privatchat geöffnet: {callsign}")
+        self.status.setText(ui_text(f"Privatchat geöffnet: {callsign}"))
 
     @staticmethod
     def _normalize_callsign(value):
@@ -2629,7 +3002,15 @@ class MainWindow(QMainWindow):
                         ack_html = f' <span title="Sendestatus" style="font-weight:700;">{symbol}</span>'
                     break
             rendered.append(content + ack_html)
-        return "<html><body>" + "\n".join(rendered) + "</body></html>"
+        return (
+            "<html><body style='background:"
+            + str(getattr(self, "chat_background", "#101722"))
+            + ";color:"
+            + str(getattr(self, "chat_text_color", "#e7edf5"))
+            + ";font-family:sans-serif;margin:0;padding:6px 4px;'>"
+            + "\n".join(rendered)
+            + "</body></html>"
+        )
 
     def _room_blocks(self, blocks, room):
         return [b for b in blocks if self._room_from_block(b) == str(room)]
@@ -3182,11 +3563,11 @@ renderStations(initialStations);</script></body></html>"""
 
             if self.filter_enabled.isChecked():
                 rooms = self._rooms()
-                self.status.setText("Nachrichten aktualisiert – Filter: " + (", ".join(rooms) if rooms else "keine Räume"))
+                self.status.setText(ui_text("Nachrichten aktualisiert – Filter: " + (", ".join(rooms) if rooms else "keine Räume")))
             else:
-                self.status.setText("Nachrichten aktualisiert – alle Räume")
+                self.status.setText(ui_text("Nachrichten aktualisiert – alle Räume"))
         except Exception as exc:
-            self.status.setText(f"Abruf fehlgeschlagen: {exc}")
+            self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
         finally:
             self.refresh_in_progress = False
 
@@ -3223,15 +3604,27 @@ renderStations(initialStations);</script></body></html>"""
                 continue
 
             # Sender / destination.  Prefer explicit dashboard labels.
-            vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
-            sender = vm.group(1).strip() if vm else ""
-            tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
-            target = tm.group(1).strip() if tm else ""
+            room_header = re.search(
+                r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?"
+                r"(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)*)"
+                r"\s*>\s*(?P<right>\d{1,8})\b", plain, re.IGNORECASE)
+            sender = ""
+            target = ""
+            if room_header:
+                left_calls = CALLSIGN_RE.findall(room_header.group("left"))
+                if left_calls:
+                    sender = cls._normalize_callsign(left_calls[0]) or left_calls[0]
+                target = room_header.group("right")
+            else:
+                vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
+                sender = vm.group(1).strip() if vm else ""
+                tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
+                target = tm.group(1).strip() if tm else ""
 
-            if not sender or not re.search(r"[A-Z]{1,3}[0-9]", sender, re.IGNORECASE):
-                participants = cls._private_participants(block)
-                if participants:
-                    sender, target = participants[0], participants[1]
+                if not sender or not re.search(r"[A-Z]{1,3}[0-9]", sender, re.IGNORECASE):
+                    participants = cls._private_participants(block)
+                    if participants:
+                        sender, target = participants[0], participants[1]
 
             # If the dashboard omits the labels, recover a normal CALL>target header.
             if not sender:
@@ -3391,14 +3784,40 @@ renderStations(initialStations);</script></body></html>"""
                 plain = self._normalized_plain(block)
                 if not plain:
                     continue
-                vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
-                sender = vm.group(1).strip() if vm else ""
-                tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
-                target = tm.group(1).strip() if tm else ""
-                if not sender:
-                    parts = self._private_participants(block)
-                    if parts:
-                        sender, target = parts[0], parts[1]
+                # For room traffic the transport header is authoritative:
+                # CALL1,CALL2>ROOM means CALL1 is the original sender.  Some
+                # WebService layouts also expose a derived "Von:" field which
+                # may contain the local/forwarding node instead.  Prefer the
+                # transport header so a received message is never shown as
+                # our own just because a relay node appears in "Von:".
+                room_header = re.search(
+                    r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?"
+                    r"(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)*)"
+                    r"\s*>\s*(?P<right>\d{1,8})\b", plain, re.IGNORECASE)
+                sender = ""
+                target = ""
+                # Private messages use the explicit direct-message transport
+                # header as the authoritative source.  The FIRST callsign is
+                # always the original sender; a relay/forwarding callsign must
+                # never make a received private message look like our own.
+                if key[0] == "private":
+                    private_parts = self._private_participants(block)
+                    if private_parts:
+                        sender, target = private_parts[0], private_parts[1]
+                if not sender and room_header:
+                    left_calls = CALLSIGN_RE.findall(room_header.group("left"))
+                    if left_calls:
+                        sender = self._normalize_callsign(left_calls[0]) or left_calls[0]
+                    target = room_header.group("right")
+                else:
+                    vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
+                    sender = vm.group(1).strip() if vm else ""
+                    tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
+                    target = tm.group(1).strip() if tm else ""
+                    if not sender:
+                        parts = self._private_participants(block)
+                        if parts:
+                            sender, target = parts[0], parts[1]
 
                 # Room messages returned by some MeshCom dashboards do not
                 # contain the explicit "Von:/Nach:" labels used by private
@@ -3506,10 +3925,10 @@ renderStations(initialStations);</script></body></html>"""
         text = self.message_input.text().strip()
         target = self.target_input.text().strip()
         if not text:
-            self.status.setText("Keine Nachricht eingegeben")
+            self.status.setText(ui_text("Keine Nachricht eingegeben"))
             return
         if len(text) > 149:
-            self.status.setText("Nachricht darf maximal 149 Zeichen lang sein")
+            self.status.setText(ui_text("Nachricht darf maximal 149 Zeichen lang sein"))
             return
 
         self.send_button.setEnabled(False)
@@ -3541,7 +3960,7 @@ renderStations(initialStations);</script></body></html>"""
             # ein zweites Mal auftauchen.
 
             self.send_log.setText(f"Letzter Sendeauftrag {timestamp}: → {target} | {text} | HTTP {method} 200")
-            self.status.setText("Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung")
+            self.status.setText(ui_text("Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung"))
             self.message_input.clear()
 
             # Bei leerem Ziel bleibt der Tab „Alle“ aktiv.
@@ -3563,12 +3982,21 @@ renderStations(initialStations);</script></body></html>"""
                 self.tabs.setCurrentIndex(idx)
                 QTimer.singleShot(1500, self.update_messages)
         except Exception as exc:
-            self.status.setText(f"Senden fehlgeschlagen: {exc}")
-            self.send_log.setText("Letzter Sendeauftrag: FEHLER – " + str(exc))
+            self.status.setText(ui_text(f"Senden fehlgeschlagen: {exc}"))
+            self.send_log.setText(ui_text("Letzter Sendeauftrag: FEHLER – ") + str(exc))
         finally:
             self.send_button.setEnabled(True)
 
     def closeEvent(self, event):
+        # Stop the UDP listener before Qt tears down the window/application.
+        # Keeping this shutdown path in one closeEvent avoids a second method
+        # silently overriding the cleanup logic.
+        self.udp_stop.set()
+        if self.udp_socket is not None:
+            try:
+                self.udp_socket.close()
+            except Exception:
+                pass
         try:
             self._write_settings()
         finally:

@@ -31,6 +31,7 @@ def load_settings():
         "sound_driver": "auto",
         "sound_volume": "70",
         "sound_file": "",
+        "language": "de",
     }
     for key, value in defaults.items():
         if key not in section:

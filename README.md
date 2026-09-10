@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.62**
+**Version 0.3.63**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![Chess_Pionier](meshcom-guru.png)
-
-![Chess_Pionier](meshcom-guru1.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,7 +23,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.62
+## Aktueller Funktionsumfang v0.3.63
 
 - Raum-Chats, Privat-Chats und Tab „Alle“
 - Einheitliche Chat-Bubbles in normalen Raum-Tabs
@@ -44,9 +38,33 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Sound-Einstellungen und Hell-/Dunkel-Theme
 - Raumfilter für bis zu fünf Räume
 - persönliche Einstellungen unter `~/.MeshCom/settings.ini`
+- **Deutsch / English:** umschaltbare Benutzeroberfläche mit gespeicherter Spracheinstellung
+- **Chat-Farben:** gemeinsamer Chat-Hintergrund für alle Chat-Ansichten; separate Schriftfarbe für „Alle“
+- Standard für Chat-Farben: **schwarzer Hintergrund / weiße Schrift**
+- Übersetztes Qt-Kontextmenü für Eingabefelder (Kopieren, Einfügen, Ausschneiden, Löschen usw.)
+- Stabileres Beenden mit sauberem UDP-Shutdown
+- Chat-Bubbles werden bei einer oder wenigen Nachrichten am unteren Rand des Chatbereichs ausgerichtet; bei längeren Chats bleibt normales Scrollen erhalten
+- Beim manuellen Hochscrollen wird die gewählte Position nicht durch neue Nachrichten überschrieben
+- Sendererkennung in Raum- und Privat-Chats berücksichtigt den ursprünglichen Absender auch bei weitergeleiteten Nachrichten
 
 ---
 
+
+# Sprache / Language
+
+Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch** und **English** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
+
+Die Benutzeroberfläche wird übersetzt; empfangene Nachrichten, Rufzeichen, Raum- und Zielnummern sowie persönliche Inhalte bleiben unverändert. Die integrierte **Hilfe → Anleitung** folgt der gewählten Sprache.
+
+# Chat-Farben
+
+Unter **Einstellungen → Chat-Farben …** können die Chat-Farben angepasst werden. Die Hintergrundfarbe gilt gemeinsam für alle Raum- und Chat-Ansichten. Die Schriftfarbe wird nur für den Tab **Alle** verwendet; die normalen Chat-Bubbles behalten ihre bestehende Farb- und Textdarstellung.
+
+Mit **Standard wiederherstellen** werden die Chat-Farben auf **schwarz / weiß** zurückgesetzt.
+
+# Kontextmenü in Eingabefeldern
+
+Ein Rechtsklick in ein Eingabefeld öffnet das Qt-Kontextmenü. Die Standardbefehle wie Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen werden entsprechend der gewählten Sprache angezeigt.
 
 # Wetterdaten – BME280/BMP280
 
@@ -420,5 +438,3 @@ Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

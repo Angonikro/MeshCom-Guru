@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v0.3.63 – Sprache, Chat-Farben, Kontextmenü und Stabilität
+
+- Projektversion auf **0.3.63** erhöht.
+- Vollständige sichtbare Deutsch-/English-Umschaltung für die aktuelle Benutzeroberfläche ergänzt und dokumentiert.
+- Spracheinstellung wird in `~/.MeshCom/settings.ini` gespeichert und beim Neustart wieder geladen.
+- Dynamische Raum-Tabs werden korrekt als **All / Room …** bzw. **Alle / Raum …** angezeigt.
+- Wetteranzeige einschließlich Temperatur, Luftfeuchte, QFE und QNH an die gewählte Sprache angepasst.
+- Fehler bei wiederholtem Umschalten der Temperaturbezeichnung (`Temperatureee…`) behoben.
+- Qt-Kontextmenü der Eingabefelder für Deutsch und English berücksichtigt.
+- Chat-Farben dokumentiert: gemeinsamer Hintergrund für alle Chat-Ansichten, Schriftfarbe nur für „Alle“, Standard schwarz/weiß.
+- Integrierte **Hilfe → Anleitung** auf den Funktionsstand v0.3.63 aktualisiert.
+- Neue PDF-Benutzeranleitung `docs/MeshCom-Guru_Anleitung_v0.3.63.pdf` erstellt.
+- Beenden stabilisiert: UDP-Listener wird sauber heruntergefahren und konkurrierende `closeEvent()`-Definitionen bereinigt.
+- Sendererkennung für **Raum- und Privatnachrichten** korrigiert: Bei weitergeleiteten Nachrichten wird der ursprüngliche Absender verwendet; ein Relay-/Weiterleitungs-Rufzeichen wird nicht fälschlich als eigener Sender dargestellt.
+- Chat-Bubbles bei einer oder wenigen Nachrichten am **unteren Rand** des Chatbereichs ausgerichtet.
+- Bei längeren Chats bleibt das normale Scrollverhalten erhalten; manuelles Hochscrollen wird nicht durch neue Nachrichten zurückgesetzt.
+- Bubble-Layout und Scrollbereich gezielt stabilisiert, ohne Wetter-, Karten-, Nachrichten- oder Senderlogik unnötig zu verändern.
+- Die bekannten Qt-/Vulkan-/AT-SPI-Hinweise beim Start sind keine Programmfunktionen und wurden nicht künstlich unterdrückt.
+- Bestehende Chat-, Privat-, Alle-, Karten-, Monitor-, MH- und Wetterfunktionen bleiben erhalten.
+
+
 ## v0.3.62 – Dokumentation, Anleitung und Release-Stand aktualisiert
 
 - Projektversion auf **0.3.62** erhöht.
