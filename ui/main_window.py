@@ -182,51 +182,6 @@ class BubbleWidget(QWidget):
 class ChatView(QScrollArea):
     callsignClicked = Signal(str)
 
-    def set_chat_colors(self, background, text):
-        """Apply the common background everywhere; text color is only for 'Alle'."""
-        self.chat_background = self._normalize_color(background)
-        self.chat_text_color = self._normalize_color(text)
-        is_all = getattr(self, "_mesh_key", (None, None)) == ("all", "all")
-
-        self.setStyleSheet(
-            f"QScrollArea {{ background: {self.chat_background}; border: none; }} "
-            "QScrollBar:vertical { width: 12px; }"
-        )
-        if is_all:
-            self._html_view.setStyleSheet(
-                f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
-            )
-        else:
-            # Keep the existing room/private bubble typography completely intact.
-            self._html_view.setStyleSheet(
-                f"QTextBrowser {{ background: {self.chat_background}; border: none; }}"
-            )
-        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
-
-        if is_all:
-            for bubble in getattr(self, "_bubble_rows", []):
-                try:
-                    bubble.label.setStyleSheet(
-                        f"background: transparent; color: {self.chat_text_color}; border: none;"
-                    )
-                except Exception:
-                    pass
-
-        if not self._bubble_mode and is_all:
-            current = self._html_view.toHtml()
-            if current:
-                current = re.sub(
-                    r"background\s*:\s*#[0-9a-fA-F]{6}",
-                    f"background:{self.chat_background}", current, count=1
-                )
-                current = re.sub(
-                    r"color\s*:\s*#[0-9a-fA-F]{6}",
-                    f"color:{self.chat_text_color}", current
-                )
-                self._html_view.setHtml(current)
-        self.viewport().update()
-        self.update()
-
     @staticmethod
     def _normalize_color(value):
         color = QColor(str(value or "#101722").strip())
@@ -236,25 +191,58 @@ class ChatView(QScrollArea):
         super().__init__(parent)
         self.chat_background = "#101722"
         self.chat_text_color = "#e6edf3"
+        self._bubble_mode = False
+        self._all_mode = False
+        self._bubble_rows = []
+
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setStyleSheet(f"QScrollArea {{ background: {self.chat_background}; border: none; }} QScrollBar:vertical {{ width: 12px; }}")
+        self._apply_scroll_style()
+
+        # Normal room/private HTML view (kept for compatibility).
         self._html_view = QTextBrowser()
         self._html_view.setReadOnly(True)
         self._html_view.setOpenLinks(False)
         self._html_view.setOpenExternalLinks(False)
         self._html_view.anchorClicked.connect(self._anchor_clicked)
-        self._html_view.setStyleSheet(f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}")
+        self._html_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._html_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._apply_html_style()
+
         self._bubble_container = QWidget()
         self._bubble_layout = QVBoxLayout(self._bubble_container)
         self._bubble_layout.setContentsMargins(10, 8, 10, 8)
         self._bubble_layout.setSpacing(8)
-        self._bubble_layout.addStretch(1)
-        self._bubble_mode = False
-        self._bubble_rows = []
         self.setWidget(self._html_view)
+
+    def _apply_scroll_style(self):
+        self.setStyleSheet(
+            f"QScrollArea {{ background: {self.chat_background}; border: none; }} "
+            "QScrollBar:vertical { width: 12px; }"
+        )
+        self.viewport().setStyleSheet(f"background: {self.chat_background};")
+
+    def _apply_html_style(self):
+        self._html_view.setStyleSheet(
+            f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
+        )
+
+    def set_chat_colors(self, background, text):
+        """Apply chat colors without changing the actual message layout."""
+        self.chat_background = self._normalize_color(background)
+        self.chat_text_color = self._normalize_color(text)
+        self._apply_scroll_style()
+        self._apply_html_style()
+        if hasattr(self, "_bubble_container"):
+            self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
+        for browser in getattr(self, "_all_message_views", []):
+            browser.setStyleSheet(
+                f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
+            )
+        self.viewport().update()
+        self.update()
 
     def _anchor_clicked(self, url):
         value = url.toString().strip()
@@ -267,68 +255,128 @@ class ChatView(QScrollArea):
         self._anchor_clicked(QUrl(str(url)))
 
     def set_chat_background(self, color):
-        """Apply the common chat background immediately to this view."""
-        self.chat_background = str(color or "#101722")
-        self.setStyleSheet(f"QScrollArea {{ background: {self.chat_background}; border: none; }} QScrollBar:vertical {{ width: 12px; }}")
-        self._html_view.setStyleSheet(f"QTextBrowser {{ background: {self.chat_background}; border: none; }}")
-        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
-        # Re-render current HTML with the new body background immediately.
-        if not self._bubble_mode:
-            current = self._html_view.toHtml()
-            if current:
-                current = re.sub(r"background\s*:\s*#[0-9a-fA-F]{6}", f"background:{self.chat_background}", current, count=1)
-                self._html_view.setHtml(current)
+        self.chat_background = self._normalize_color(color)
+        self._apply_scroll_style()
+        self._apply_html_style()
+        if hasattr(self, "_bubble_container"):
+            self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
+        for browser in getattr(self, "_all_message_views", []):
+            browser.setStyleSheet(
+                f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
+            )
         self.viewport().update()
         self.update()
 
+    def set_all_html(self, html_text):
+        """Display the complete 'Alle' document bottom-anchored with normal scrolling.
+
+        The important point is that the QTextBrowser itself is NOT the scroll
+        container here.  It is rendered at its real document height inside an
+        outer QScrollArea.  A layout stretch puts short histories at the bottom;
+        once the history is taller than the viewport, the outer scrollbar behaves
+        like a normal chat scrollbar.
+        """
+        old_bar = self.verticalScrollBar()
+        old_value = old_bar.value()
+        old_max = old_bar.maximum()
+        was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
+
+        self._all_mode = True
+        self._bubble_mode = False
+        self._all_message_views = []
+
+        container = QWidget()
+        container.setStyleSheet(f"background: {self.chat_background};")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(0)
+
+        # A single document keeps the existing 'Alle' rendering 1:1.
+        browser = QTextBrowser()
+        browser.setReadOnly(True)
+        browser.setOpenLinks(False)
+        browser.setOpenExternalLinks(False)
+        browser.anchorClicked.connect(self._anchor_clicked)
+        browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        browser.setStyleSheet(
+            f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; padding: 0; }}"
+        )
+        browser.setHtml(str(html_text))
+        self._all_message_views.append(browser)
+        layout.addStretch(1)
+        layout.addWidget(browser, 0)
+        self.setWidget(container)
+        self._all_container = container
+        self._all_layout = layout
+
+        def finalize():
+            if not self._all_mode or self.widget() is not container:
+                return
+            width = max(100, self.viewport().width() - 20)
+            browser.setFixedWidth(width)
+            doc = browser.document()
+            doc.setTextWidth(max(80, width - 4))
+            doc.adjustSize()
+            # QTextDocument height is in pixels after the width is fixed.
+            h = max(24, int(doc.size().height()) + 6)
+            browser.setFixedHeight(h)
+            layout.activate()
+            # Ensure the outer content is at least the viewport height. The
+            # stretch then moves even ONE message to the bottom.
+            container.setMinimumHeight(max(self.viewport().height(), h + 16))
+            container.updateGeometry()
+            layout.activate()
+            new_bar = self.verticalScrollBar()
+            if was_at_bottom:
+                new_bar.setValue(new_bar.maximum())
+            else:
+                new_bar.setValue(min(old_value, new_bar.maximum()))
+
+        QTimer.singleShot(0, finalize)
+        QTimer.singleShot(50, finalize)
+
     def setHtml(self, html_text, *args):
-        # Do not force the user back to the bottom on every 5-second refresh.
-        # If the user has scrolled up, keep that position.  Only follow the
-        # newest message when the view was already at the bottom (or is empty).
-        # In HTML mode the QTextBrowser owns the real scrollbar.  The
-        # surrounding QScrollArea normally has no scroll range, so reading
-        # its scrollbar here would make every refresh look like "at bottom".
+        # Normal HTML mode for compatibility with non-'Alle' views.
+        self._all_mode = False
+        self._bubble_mode = False
         bar = self._html_view.verticalScrollBar()
         old_value = bar.value()
         old_max = bar.maximum()
         was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
-        self._bubble_mode = False
+        self._apply_html_style()
+        self._html_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setWidget(self._html_view)
-        html_text = re.sub(r"background\s*:\s*#[0-9a-fA-F]{6}", f"background:{self.chat_background}", str(html_text), count=1)
-        self._html_view.setHtml(html_text)
-        def restore_html_scroll():
+        self._html_view.setHtml(str(html_text))
+
+        def restore():
             new_bar = self._html_view.verticalScrollBar()
             if was_at_bottom:
                 new_bar.setValue(new_bar.maximum())
             else:
                 new_bar.setValue(min(old_value, new_bar.maximum()))
-        QTimer.singleShot(0, restore_html_scroll)
+        QTimer.singleShot(0, restore)
 
     def set_bubbles(self, items):
-        # Preserve the user's scroll position.  Automatic refreshes must not
-        # jump back to the newest message when the user is reading older ones.
+        self._all_mode = False
         old_bar = self.verticalScrollBar()
         old_value = old_bar.value()
         old_max = old_bar.maximum()
         was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
         self._bubble_mode = True
-        # Remove previous bubble widgets completely. There is exactly one
-        # widget per semantic message, so refreshes cannot create duplicates.
-        old = self._bubble_container
         self._bubble_container = QWidget()
         self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
         self._bubble_layout = QVBoxLayout(self._bubble_container)
         self._bubble_layout.setContentsMargins(10, 8, 10, 8)
         self._bubble_layout.setSpacing(8)
-        # Keep the message stack at the bottom when it is shorter than the viewport.
-        # No stretch item is used: this avoids shifting/scrolling the bubble stack.
         self._bubble_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
         self.setWidget(self._bubble_container)
         self._bubble_rows = []
 
         if not items:
             empty = QLabel("Keine Nachrichten.")
-            empty.setStyleSheet("color:#aeb9c7; padding:18px;")
+            empty.setStyleSheet(f"color:{self.chat_text_color}; padding:18px;")
             self._bubble_layout.addWidget(empty, 0, Qt.AlignmentFlag.AlignLeft)
         else:
             width = max(260, int(self.viewport().width() * 0.75))
@@ -346,21 +394,16 @@ class ChatView(QScrollArea):
                     row.addStretch(1)
                 self._bubble_layout.addLayout(row)
                 self._bubble_rows.append(bubble)
-        self._bubble_container.adjustSize()
-        self._bubble_container.updateGeometry()
         self._update_bubble_container_height()
-        # The layout/scroll range is only final after the event loop has
-        # activated the new child widgets.  Scroll once more afterwards so
-        # the newest message is fully visible instead of being clipped.
-        QTimer.singleShot(0, self._update_bubble_container_height)
-        def restore_bubble_scroll():
+
+        def restore():
             new_bar = self.verticalScrollBar()
             if was_at_bottom:
                 new_bar.setValue(new_bar.maximum())
             else:
                 new_bar.setValue(min(old_value, new_bar.maximum()))
-        QTimer.singleShot(0, restore_bubble_scroll)
-        QTimer.singleShot(50, restore_bubble_scroll)
+        QTimer.singleShot(0, restore)
+        QTimer.singleShot(50, restore)
 
     def _update_bubble_container_height(self):
         if not self._bubble_mode:
@@ -373,16 +416,31 @@ class ChatView(QScrollArea):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if self._all_mode and hasattr(self, "_all_container"):
+            QTimer.singleShot(0, self._refresh_all_geometry)
         if self._bubble_mode:
             width = max(260, int(self.viewport().width() * 0.75))
             for bubble in self._bubble_rows:
                 bubble.set_content(bubble.label.text(), width)
             self._update_bubble_container_height()
-            QTimer.singleShot(0, self._update_bubble_container_height)
+
+    def _refresh_all_geometry(self):
+        if not self._all_mode or not getattr(self, "_all_message_views", None):
+            return
+        browser = self._all_message_views[0]
+        if self.widget() is not self._all_container:
+            return
+        width = max(100, self.viewport().width() - 20)
+        browser.setFixedWidth(width)
+        doc = browser.document()
+        doc.setTextWidth(max(80, width - 4))
+        doc.adjustSize()
+        browser.setFixedHeight(max(24, int(doc.size().height()) + 6))
+        self._all_container.setMinimumHeight(max(self.viewport().height(), browser.height() + 16))
+        self._all_layout.activate()
 
     def scroll_to_bottom(self):
-        bar = self.verticalScrollBar()
-        bar.setValue(bar.maximum())
+        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 
 class MainWindow(QMainWindow):
@@ -3896,7 +3954,10 @@ renderStations(initialStations);</script></body></html>"""
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
             changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
             self.tab_hashes[key] = digest
-            view.setHtml(rendered)
+            if key[0] == "all":
+                view.set_all_html(rendered)
+            else:
+                view.setHtml(rendered)
         # ChatView keeps the current scroll position during refreshes and only
         # follows the newest message when the user was already at the bottom.
         if changed and self.tabs.currentIndex() != index:

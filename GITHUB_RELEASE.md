@@ -1,9 +1,9 @@
-# MeshCom-Guru v0.3.63
+# MeshCom-Guru v0.3.64
 
-## Release v0.3.63
+## Release v0.3.64
 
-v0.3.63 ist der aktuelle stabile Release-Stand von MeshCom-Guru. Der Schwerpunkt dieser Version liegt auf der vollständigen Deutsch-/English-Benutzeroberfläche, den Chat-Farben, dem übersetzten Eingabefeld-Kontextmenü sowie einer stabileren Beendigung der Anwendung.
-
+v0.3.64 ist der aktuelle stabile Release-Stand von MeshCom-Guru. Der Schwerpunkt dieser Version liegt auf der vollständigen Deutsch-/English-Benutzeroberfläche, den Chat-Farben, dem übersetzten Eingabefeld-Kontextmenü sowie einer stabileren Beendigung der Anwendung.
+Alle Scroll Fix
 ### Neu und verbessert
 
 - Deutsch / English umschaltbar und dauerhaft gespeichert
@@ -13,7 +13,7 @@ v0.3.63 ist der aktuelle stabile Release-Stand von MeshCom-Guru. Der Schwerpunkt
 - Qt-Kontextmenü in Eingabefeldern berücksichtigt die gewählte Sprache
 - Chat-Farben: gemeinsamer Hintergrund für alle Chats, Schriftfarbe nur für „Alle“
 - Standard-Chatfarben: schwarz / weiß
-- integrierte Anleitung auf v0.3.63 aktualisiert
+- integrierte Anleitung auf v0.3.64 aktualisiert
 - neue PDF-Anleitung enthalten
 - stabileres Beenden durch sauberes Herunterfahren des UDP-Listeners
 - Sendererkennung in Raum- und Privat-Chats bei weitergeleiteten Nachrichten korrigiert
@@ -44,6 +44,6 @@ v0.3.63 ist der aktuelle stabile Release-Stand von MeshCom-Guru. Der Schwerpunkt
 ### Release-Dateien
 
 - oberster Projektordner im Archiv: `MeshCom/`
-- neue PDF-Anleitung: `docs/MeshCom-Guru_Anleitung_v0.3.63.pdf`
+- neue PDF-Anleitung: `docs/MeshCom-Guru_Anleitung_v0.3.64.pdf`
 - persönliche Einstellungen nicht im Projektarchiv
 - Debian-Ziel: `/usr/share/MeshCom`

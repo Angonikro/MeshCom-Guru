@@ -1,3 +1,9 @@
+# Changelog
+
+## v0.3.64
+
+- Alle-Scrollfix
+
 # CHANGELOG
 
 ## v0.3.63 – Sprache, Chat-Farben, Kontextmenü und Stabilität
