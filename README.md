@@ -444,3 +444,5 @@ Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
+
+73 de DO2QG Andreas
