@@ -1,49 +1,40 @@
-# MeshCom-Guru v0.3.64
+# MeshCom-Guru v0.3.65
 
-## Release v0.3.64
+## Release v0.3.65
 
-v0.3.64 ist der aktuelle stabile Release-Stand von MeshCom-Guru. Der Schwerpunkt dieser Version liegt auf der vollständigen Deutsch-/English-Benutzeroberfläche, den Chat-Farben, dem übersetzten Eingabefeld-Kontextmenü sowie einer stabileren Beendigung der Anwendung.
-Alle Scroll Fix
-### Neu und verbessert
+v0.3.65 ist der aktuelle Release-Stand von MeshCom-Guru. Diese Version enthält einen gezielten Fix gegen das gelegentliche Flackern der Nachrichtenblasen im Chat.
 
-- Deutsch / English umschaltbar und dauerhaft gespeichert
-- dynamische Raum-Tabs werden korrekt übersetzt
-- Wetteranzeige wird vollständig sprachabhängig dargestellt
-- Temperatur-Übersetzung bleibt bei wiederholtem Umschalten korrekt
-- Qt-Kontextmenü in Eingabefeldern berücksichtigt die gewählte Sprache
-- Chat-Farben: gemeinsamer Hintergrund für alle Chats, Schriftfarbe nur für „Alle“
-- Standard-Chatfarben: schwarz / weiß
-- integrierte Anleitung auf v0.3.64 aktualisiert
-- neue PDF-Anleitung enthalten
-- stabileres Beenden durch sauberes Herunterfahren des UDP-Listeners
-- Sendererkennung in Raum- und Privat-Chats bei weitergeleiteten Nachrichten korrigiert
-- Chat-Bubbles bei kurzen Chats am unteren Rand ausgerichtet; längere Chats behalten normales Scrollen
-- manuelles Hochscrollen wird nicht durch neue Nachrichten überschrieben
+### Fehlerbehebung
+
+- Gelegentliches Flackern der Nachrichtenblasen beim periodischen Chat-Refresh behoben.
+- Bereits dargestellte Bubble-Widgets werden nicht mehr unnötig entfernt und neu erzeugt, wenn sich an der sichtbaren Darstellung nichts geändert hat.
+- Ein tatsächlicher Neuaufbau erfolgt weiterhin bei neuen bzw. geänderten Nachrichten oder relevanten Statusänderungen.
+- Die Änderung ist bewusst klein gehalten und greift nicht in die bestehende Nachrichtenlogik ein.
 
 ### Bestehende Funktionen
 
 - Raum-Chats und Privat-Chats
 - Tab „Alle“
-- einheitliche Chat-Bubbles in normalen Räumen
-- Privat-Sendestatus mit **⏳** und echtem Empfänger-ACK **✓✓**
+- Tab „Weltweit“
+- einheitliche Chat-Bubbles in den Chat-Ansichten
+- Privat-Sendestatus mit **⏳** und Empfänger-ACK **✓✓**
 - **⚡ Schnelltexte**
 - **😊 Emoji-Picker**
 - 149-Zeichen-Limit mit Live-Zähler
 - anklickbare HTTP-/HTTPS-Links
-- **📡 Monitor** mit ALLE / MSG / POS / TEL / ACK
+- **📡 Monitor**
 - **📋 MH – Most Recently Heard**
 - OSM-/Leaflet-Karte und Positionsdaten
 - Node Info
 - Wetterdaten / WX
 - Sound-Einstellungen
 - Hell-/Dunkel-Theme
-- Raumfilter bis zu fünf Räume
+- Raumfilter
 - persönliche Einstellungen unter `~/.MeshCom/settings.ini`
 - Linux-, Windows- und Debian-Startwege
 
 ### Release-Dateien
 
 - oberster Projektordner im Archiv: `MeshCom/`
-- neue PDF-Anleitung: `docs/MeshCom-Guru_Anleitung_v0.3.64.pdf`
 - persönliche Einstellungen nicht im Projektarchiv
 - Debian-Ziel: `/usr/share/MeshCom`

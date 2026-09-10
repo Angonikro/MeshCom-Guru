@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.64**
+**Version 0.3.65**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,7 +23,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.64
+## Aktueller Funktionsumfang v0.3.65
 
 - Raum-Chats, Privat-Chats und Tab „Alle“
 - Einheitliche Chat-Bubbles in normalen Raum-Tabs
@@ -444,5 +438,3 @@ Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

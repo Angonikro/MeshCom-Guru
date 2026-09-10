@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.65 – Chat-Bubble-Flackerfix
+
+- Gezielten Fehler beim gelegentlichen Flackern der Nachrichtenblasen behoben.
+- Der periodische Chat-Refresh baut die vorhandenen Bubble-Widgets nicht mehr unnötig neu auf, wenn sich der sichtbare Inhalt nicht geändert hat.
+- Dadurch bleiben bestehende Nachrichtenblasen beim normalen Hintergrund-Refresh stabil sichtbar.
+- Neuaufbau erfolgt weiterhin, wenn sich der sichtbare Nachrichteninhalt oder ein relevanter Sendestatus tatsächlich ändert.
+- Bestehende Nachrichten-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH- und Wetterfunktionen bleiben unverändert.
+
 ## v0.3.64
 
 - Alle-Scrollfix

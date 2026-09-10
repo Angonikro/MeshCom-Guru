@@ -3943,12 +3943,27 @@ renderStations(initialStations);</script></body></html>"""
                             f"{(' &nbsp;•&nbsp; ' + meta_html) if meta_html else ''}</div>"
                             f"<div style='margin-top:5px;font-size:14px;'><b>{body_html}</b></div>")
                 unique.append({"html": html_msg, "outgoing": outgoing})
-            # Keep the digest for unread handling without changing the source data.
-            digest_source = "\n".join(str(self._message_identity(b)) for b in blocks)
+            # Keep a digest for both unread handling AND the rendered bubble
+            # state.  update_messages() runs every 5 seconds.  Rebuilding the
+            # complete QWidget bubble tree on every refresh forces Qt to remove
+            # and recreate all message widgets, which can cause visible
+            # flickering even when absolutely nothing in the chat changed.
+            #
+            # The rendered HTML also contains the send-status symbol (⏳/✓/✓✓),
+            # so a real status change still triggers exactly one rebuild.
+            digest_source = "\n".join(
+                f"{item.get('outgoing', False)}\x1f{item.get('html', '')}"
+                for item in unique
+            )
             digest = hashlib.sha1(digest_source.encode("utf-8", errors="ignore")).hexdigest()
-            changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
+            old_digest = self.tab_hashes.get(key, "")
+            changed = bool(old_digest) and old_digest != digest
             self.tab_hashes[key] = digest
-            view.set_bubbles(unique)
+
+            # IMPORTANT: do not recreate the bubbles when the refresh returned
+            # exactly the same visual content.  This is the flicker fix.
+            if old_digest != digest:
+                view.set_bubbles(unique)
         else:
             rendered = self._render_blocks(blocks)
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
