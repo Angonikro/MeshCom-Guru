@@ -13,7 +13,7 @@ def load_settings():
     config = configparser.ConfigParser()
     SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not SETTINGS_FILE.exists():
-        template = BASE_DIR / "data" / "settings.ini"
+        template = BASE_DIR / "data" / "default_settings.ini"
         if template.exists():
             shutil.copyfile(template, SETTINGS_FILE)
     if SETTINGS_FILE.exists():

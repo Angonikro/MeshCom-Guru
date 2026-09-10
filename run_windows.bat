@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 echo.
 echo ========================================
-echo   MeshCom-Guru v0.3.56 - Windows
+echo   MeshCom-Guru v0.3.60 - Windows
 echo ========================================
 echo.
 

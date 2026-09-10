@@ -12,7 +12,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt, QUrl, Signal
+from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
 except Exception:
@@ -21,24 +21,31 @@ try:
     from PySide6.QtMultimedia import QSoundEffect
 except Exception:
     QSoundEffect = None
-from PySide6.QtGui import QAction, QTextCursor, QDesktopServices
+from PySide6.QtGui import QAction, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QFileDialog,
     QCheckBox,
     QFormLayout,
+    QAbstractItemView,
+    QHeaderView,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QSlider,
+    QSizePolicy,
     QMainWindow,
+    QScrollArea,
     QPushButton,
     QTabWidget,
     QTextBrowser,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -108,142 +115,200 @@ def _meshcom_extract_coordinates(raw):
     return None
 
 
-class ChatView(QTextBrowser):
+class BubbleWidget(QWidget):
+    """Compact WhatsApp-style message bubble with a small inward tail."""
+    def __init__(self, text, outgoing=False, parent=None):
+        super().__init__(parent)
+        self.outgoing = outgoing
+        self.bg = QColor("#78d86b" if outgoing else "#4d98e8")
+        self.border = QColor("#6bc65f" if outgoing else "#4186ce")
+        self.label = QLabel()
+        self.label.setTextFormat(Qt.TextFormat.RichText)
+        self.label.setWordWrap(True)
+        self.label.setOpenExternalLinks(False)
+        self.label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.label.setStyleSheet("background: transparent; color: #081018; border: none;")
+        self.label.linkActivated.connect(self._link_activated)
+        layout = QVBoxLayout(self)
+        if outgoing:
+            layout.setContentsMargins(14, 9, 20, 9)
+        else:
+            layout.setContentsMargins(20, 9, 14, 9)
+        layout.addWidget(self.label)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        self.setMinimumHeight(48)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+    def _link_activated(self, url):
+        w = self.window()
+        if hasattr(w, "_bubble_link_activated"):
+            w._bubble_link_activated(url)
+
+    def set_content(self, text, max_width):
+        self.setFixedWidth(max_width)
+        self.label.setMaximumWidth(max(120, max_width - 34))
+        self.label.setText(text)
+        self.label.adjustSize()
+        self.adjustSize()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        r = self.rect().adjusted(8, 1, -8, -1)
+        p.setPen(QPen(self.border, 1))
+        p.setBrush(self.bg)
+        p.drawRoundedRect(QRectF(r), 18, 18)
+        if self.outgoing:
+            tail = QPolygonF([
+                QPointF(r.right() - 1, r.bottom() - 18),
+                QPointF(self.width() - 1, r.bottom() - 11),
+                QPointF(r.right() - 1, r.bottom() - 7),
+            ])
+        else:
+            tail = QPolygonF([
+                QPointF(r.left() + 1, r.bottom() - 18),
+                QPointF(1, r.bottom() - 11),
+                QPointF(r.left() + 1, r.bottom() - 7),
+            ])
+        p.drawPolygon(tail)
+        p.end()
+        super().paintEvent(event)
+
+
+class ChatView(QScrollArea):
     callsignClicked = Signal(str)
-
-
-
-
-
-    def _trace_and_place_node_coordinate(self, lat, lon, label="Node"):
-        """Place a known coordinate using the existing map implementation."""
-        try:
-            lat = float(lat)
-            lon = float(lon)
-        except (TypeError, ValueError):
-            return False
-        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            return False
-
-        # First use an existing Python marker function, if present.
-        for name in (
-            "add_node_marker", "add_map_marker", "_add_map_marker",
-            "update_map_marker", "_update_map_marker", "set_node_position"
-        ):
-            fn = getattr(self, name, None)
-            if callable(fn):
-                for args in ((lat, lon, label), (lat, lon), (label, lat, lon)):
-                    try:
-                        fn(*args)
-                        return True
-                    except TypeError:
-                        continue
-                    except Exception:
-                        continue
-
-        # Then use a QWebEngineView if the map is embedded that way.
-        js = (
-            "(function(){"
-            "var lat=" + repr(lat) + ",lon=" + repr(lon) + ",label=" + repr(str(label)) + ";"
-            "if(window.addMeshComMarker) return window.addMeshComMarker(lat,lon,label);"
-            "if(window.setNodeMarker) return window.setNodeMarker(lat,lon,label);"
-            "return false;"
-            "})()"
-        )
-        for attr in (
-            "map_view", "map_webview", "web_view", "webview",
-            "mapWidget", "browser", "leaflet_view"
-        ):
-            view = getattr(self, attr, None)
-            if view is not None and hasattr(view, "page"):
-                try:
-                    view.page().runJavaScript(js)
-                    return True
-                except Exception:
-                    continue
-
-        # Keep the exact position for the existing refresh cycle.
-        if not hasattr(self, "_pending_map_coordinates"):
-            self._pending_map_coordinates = {}
-        self._pending_map_coordinates[str(label)] = (lat, lon)
-        return False
-
-
-    def _map_coordinates_from_node_info(self, node_info, label="Node"):
-        """Use coordinates already returned by Node Info for the map."""
-        if node_info is None:
-            return False
-
-        def get(obj, names):
-            if isinstance(obj, dict):
-                for name in names:
-                    if name in obj and obj[name] not in (None, ""):
-                        return obj[name]
-            for name in names:
-                try:
-                    value = getattr(obj, name)
-                except Exception:
-                    continue
-                if value not in (None, ""):
-                    return value
-            return None
-
-        lat = get(node_info, ("latitude", "lat", "breitengrad", "gps_lat", "gpsLatitude"))
-        lon = get(node_info, ("longitude", "lon", "längengrad", "gps_lon", "gpsLongitude"))
-
-        try:
-            lat = float(str(lat).replace(",", "."))
-            lon = float(str(lon).replace(",", "."))
-        except (TypeError, ValueError):
-            return False
-
-        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            return False
-
-        # Prefer the project's existing map implementation.
-        for name in (
-            "add_node_marker", "add_map_marker", "_add_map_marker",
-            "update_map_marker", "_update_map_marker",
-        ):
-            fn = getattr(self, name, None)
-            if callable(fn):
-                for args in ((lat, lon, label), (lat, lon), (label, lat, lon)):
-                    try:
-                        fn(*args)
-                        return True
-                    except TypeError:
-                        continue
-                    except Exception:
-                        break
-
-        # Store the exact Node Info coordinates for the map refresh.
-        if not hasattr(self, "_node_info_coordinates"):
-            self._node_info_coordinates = {}
-        self._node_info_coordinates[str(label)] = (lat, lon)
-        return True
-
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setReadOnly(True)
-        self.setOpenLinks(False)
-        self.setOpenExternalLinks(False)
-        self.anchorClicked.connect(self._anchor_clicked)
-        self.setPlaceholderText("MeshCom-Nachrichten werden hier angezeigt …")
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setStyleSheet("QScrollArea { background: #101722; border: none; } QScrollBar:vertical { width: 12px; }")
+        self._html_view = QTextBrowser()
+        self._html_view.setReadOnly(True)
+        self._html_view.setOpenLinks(False)
+        self._html_view.setOpenExternalLinks(False)
+        self._html_view.anchorClicked.connect(self._anchor_clicked)
+        self._html_view.setStyleSheet("QTextBrowser { background: #101722; border: none; }")
+        self._bubble_container = QWidget()
+        self._bubble_layout = QVBoxLayout(self._bubble_container)
+        self._bubble_layout.setContentsMargins(10, 8, 10, 8)
+        self._bubble_layout.setSpacing(8)
+        self._bubble_layout.addStretch(1)
+        self._bubble_mode = False
+        self._bubble_rows = []
+        self.setWidget(self._html_view)
 
-    def _anchor_clicked(self, url: QUrl):
+    def _anchor_clicked(self, url):
         value = url.toString().strip()
         if value.startswith("meshcom://call/"):
-            call = value.rsplit("/", 1)[-1]
-            self.callsignClicked.emit(call)
+            self.callsignClicked.emit(value.rsplit("/", 1)[-1])
         elif value.startswith(("http://", "https://")):
-            QDesktopServices.openUrl(QUrl(value))
+            QDesktopServices.openUrl(url)
+
+    def _bubble_link_activated(self, url):
+        self._anchor_clicked(QUrl(str(url)))
+
+    def setHtml(self, html_text, *args):
+        # Do not force the user back to the bottom on every 5-second refresh.
+        # If the user has scrolled up, keep that position.  Only follow the
+        # newest message when the view was already at the bottom (or is empty).
+        # In HTML mode the QTextBrowser owns the real scrollbar.  The
+        # surrounding QScrollArea normally has no scroll range, so reading
+        # its scrollbar here would make every refresh look like "at bottom".
+        bar = self._html_view.verticalScrollBar()
+        old_value = bar.value()
+        old_max = bar.maximum()
+        was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
+        self._bubble_mode = False
+        self.setWidget(self._html_view)
+        self._html_view.setHtml(html_text)
+        def restore_html_scroll():
+            new_bar = self._html_view.verticalScrollBar()
+            if was_at_bottom:
+                new_bar.setValue(new_bar.maximum())
+            else:
+                new_bar.setValue(min(old_value, new_bar.maximum()))
+        QTimer.singleShot(0, restore_html_scroll)
+
+    def set_bubbles(self, items):
+        # Preserve the user's scroll position.  Automatic refreshes must not
+        # jump back to the newest message when the user is reading older ones.
+        old_bar = self.verticalScrollBar()
+        old_value = old_bar.value()
+        old_max = old_bar.maximum()
+        was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
+        self._bubble_mode = True
+        # Remove previous bubble widgets completely. There is exactly one
+        # widget per semantic message, so refreshes cannot create duplicates.
+        old = self._bubble_container
+        self._bubble_container = QWidget()
+        self._bubble_container.setStyleSheet("background: #101722;")
+        self._bubble_layout = QVBoxLayout(self._bubble_container)
+        self._bubble_layout.setContentsMargins(10, 8, 10, 8)
+        self._bubble_layout.setSpacing(8)
+        self.setWidget(self._bubble_container)
+        self._bubble_rows = []
+
+        if not items:
+            empty = QLabel("Keine Nachrichten.")
+            empty.setStyleSheet("color:#aeb9c7; padding:18px;")
+            self._bubble_layout.addWidget(empty, 0, Qt.AlignmentFlag.AlignLeft)
+        else:
+            width = max(260, int(self.viewport().width() * 0.75))
+            for item in items:
+                row = QHBoxLayout()
+                row.setContentsMargins(0, 0, 0, 0)
+                row.setSpacing(0)
+                bubble = BubbleWidget(item["html"], item["outgoing"])
+                bubble.set_content(item["html"], width)
+                if item["outgoing"]:
+                    row.addStretch(1)
+                    row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignRight)
+                else:
+                    row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
+                    row.addStretch(1)
+                self._bubble_layout.addLayout(row)
+                self._bubble_rows.append(bubble)
+        self._bubble_layout.addStretch(1)
+        self._bubble_container.adjustSize()
+        self._bubble_container.updateGeometry()
+        self._update_bubble_container_height()
+        # The layout/scroll range is only final after the event loop has
+        # activated the new child widgets.  Scroll once more afterwards so
+        # the newest message is fully visible instead of being clipped.
+        QTimer.singleShot(0, self._update_bubble_container_height)
+        def restore_bubble_scroll():
+            new_bar = self.verticalScrollBar()
+            if was_at_bottom:
+                new_bar.setValue(new_bar.maximum())
+            else:
+                new_bar.setValue(min(old_value, new_bar.maximum()))
+        QTimer.singleShot(0, restore_bubble_scroll)
+        QTimer.singleShot(50, restore_bubble_scroll)
+
+    def _update_bubble_container_height(self):
+        if not self._bubble_mode:
+            return
+        self._bubble_layout.activate()
+        needed = self._bubble_layout.sizeHint().height()
+        viewport_h = max(0, self.viewport().height())
+        self._bubble_container.setMinimumHeight(max(viewport_h, needed))
+        self._bubble_container.updateGeometry()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._bubble_mode:
+            width = max(260, int(self.viewport().width() * 0.75))
+            for bubble in self._bubble_rows:
+                bubble.set_content(bubble.label.text(), width)
+            self._update_bubble_container_height()
+            QTimer.singleShot(0, self._update_bubble_container_height)
 
     def scroll_to_bottom(self):
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        bar = self.verticalScrollBar()
+        bar.setValue(bar.maximum())
 
 
 class MainWindow(QMainWindow):
@@ -276,6 +341,10 @@ class MainWindow(QMainWindow):
         # Der Node liefert das eigene Echo ebenfalls zurück; dieses Echo darf
         # keinen neuen Privat-Tab für das eigene Rufzeichen erzeugen.
         self.last_private_sent = None
+        # Punkt 2: eigene Sendungen nur für die Sendebestätigung merken.
+        self.outgoing_messages = []
+        # Schnelltexte: aus settings.ini laden und dauerhaft speichern.
+        self.quick_texts = self._load_quick_texts(settings)
         # Nur für den Gesamtstrom „Alle“: eigene Sendungen lokal merken.
         self.local_all_messages = []
         # Lokaler Nachrichtenpuffer: Der WebService liefert je nach Node/
@@ -306,6 +375,16 @@ class MainWindow(QMainWindow):
         self.udp_stop = threading.Event()
         self.udp_enabled = True
         self.udp_status = "UDP: wird gestartet …"
+        # Monitor: reine Anzeige des bereits empfangenen UDP-Datenstroms.
+        self.monitor_rows = []
+        self.monitor_paused = False
+        self.monitor_filter = "ALLE"
+        self.monitor_search = ""
+        self.monitor_autoscroll = True
+        # MH-Liste: Most Recently Heard. Nur aus dem bereits empfangenen
+        # UDP-Datenstrom aufgebaut; die bestehende POS-/Monitor-Verarbeitung
+        # bleibt davon getrennt.
+        self.mh_stations = {}
         self.udpPacketReceived.connect(self._handle_udp_packet)
         self.own_callsign = settings.get("own_callsign", "").strip().upper()
         try:
@@ -421,6 +500,321 @@ class MainWindow(QMainWindow):
             return lat, lon
         return None
 
+    @staticmethod
+    def _monitor_value(packet, *names):
+        for name in names:
+            if name in packet and packet.get(name) not in (None, ""):
+                return packet.get(name)
+        return ""
+
+    def _monitor_telemetry_data(self, packet, msg):
+        data = packet.get("data")
+        if isinstance(data, dict):
+            return data
+        if not msg:
+            return {}
+        candidates = [msg]
+        start, end = msg.find("{"), msg.rfind("}")
+        if start >= 0 and end > start:
+            candidates.append(msg[start:end + 1])
+        for candidate in candidates:
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+        return {}
+
+    @staticmethod
+    def _monitor_num(value, digits=1, suffix=""):
+        if value in (None, ""):
+            return ""
+        try:
+            return f"{float(value):.{digits}f}{suffix}"
+        except (TypeError, ValueError):
+            return f"{value}{suffix}"
+
+    def _monitor_add_packet(self, packet):
+        """Only display an already received UDP packet; never alter packet handling."""
+        if self.monitor_paused:
+            return
+        ptype_raw = str(packet.get("type", packet.get("packet_type", "")) or "").strip().lower()
+        msg = str(self._monitor_value(packet, "msg", "message") or "")
+        if ptype_raw in {"ack", "acknowledgement", "delivery_ack"} or re.search(r":ack\d{1,6}\b", msg, re.I):
+            ptype = "ACK"
+        elif ptype_raw in {"msg", "message"}:
+            ptype = "MSG"
+        elif ptype_raw in {"pos", "position", "gps"}:
+            ptype = "POS"
+        elif ptype_raw in {"tel", "tele", "telemetry", "status"}:
+            ptype = "TEL"
+        else:
+            ptype = ptype_raw.upper()[:8] or "UDP"
+
+        src = self._udp_callsign(packet.get("src", "")) or str(packet.get("src", "") or "-")
+        dst = str(packet.get("dst", packet.get("target", "")) or "-").strip()
+        rssi = self._monitor_value(packet, "rssi", "RSSI", "signal")
+        snr = self._monitor_value(packet, "snr", "SNR")
+
+        if ptype == "MSG":
+            detail = msg or "Nachricht"
+            seq = re.search(r"\{(\d{1,6})\}?", detail)
+            ack = re.search(r":ack(\d{1,6})\b", detail, re.I)
+            if seq:
+                detail = re.sub(r"\{\d{1,6}\}?", "", detail).strip()
+                detail = f"#{seq.group(1)}  {detail}" if detail else f"#{seq.group(1)}"
+            elif ack:
+                detail = f"{src} :ack{ack.group(1)}"
+        elif ptype == "ACK":
+            ack = re.search(r":ack(\d{1,6})\b", msg, re.I)
+            detail = f"{src} :ack{ack.group(1)}" if ack else (msg or "ACK")
+        elif ptype == "POS":
+            coords = self._udp_coordinate(packet)
+            detail = f"{coords[0]:.6f}, {coords[1]:.6f}" if coords else (msg or "Position")
+            alt = self._monitor_value(packet, "alt", "altitude", "height")
+            batt = self._monitor_value(packet, "batt", "battery")
+            extra = []
+            if alt != "":
+                extra.append(f"Höhe {self._monitor_num(alt, 0)} m")
+            if batt != "":
+                extra.append(f"Batt {self._monitor_num(batt, 0)} %")
+            if extra:
+                detail += "  ·  " + "  ·  ".join(extra)
+        elif ptype == "TEL":
+            data = self._monitor_telemetry_data(packet, msg)
+            def val(key, *aliases):
+                for k in (key, *aliases):
+                    v = packet.get(k, data.get(k, ""))
+                    if v not in (None, ""):
+                        return v
+                return ""
+            parts = []
+            temp = val("temp", "temperature", "temp1")
+            hum = val("hum", "humidity")
+            qfe = val("qfe")
+            qnh = val("qnh")
+            co2 = val("co2")
+            gas = val("gas")
+            hum0 = val("hum0")
+            temp2 = val("temp2")
+            batt = val("batt", "battery")
+            volt = val("volt", "voltage")
+            if temp != "": parts.append(f"Temperatur {self._monitor_num(temp, 1)} °C")
+            if hum != "": parts.append(f"Luftfeuchte {self._monitor_num(hum, 1)} %")
+            if qfe != "": parts.append(f"QFE {self._monitor_num(qfe, 1)} hPa")
+            if qnh != "": parts.append(f"QNH {self._monitor_num(qnh, 1)} hPa")
+            if co2 != "": parts.append(f"CO₂ {self._monitor_num(co2, 0)} ppm")
+            if gas != "": parts.append(f"Gas {self._monitor_num(gas, 0)}")
+            if hum0 != "": parts.append(f"Hum {self._monitor_num(hum0, 0)}")
+            if temp2 != "": parts.append(f"Temp2 {self._monitor_num(temp2, 1)} °C")
+            if batt != "": parts.append(f"Batt {self._monitor_num(batt, 0)} %")
+            if volt != "": parts.append(f"Volt {self._monitor_num(volt, 2)} V")
+            detail = "  ·  ".join(parts) or "Telemetry"
+        else:
+            detail = msg or json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+
+        # Eine eigene gesendete Nachricht soll sofort im Monitor erscheinen.
+        # Kommt kurz danach das EXTUDP-Echo vom Node, wird der lokale Eintrag
+        # nur ergänzt statt doppelt angezeigt. Alle anderen Monitor-Pakete
+        # bleiben unverändert.
+        if ptype == "MSG":
+            own = str(self.own_callsign or "").strip().upper()
+            if own and str(src).strip().upper() == own:
+                for existing in reversed(self.monitor_rows):
+                    if existing.get("type") != "MSG" or existing.get("_local_send") is not True:
+                        continue
+                    if str(existing.get("src", "")).strip().upper() != own:
+                        continue
+                    existing_dst = str(existing.get("dst", "")).strip().upper()
+                    current_dst = str(dst).strip().upper()
+                    # Das EXTUDP-Echo kann als Ziel "*" oder ohne Ziel kommen.
+                    # In diesem Fall trotzdem mit der direkt angezeigten eigenen
+                    # Nachricht zusammenführen, damit sie nicht doppelt erscheint.
+                    if existing_dst not in {"", "-", "*"} and current_dst not in {"", "-", "*", existing_dst}:
+                        continue
+                    if detail.replace("#", "", 1).strip().casefold().endswith(str(existing.get("_text", "")).strip().casefold()):
+                        existing["detail"] = detail
+                        existing["rssi"] = str(rssi) if rssi != "" else existing.get("rssi", "-")
+                        existing["snr"] = str(snr) if snr != "" else existing.get("snr", "-")
+                        self._render_monitor()
+                        return
+
+        self.monitor_rows.append({
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "type": ptype,
+            "src": str(src),
+            "dst": dst,
+            "rssi": str(rssi) if rssi != "" else "-",
+            "snr": str(snr) if snr != "" else "-",
+            "detail": detail,
+        })
+        self.monitor_rows = self.monitor_rows[-500:]
+        self._render_monitor()
+
+    def _render_monitor(self):
+        if not hasattr(self, "monitor_table"):
+            return
+        rows = self.monitor_rows
+        if self.monitor_filter != "ALLE":
+            rows = [r for r in rows if r["type"] == self.monitor_filter]
+        search = self.monitor_search.strip().lower()
+        if search:
+            rows = [r for r in rows if search in " ".join(str(r[k]) for k in ("time", "type", "src", "dst", "detail")).lower()]
+
+        self.monitor_table.setRowCount(len(rows))
+        badge_colors = {
+            "MSG": "#2f79bd", "POS": "#2f8a5a", "TEL": "#2d8a8a",
+            "ACK": "#7656c5", "UDP": "#566274",
+        }
+        for row_index, row in enumerate(rows):
+            values = [row["time"], row["type"], row["src"], row["dst"], row["rssi"], row["snr"], row["detail"]]
+            for col, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                item.setToolTip(str(value))
+                self.monitor_table.setItem(row_index, col, item)
+            badge = self.monitor_table.item(row_index, 1)
+            badge.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            badge.setForeground(QColor("#ffffff"))
+            badge.setBackground(QColor(badge_colors.get(row["type"], "#566274")))
+            for col in (4, 5):
+                self.monitor_table.item(row_index, col).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.monitor_count_label.setText(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert")
+        if self.monitor_autoscroll and rows:
+            self.monitor_table.scrollToBottom()
+
+    def _set_monitor_filter(self, value):
+        self.monitor_filter = value
+        self._render_monitor()
+
+    def _set_monitor_search(self, text):
+        self.monitor_search = text
+        self._render_monitor()
+
+    def _toggle_monitor_autoscroll(self, checked):
+        self.monitor_autoscroll = checked
+        if checked:
+            self.monitor_table.scrollToBottom()
+
+    def _toggle_monitor_pause(self):
+        self.monitor_paused = not self.monitor_paused
+        self.monitor_pause_button.setText("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+
+    def _clear_monitor(self):
+        self.monitor_rows.clear()
+        self._render_monitor()
+
+    def _mh_distance_km(self, lat, lon):
+        try:
+            if self.own_lat is None or self.own_lon is None:
+                return None
+            r = 6371.0088
+            p1 = math.radians(float(self.own_lat))
+            p2 = math.radians(float(lat))
+            dp = math.radians(float(lat) - float(self.own_lat))
+            dl = math.radians(float(lon) - float(self.own_lon))
+            a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+            return r * 2 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1 - a)))
+        except (TypeError, ValueError):
+            return None
+
+    def _update_mh_from_packet(self, packet):
+        """Update one MH station from an already received EXTUDP packet."""
+        if not isinstance(packet, dict):
+            return
+        callsign = self._udp_callsign(packet.get("src", ""))
+        if not callsign:
+            return
+        if callsign.upper() == str(self.own_callsign or "").upper():
+            return
+
+        # OE1XAR test/gateway entries are not part of the MH station list.
+        if callsign.upper() in {"OE1XAR-33", "OE1XAR-62"}:
+            return
+
+        ptype = str(packet.get("type", packet.get("packet_type", "")) or "").strip().lower()
+        if ptype not in {"msg", "message", "pos", "position", "gps", "tele", "tel", "telemetry", "status", "ack", "acknowledgement", "delivery_ack"}:
+            return
+
+        now = datetime.now().strftime("%H:%M:%S")
+        row = self.mh_stations.setdefault(callsign, {
+            "callsign": callsign, "lat": None, "lon": None,
+            "rssi": None, "snr": None, "battery": None,
+            "last_heard": now, "alt": None, "firmware": "",
+        })
+        row["last_heard"] = now
+
+        rssi = self._monitor_value(packet, "rssi", "RSSI", "signal")
+        snr = self._monitor_value(packet, "snr", "SNR")
+        if rssi not in (None, ""):
+            row["rssi"] = rssi
+        if snr not in (None, ""):
+            row["snr"] = snr
+
+        coords = self._udp_coordinate(packet)
+        if coords:
+            row["lat"], row["lon"] = coords
+        alt = self._monitor_value(packet, "alt", "altitude", "height")
+        batt = self._monitor_value(packet, "batt", "battery")
+        if alt not in (None, ""):
+            row["alt"] = alt
+        if batt not in (None, ""):
+            row["battery"] = batt
+        fw = self._monitor_value(packet, "firmware", "fw", "version")
+        if fw not in (None, ""):
+            row["firmware"] = str(fw)
+
+        self._render_mh()
+
+    @staticmethod
+    def _mh_format_distance(km):
+        if km is None:
+            return "-"
+        try:
+            km = float(km)
+        except (TypeError, ValueError):
+            return "-"
+        if km < 1:
+            return f"{round(km * 1000)} m"
+        return f"{km:.1f} km"
+
+    @staticmethod
+    def _mh_format_signal(value, suffix=""):
+        if value in (None, ""):
+            return "-"
+        try:
+            return f"{float(value):g}{suffix}"
+        except (TypeError, ValueError):
+            return str(value)
+
+    def _render_mh(self):
+        if not hasattr(self, "mh_table"):
+            return
+        rows = sorted(self.mh_stations.values(), key=lambda r: r.get("last_heard", ""), reverse=True)
+        self.mh_table.setRowCount(len(rows))
+        for i, station in enumerate(rows):
+            distance = self._mh_distance_km(station.get("lat"), station.get("lon")) if station.get("lat") is not None else None
+            values = [
+                station.get("callsign", ""),
+                self._mh_format_distance(distance),
+                self._mh_format_signal(station.get("rssi"), " dBm"),
+                self._mh_format_signal(station.get("snr"), " dB"),
+                self._mh_format_signal(station.get("battery"), " %"),
+                station.get("last_heard", "-"),
+            ]
+            for col, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                if col in (1, 2, 3, 4):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.mh_table.setItem(i, col, item)
+        if hasattr(self, "mh_count_label"):
+            self.mh_count_label.setText(f"{len(rows)} Station(en)")
+
+    def _clear_mh(self):
+        self.mh_stations.clear()
+        self._render_mh()
+
     def _handle_udp_packet(self, packet):
         status = packet.get("_status") if isinstance(packet, dict) else None
         if status:
@@ -428,6 +822,8 @@ class MainWindow(QMainWindow):
             return
         if not isinstance(packet, dict):
             return
+        self._monitor_add_packet(packet)
+        self._update_mh_from_packet(packet)
         # Diagnose den direkten UDP-Empfang unabhängig von der Kartenanzeige.
         try:
             debug_file = Path(__file__).resolve().parent.parent / "data" / "udp_received.log"
@@ -437,6 +833,28 @@ class MainWindow(QMainWindow):
             pass
         ptype = str(packet.get("type", packet.get("packet_type", ""))).lower().strip()
         callsign = self._udp_callsign(packet.get("src", ""))
+
+        # Punkt 2 – ausschließlich den EXTUDP-MSG-Strom für die Sendebestätigung
+        # auswerten. POS/Koordinaten bleiben darunter unverändert.
+        if ptype in {"msg", "message"}:
+            packet_text = str(packet.get("msg", packet.get("message", "")) or "")
+            src_text = str(packet.get("src", "") or "").upper()
+            own_text = str(self.own_callsign or "").upper()
+
+            # Eigenes Node-Echo: Nachricht{NNN} -> ✓
+            seq_match = re.search(r"\{(\d{1,6})\}?", packet_text)
+            if own_text and own_text in src_text and seq_match:
+                clean_text = re.sub(r"\{\d{1,6}\}?", "", packet_text).strip()
+                self._mark_outgoing_echo(clean_text, seq_match.group(1), packet.get("dst", ""))
+
+            # Empfänger-ACK: CALL :ackNNN -> ✓✓
+            ack_match = re.search(r":ack(\d{1,6})\b", packet_text, re.IGNORECASE)
+            if ack_match:
+                self._mark_outgoing_ack(ack_match.group(1))
+
+            if seq_match or ack_match:
+                self._refresh_visible_ack_states()
+
         coords = self._udp_coordinate(packet)
         if ptype in {"pos", "position", "gps"} and callsign and coords:
             self.station_positions[callsign] = coords
@@ -652,9 +1070,122 @@ class MainWindow(QMainWindow):
             None,
         )
 
+        # ---------- 📡 Monitor ----------
+        # Eigenständige Anzeige des UDP-Datenstroms; die bestehende
+        # Nachrichten-, POS-, Karten- und ACK-Verarbeitung bleibt unverändert.
+        self.monitor_view = QWidget()
+        monitor_layout = QVBoxLayout(self.monitor_view)
+        monitor_layout.setContentsMargins(6, 6, 6, 6)
+        monitor_toolbar = QHBoxLayout()
+
+        self.monitor_pause_button = QPushButton("⏸ Pause")
+        self.monitor_pause_button.setFixedWidth(92)
+        self.monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
+        monitor_toolbar.addWidget(self.monitor_pause_button)
+
+        monitor_clear_button = QPushButton("Leeren")
+        monitor_clear_button.setFixedWidth(78)
+        monitor_clear_button.clicked.connect(self._clear_monitor)
+        monitor_toolbar.addWidget(monitor_clear_button)
+
+        monitor_toolbar.addWidget(QLabel("Filter:"))
+        self.monitor_filter_combo = QComboBox()
+        self.monitor_filter_combo.addItems(["ALLE", "MSG", "POS", "TEL", "ACK"])
+        self.monitor_filter_combo.setFixedWidth(78)
+        self.monitor_filter_combo.currentTextChanged.connect(self._set_monitor_filter)
+        monitor_toolbar.addWidget(self.monitor_filter_combo)
+
+        self.monitor_search_edit = QLineEdit()
+        self.monitor_search_edit.setPlaceholderText("Suchen …")
+        self.monitor_search_edit.setMinimumWidth(130)
+        self.monitor_search_edit.setMaximumWidth(190)
+        self.monitor_search_edit.textChanged.connect(self._set_monitor_search)
+        monitor_toolbar.addWidget(self.monitor_search_edit)
+
+        self.monitor_autoscroll_check = QCheckBox("Auto-Scroll")
+        self.monitor_autoscroll_check.setChecked(True)
+        self.monitor_autoscroll_check.toggled.connect(self._toggle_monitor_autoscroll)
+        monitor_toolbar.addWidget(self.monitor_autoscroll_check)
+        monitor_toolbar.addStretch(1)
+        self.monitor_count_label = QLabel("0 angezeigt · 0 gespeichert")
+        monitor_toolbar.addWidget(self.monitor_count_label)
+        monitor_toolbar.addWidget(QLabel("MSG / POS / TEL / ACK"))
+        monitor_layout.addLayout(monitor_toolbar)
+
+        self.monitor_table = QTableWidget(0, 7)
+        self.monitor_table.setHorizontalHeaderLabels(["Zeit", "Typ", "Von", "Nach", "RSSI", "SNR", "Information"])
+        self.monitor_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.monitor_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.monitor_table.setAlternatingRowColors(False)
+        self.monitor_table.setWordWrap(False)
+        self.monitor_table.verticalHeader().setVisible(False)
+        self.monitor_table.setShowGrid(True)
+        header = self.monitor_table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
+        self.monitor_table.setMinimumHeight(170)
+        monitor_layout.addWidget(self.monitor_table, 1)
+
+        self.monitor_tab_index = self.tabs.insertTab(self.map_tab_index + 1, self.monitor_view, "📡 Monitor")
+        self.tabs.tabBar().setTabButton(
+            self.monitor_tab_index,
+            self.tabs.tabBar().ButtonPosition.RightSide,
+            None,
+        )
+
+        # ---------- 📋 MH – Most Recently Heard ----------
+        self.mh_view = QWidget()
+        mh_layout = QVBoxLayout(self.mh_view)
+        mh_layout.setContentsMargins(6, 6, 6, 6)
+        mh_toolbar = QHBoxLayout()
+        self.mh_count_label = QLabel("0 Station(en)")
+        mh_toolbar.addWidget(self.mh_count_label)
+        mh_toolbar.addStretch(1)
+        mh_clear_button = QPushButton("Leeren")
+        mh_clear_button.setFixedWidth(78)
+        mh_clear_button.clicked.connect(self._clear_mh)
+        mh_toolbar.addWidget(mh_clear_button)
+        mh_layout.addLayout(mh_toolbar)
+
+        self.mh_table = QTableWidget(0, 6)
+        self.mh_table.setHorizontalHeaderLabels(["Rufzeichen", "Entfernung", "RSSI", "SNR", "Batterie", "Zuletzt gehört"])
+        self.mh_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.mh_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.mh_table.setAlternatingRowColors(False)
+        self.mh_table.setWordWrap(False)
+        self.mh_table.verticalHeader().setVisible(False)
+        self.mh_table.setShowGrid(True)
+        mh_header = self.mh_table.horizontalHeader()
+        mh_header.setStretchLastSection(True)
+        for col in range(6):
+            mh_header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+        mh_header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self.mh_table.setMinimumHeight(170)
+        mh_layout.addWidget(self.mh_table, 1)
+
+        self.mh_tab_index = self.tabs.insertTab(self.monitor_tab_index + 1, self.mh_view, "📋 MH")
+        self.tabs.tabBar().setTabButton(
+            self.mh_tab_index,
+            self.tabs.tabBar().ButtonPosition.RightSide,
+            None,
+        )
+        self._render_mh()
+
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Nachricht eingeben …")
         self.message_input.setMaxLength(149)
+
+        # Schnelltexte: auswählbar, bearbeitbar und um neue Einträge erweiterbar.
+        self.quick_text_button = QPushButton("⚡ Schnelltexte")
+        self.quick_text_button.setFixedWidth(120)
+        self.quick_text_button.setToolTip("Schnelltext auswählen oder bearbeiten")
+        self.quick_text_button.clicked.connect(self._open_quick_texts)
 
         # Emoji-Auswahl für Nachrichten. Die Auswahl ist bewusst lokal und
         # verändert die bestehende Sende-/Empfangslogik nicht.
@@ -702,6 +1233,7 @@ class MainWindow(QMainWindow):
 
         message_row = QHBoxLayout()
         message_row.addWidget(self.message_input, 1)
+        message_row.addWidget(self.quick_text_button)
         message_row.addWidget(self.emoji_button)
         message_row.addWidget(self.message_counter)
         layout.addLayout(message_row)
@@ -721,6 +1253,113 @@ class MainWindow(QMainWindow):
             self.message_counter.setToolTip("Maximale Länge erreicht: 149 Zeichen")
         else:
             self.message_counter.setToolTip(f"Noch {149 - len(text)} Zeichen frei")
+
+    def _load_quick_texts(self, settings):
+        """Load persistent quick texts, with useful defaults on first start."""
+        defaults = [
+            "CQ CQ",
+            "73",
+            "Danke für das QSO",
+            "Bin QRV",
+            "QTH ...",
+            "Kommt gut an",
+            "Bis später",
+            "Viele Grüße",
+        ]
+        values = []
+        for i, default in enumerate(defaults, 1):
+            value = str(settings.get(f"quick_text{i}", "")).strip()
+            values.append(value or default)
+        # Zusätzliche gespeicherte Einträge ab Nummer 9 laden.
+        i = len(defaults) + 1
+        while i <= 50:
+            value = str(settings.get(f"quick_text{i}", "")).strip()
+            if not value:
+                break
+            values.append(value[:149])
+            i += 1
+        return values
+
+    def _open_quick_texts(self):
+        """Show editable quick texts with insert, add and delete controls."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("⚡ Schnelltexte bearbeiten")
+        dialog.setModal(True)
+        dialog.setMinimumWidth(620)
+
+        layout = QVBoxLayout(dialog)
+        info = QLabel(
+            "Schnelltexte hier bearbeiten. Mit „Einfügen“ wird der Text nur ins Nachrichtenfeld übernommen – nicht automatisch gesendet."
+        )
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        rows_layout = QVBoxLayout()
+        layout.addLayout(rows_layout)
+        fields = []
+
+        def add_row(text=""):
+            if len(fields) >= 50:
+                return
+            row = QHBoxLayout()
+            field = QLineEdit(str(text))
+            field.setMaxLength(149)
+            field.setPlaceholderText("Schnelltext eingeben …")
+            insert_button = QPushButton("Einfügen")
+            delete_button = QPushButton("Löschen")
+            row.addWidget(field, 1)
+            row.addWidget(insert_button)
+            row.addWidget(delete_button)
+            rows_layout.addLayout(row)
+            fields.append(field)
+
+            insert_button.clicked.connect(
+                lambda checked=False, f=field: self._use_quick_text(f.text(), dialog)
+            )
+
+            def remove_row():
+                if field not in fields:
+                    return
+                fields.remove(field)
+                field.deleteLater()
+                insert_button.deleteLater()
+                delete_button.deleteLater()
+                row.setEnabled(False)
+
+            delete_button.clicked.connect(remove_row)
+
+        for text in self.quick_texts:
+            add_row(text)
+
+        add_button = QPushButton("＋ Schnelltext hinzufügen")
+        add_button.clicked.connect(lambda: add_row(""))
+        layout.addWidget(add_button)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(lambda: self._save_quick_texts(fields, dialog))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
+
+    def _use_quick_text(self, text, dialog=None):
+        """Insert a quick text into the message field without sending it."""
+        text = str(text or "").strip()[:149]
+        if not text:
+            return
+        self.message_input.setText(text)
+        self.message_input.setFocus()
+        self.message_input.setCursorPosition(len(text))
+        if dialog is not None:
+            dialog.accept()
+
+    def _save_quick_texts(self, fields, dialog):
+        values = [field.text().strip()[:149] for field in fields if field.text().strip()]
+        self.quick_texts = values
+        self._write_settings()
+        self.status.setText("Schnelltexte gespeichert")
+        dialog.accept()
 
     def _toggle_emoji_picker(self):
         """Open/close the compact emoji picker above the message field."""
@@ -922,6 +1561,13 @@ class MainWindow(QMainWindow):
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
         section["sound_file"] = self.sound_file
+        # Schnelltexte dauerhaft in settings.ini speichern.
+        for i in range(1, 51):
+            key = f"quick_text{i}"
+            if key in section:
+                del section[key]
+        for i, text in enumerate(getattr(self, "quick_texts", []), 1):
+            section[f"quick_text{i}"] = text[:149]
         section["weather_enabled"] = "1" if getattr(self, "weather_enabled", False) else "0"
         section["weather_city"] = self.weather_city_input.text().strip() if hasattr(self, "weather_city_input") else ""
         section["own_callsign"] = self.own_callsign_input.text().strip().upper()
@@ -1865,10 +2511,79 @@ class MainWindow(QMainWindow):
             result = result.replace(f"@@MESHCOM_ANCHOR_{i}@@", anchor)
         return result
 
+    def _outgoing_target_matches(self, block, target):
+        target = str(target or "").strip().upper()
+        if not target:
+            return True
+        plain = self._normalized_plain(block)
+        if re.search(rf"(?:NACH|TO)\s*[:=]\s*{re.escape(target)}(?:\s|$)", plain, re.IGNORECASE):
+            return True
+        return re.search(rf">\s*{re.escape(target)}(?:\s|$)", plain, re.IGNORECASE) is not None
+
+    def _block_is_outgoing(self, block, outgoing):
+        own = str(self.own_callsign or "").strip().upper()
+        text = str(outgoing.get("text", "")).strip()
+        if not own or not text:
+            return False
+        plain = self._normalized_plain(block)
+        if own not in plain.upper() or text.casefold() not in plain.casefold():
+            return False
+        return self._outgoing_target_matches(block, outgoing.get("target", ""))
+
+    def _mark_outgoing_echo(self, clean_text, seq, packet_target=""):
+        for msg in reversed(self.outgoing_messages):
+            if msg.get("status") != "pending":
+                continue
+            if clean_text and clean_text.casefold() != str(msg.get("text", "")).strip().casefold():
+                continue
+            expected = str(msg.get("target", "")).strip().upper()
+            actual = str(packet_target or "").strip().upper()
+            if expected and actual and expected != actual:
+                if actual not in {"*", "ALL", "CQCQCQ"} or expected not in {"", "*", "ALL", "CQCQCQ"}:
+                    continue
+            msg["seq"] = str(seq)
+            msg["status"] = "sent"
+            return msg
+        return None
+
+    def _mark_outgoing_ack(self, seq):
+        for msg in reversed(self.outgoing_messages):
+            if str(msg.get("seq", "")) == str(seq):
+                msg["status"] = "delivered"
+                msg["ack"] = True
+                return msg
+        return None
+
+    def _refresh_visible_ack_states(self):
+        # Den bestehenden Nachrichten-Refresh verwenden, damit auch der
+        # vorhandene „Alle“-Zusatzstrom (einschließlich POS/Koordinaten) exakt
+        # so aufgebaut wird wie bisher. Keine eigene neue Chat-/POS-Logik.
+        if not self.refresh_in_progress:
+            self.update_messages()
+
+
     def _render_blocks(self, blocks):
         if not blocks:
             return "<html><body><p><b>Keine Nachrichten.</b></p></body></html>"
-        return "<html><body>" + "\n".join(self._make_clickable(b) for b in blocks) + "</body></html>"
+        rendered = []
+        for block in blocks:
+            content = self._make_clickable(block)
+            # Nur bei einer tatsächlich eigenen Textnachricht einen Status
+            # anhängen. POS-/Koordinatenblöcke bleiben 1:1 unangetastet.
+            ack_html = ""
+            for outgoing in reversed(self.outgoing_messages):
+                if self._block_is_outgoing(block, outgoing):
+                    symbols = {
+                        "pending": "⏳",
+                        "sent": "✓",
+                        "delivered": "✓✓",
+                    }
+                    symbol = symbols.get(outgoing.get("status", "pending"), "")
+                    if symbol:
+                        ack_html = f' <span title="Sendestatus" style="font-weight:700;">{symbol}</span>'
+                    break
+            rendered.append(content + ack_html)
+        return "<html><body>" + "\n".join(rendered) + "</body></html>"
 
     def _room_blocks(self, blocks, room):
         return [b for b in blocks if self._room_from_block(b) == str(room)]
@@ -2419,12 +3134,6 @@ renderStations(initialStations);</script></body></html>"""
 
             self._update_tab_content(all_key, all_index, all_blocks)
 
-            # Scroll every chat to the newest message.
-            for i in range(self.tabs.count()):
-                view = self.tabs.widget(i)
-                if isinstance(view, ChatView):
-                    view.scroll_to_bottom()
-
             if self.filter_enabled.isChecked():
                 rooms = self._rooms()
                 self.status.setText("Nachrichten aktualisiert – Filter: " + (", ".join(rooms) if rooms else "keine Räume"))
@@ -2435,20 +3144,283 @@ renderStations(initialStations);</script></body></html>"""
         finally:
             self.refresh_in_progress = False
 
+
+    @staticmethod
+    def _chat_escape(value):
+        return html.escape(str(value or ""), quote=True)
+
+    @classmethod
+    def _chat_field(cls, plain, label):
+        m = re.search(rf"\b{re.escape(label)}\s*:\s*(.*?)(?=\s+\b(?:Von|From|Nach|To|RSSI|SNR|MsgId|MSGID|Batterie|Batt|Höhe|Breite|Länge|Firmware|Nachricht)\s*:|$)",
+                      plain, re.IGNORECASE)
+        return m.group(1).strip() if m else ""
+
+    @classmethod
+    def _render_chat_blocks(cls, blocks, own_callsign="", outgoing_messages=None):
+        """Render only normal room/private chats as modern message cards.
+
+        This renderer is intentionally NOT used by 'Alle', 'Monitor', 'MH' or
+        the map.  It only changes the presentation layer of normal chat tabs.
+        """
+        if not blocks:
+            return """<html><head><meta charset="utf-8"></head>
+            <body style="background:#101722;color:#e7edf5;font-family:sans-serif;">
+            <div style="padding:18px;color:#aeb9c7;">Keine Nachrichten.</div></body></html>"""
+
+        own = str(own_callsign or "").strip().upper()
+        outgoing_messages = outgoing_messages or []
+        cards = []
+
+        for block in blocks:
+            plain = cls._normalized_plain(block)
+            if not plain:
+                continue
+
+            # Sender / destination.  Prefer explicit dashboard labels.
+            vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
+            sender = vm.group(1).strip() if vm else ""
+            tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
+            target = tm.group(1).strip() if tm else ""
+
+            if not sender or not re.search(r"[A-Z]{1,3}[0-9]", sender, re.IGNORECASE):
+                participants = cls._private_participants(block)
+                if participants:
+                    sender, target = participants[0], participants[1]
+
+            # If the dashboard omits the labels, recover a normal CALL>target header.
+            if not sender:
+                hm = re.search(
+                    r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)\s*>\s*"
+                    r"(?P<right>[A-Z0-9*\-]{1,20})",
+                    plain, re.IGNORECASE)
+                if hm:
+                    sender, target = hm.group("left"), hm.group("right")
+
+            sender = cls._normalize_callsign(sender) or sender
+            target = target.strip()
+
+            # Time and radio metadata.
+            time_text = cls._timestamp_from_block(block)
+            rssi = cls._chat_field(plain, "RSSI")
+            snr = cls._chat_field(plain, "SNR")
+            msgid = cls._chat_field(plain, "MsgId") or cls._chat_field(plain, "MSGID")
+            batt = cls._chat_field(plain, "Batterie") or cls._chat_field(plain, "Batt")
+            height = cls._chat_field(plain, "Höhe")
+            lat = cls._chat_field(plain, "Breite")
+            lon = cls._chat_field(plain, "Länge")
+            firmware = cls._chat_field(plain, "Firmware")
+
+            # Message text: take everything after the explicit Nachricht label.
+            body = ""
+            nm = re.search(r"(?:💬\s*)?Nachricht\s*:\s*(.*)$", plain, re.IGNORECASE)
+            if nm:
+                body = nm.group(1).strip()
+            else:
+                # Fallback for compact dashboard lines: remove known metadata,
+                # leaving the actual message at the end.
+                body = plain
+                if sender:
+                    body = re.sub(re.escape(sender), "", body, count=1, flags=re.IGNORECASE)
+                body = re.sub(r"\b(?:Von|From|Nach|To|RSSI|SNR|MsgId|MSGID|Batterie|Batt|Höhe|Breite|Länge|Firmware|Nachricht)\s*:\s*[^|]+", " ", body, flags=re.IGNORECASE)
+                body = re.sub(r"\s+", " ", body).strip()
+
+            # Remove the repeated date/time which some WebService versions put
+            # immediately before the message text.
+            body = re.sub(
+                r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*",
+                "", body, flags=re.IGNORECASE).strip()
+            if not body:
+                body = " "
+
+            is_out = False
+            for outgoing in reversed(outgoing_messages):
+                if cls._block_is_outgoing_static(block, outgoing, own):
+                    is_out = True
+                    break
+            if not is_out and own and sender.upper() == own and target:
+                is_out = True
+
+            status = ""
+            for outgoing in reversed(outgoing_messages):
+                text_o = str(outgoing.get("text", "")).strip()
+                if is_out and text_o and text_o.casefold() == body.casefold():
+                    status = {"pending":"⏳", "sent":"✓", "delivered":"✓✓"}.get(outgoing.get("status",""), "")
+                    break
+
+            # Keep all useful metadata that already exists in the message block.
+            meta = []
+            if rssi: meta.append(f"RSSI: {cls._chat_escape(rssi)}")
+            if snr: meta.append(f"SNR: {cls._chat_escape(snr)}")
+            if msgid: meta.append(f"MsgId: {cls._chat_escape(msgid)}")
+            if batt: meta.append(f"Batterie: {cls._chat_escape(batt)}")
+            if height: meta.append(f"Höhe: {cls._chat_escape(height)}")
+            if lat: meta.append(f"Breite: {cls._chat_escape(lat)}")
+            if lon: meta.append(f"Länge: {cls._chat_escape(lon)}")
+            if firmware: meta.append(f"Firmware: {cls._chat_escape(firmware)}")
+
+            icon = "✈" if is_out else "📡"
+            bg = "#075f3f" if is_out else "#173a63"
+            border = "#0a8055" if is_out else "#285a8e"
+            align = "right" if is_out else "left"
+            margin = "margin-left:12%;margin-right:2%;" if is_out else "margin-left:2%;margin-right:12%;"
+
+            top = f"<b style='font-size:16px;'>{cls._chat_escape(time_text or '')}</b> &nbsp; <b>MSG</b> &nbsp;•&nbsp; <span>HTTP</span>"
+            if status:
+                top += f" &nbsp; <span style='font-weight:700;'>{status}</span>"
+
+            # Tables are deliberately used here instead of flex/inline-block:
+            # QTextDocument (used by QTextBrowser) supports tables reliably,
+            # while modern CSS layout rules are only partially supported.
+            card_align = "right" if is_out else "left"
+            card_bg = bg
+            card_border = border
+            card = f"""
+            <table width="88%" align="{card_align}" cellspacing="0" cellpadding="0"
+                   style="margin:7px 0;">
+              <tr>
+                <td bgcolor="{card_bg}" style="border:1px solid {card_border};
+                    padding:10px 14px 12px 14px;color:#eef5fb;">
+                  <div style="font-size:13px;color:#e4edf6;">
+                    <span style="font-size:22px;">{icon}</span>
+                    &nbsp;{top}
+                  </div>
+                  <div style="margin-top:7px;font-size:14px;">
+                    <b>Von:</b> {cls._chat_escape(sender or '-')}
+                    &nbsp;&nbsp;&nbsp; <b>Nach:</b> {cls._chat_escape(target or '-')}
+                  </div>
+                  <div style="margin-top:4px;font-size:13px;color:#d7e2ec;">
+                    {(' &nbsp;•&nbsp; '.join(meta)) if meta else 'RSSI: - &nbsp;&nbsp; SNR: -'}
+                  </div>
+                  <div style="margin-top:7px;font-size:14px;">
+                    💬 <b>Nachricht:</b><br>
+                    <span style="white-space:pre-wrap;">{cls._make_clickable(cls._chat_escape(body))}</span>
+                  </div>
+                </td>
+              </tr>
+            </table>"""
+            cards.append(card)
+
+        return """<html><head><meta charset="utf-8"></head>
+        <body style="background:#101722;color:#e7edf5;font-family:sans-serif;margin:0;padding:6px 4px;">
+        """ + "\n".join(cards) + "</body></html>"
+
+    @staticmethod
+    def _block_is_outgoing_static(block, outgoing, own):
+        text = str(outgoing.get("text", "")).strip()
+        if not own or not text:
+            return False
+        plain = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", block))).strip()
+        if own not in plain.upper() or text.casefold() not in plain.casefold():
+            return False
+        expected = str(outgoing.get("target", "")).strip().upper()
+        if not expected:
+            return True
+        # Numeric rooms and broadcast targets are represented in several ways
+        # by the WebService; don't let that alter the card direction.
+        actual_m = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]+)", plain, re.IGNORECASE)
+        actual = actual_m.group(1).upper() if actual_m else ""
+        if actual and actual != expected and actual not in {"*", "ALL", "CQCQCQ"}:
+            return False
+        return True
+
     def _update_tab_content(self, key, index, blocks):
         view = self.tabs.widget(index)
         if not isinstance(view, ChatView):
             return
-        rendered = self._render_blocks(blocks)
-        digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
-        changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
-        self.tab_hashes[key] = digest
-        view.setHtml(rendered)
-        view.scroll_to_bottom()
+        # Nur normale Raum- und Privat-Chats bekommen das neue Karten-Design.
+        # 'Alle', 'Monitor', 'MH' und die Karte laufen weiterhin über ihre
+        # bisherigen Darstellungen.
+        if key[0] in ("room", "private"):
+            # Build real QWidget bubbles from the already filtered blocks.
+            # The existing message/POS collection remains untouched.
+            unique = []
+            seen = set()
+            own = str(self.own_callsign or "").strip().upper()
+            for block in blocks:
+                ident = self._message_identity(block)
+                if ident is not None and ident in seen:
+                    continue
+                if ident is not None:
+                    seen.add(ident)
+                plain = self._normalized_plain(block)
+                if not plain:
+                    continue
+                vm = re.search(r"\b(?:Von|From)\s*:\s*([A-Z0-9][A-Z0-9,\- ]{1,30}?)(?=\s+\b(?:Nach|To)\s*:)", plain, re.IGNORECASE)
+                sender = vm.group(1).strip() if vm else ""
+                tm = re.search(r"\b(?:Nach|To)\s*:\s*([A-Z0-9*\-]{1,20})", plain, re.IGNORECASE)
+                target = tm.group(1).strip() if tm else ""
+                if not sender:
+                    parts = self._private_participants(block)
+                    if parts:
+                        sender, target = parts[0], parts[1]
+                sender = self._normalize_callsign(sender) or sender
+                time_text = self._timestamp_from_block(block) or ""
+                nm = re.search(r"(?:💬\s*)?Nachricht\s*:\s*(.*)$", plain, re.IGNORECASE)
+                body = nm.group(1).strip() if nm else plain
+                body = re.sub(r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*", "", body).strip()
+                if not body:
+                    body = " "
+                outgoing = bool(own and sender.upper() == own)
+                status = ""
+                for outgoing_msg in reversed(self.outgoing_messages):
+                    if outgoing and str(outgoing_msg.get("text", "")).strip().casefold() == body.casefold():
+                        status = {"pending":"⏳", "sent":"✓", "delivered":"✓✓"}.get(outgoing_msg.get("status", ""), "")
+                        break
+                icon = "✈" if outgoing else "📡"
+                icon_html = f"<span style='font-size:28px; line-height:32px; vertical-align:middle;'>{icon}</span>"
+                status_html = (f" <span style='font-size:28px; font-weight:900; line-height:32px; vertical-align:middle;'>{status}</span>" if status else "")
+                sender_html = self._chat_escape(sender or "-")
+                target_html = self._chat_escape(target or "-")
+                body_html = self._make_clickable(self._chat_escape(body))
+                meta = []
+                for label in ("RSSI", "SNR", "MsgId", "MSGID"):
+                    val = self._chat_field(plain, label)
+                    if val:
+                        meta.append(f"{label}: {self._chat_escape(val)}")
+                meta_html = " &nbsp;•&nbsp; ".join(meta)
+                header = (f"<b>{icon_html} &nbsp;{self._chat_escape(time_text)}</b> &nbsp; "
+                          f"<b>{sender_html}</b>{status_html}")
+                html_msg = (f"<div style='font-size:13px;'>{header}</div>"
+                            f"<div style='margin-top:4px;font-size:12px;'><b>Nach:</b> {target_html}"
+                            f"{(' &nbsp;•&nbsp; ' + meta_html) if meta_html else ''}</div>"
+                            f"<div style='margin-top:5px;font-size:14px;'><b>{body_html}</b></div>")
+                unique.append({"html": html_msg, "outgoing": outgoing})
+            # Keep the digest for unread handling without changing the source data.
+            digest_source = "\n".join(str(self._message_identity(b)) for b in blocks)
+            digest = hashlib.sha1(digest_source.encode("utf-8", errors="ignore")).hexdigest()
+            changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
+            self.tab_hashes[key] = digest
+            view.set_bubbles(unique)
+        else:
+            rendered = self._render_blocks(blocks)
+            digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
+            changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
+            self.tab_hashes[key] = digest
+            view.setHtml(rendered)
+        # ChatView keeps the current scroll position during refreshes and only
+        # follows the newest message when the user was already at the bottom.
         if changed and self.tabs.currentIndex() != index:
             self._set_tab_unread(key)
 
     # ---------- Send ----------
+    def _monitor_add_local_message(self, text, target):
+        """Show the just-sent message immediately; later UDP echo is merged."""
+        if not hasattr(self, "monitor_rows") or getattr(self, "monitor_paused", False):
+            return
+        self.monitor_rows.append({
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "type": "MSG",
+            "src": str(self.own_callsign or "-").strip() or "-",
+            "dst": str(target or "-").strip() or "-",
+            "rssi": "-",
+            "snr": "-",
+            "detail": str(text).strip(),
+            "_local_send": True,
+            "_text": str(text).strip(),
+        })
+        self.monitor_rows = self.monitor_rows[-500:]
+        self._render_monitor()
+
     def send(self):
         text = self.message_input.text().strip()
         target = self.target_input.text().strip()
@@ -2466,6 +3438,21 @@ renderStations(initialStations);</script></body></html>"""
             self.last_sent = text
             self.last_sent_time = timestamp
             self.last_private_sent = (target.upper(), text) if target and not target.isdigit() else None
+
+            # Punkt 2: Sendeauftrag für ⏳/✓/✓✓ merken. Die eigentliche
+            # Nachricht kommt weiterhin ausschließlich aus dem WebService.
+            self.outgoing_messages.append({
+                "text": text,
+                "target": target,
+                "time": timestamp,
+                "seq": "",
+                "status": "pending",
+                "ack": False,
+            })
+            self.outgoing_messages = self.outgoing_messages[-100:]
+
+            # Punkt 3 Monitor: eigene Nachricht sofort anzeigen.
+            self._monitor_add_local_message(text, target)
 
             # Keine lokale Kopie mehr erzeugen. Die eigene Nachricht wird nach
             # der Hotspot-Rückmeldung aus demselben WebService-Strom wie alle

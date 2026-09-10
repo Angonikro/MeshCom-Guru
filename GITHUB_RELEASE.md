@@ -1,8 +1,8 @@
-# MeshCom-Guru v0.3.59
+# MeshCom-Guru v0.3.60
 
 ## Release
 
-Diese Version erweitert das Nachrichtenfeld um eine kompakte Emoji-Auswahl.
+Diese Version enthält die aktuellen Nachrichten-, Monitor-, Schnelltext- und MH-Funktionen sowie den korrigierten Scrollbereich des Tabs **Alle**.
 
 ### Änderungen
 - 😊-Button direkt neben dem Nachrichtenfeld.
@@ -14,3 +14,9 @@ Diese Version erweitert das Nachrichtenfeld um eine kompakte Emoji-Auswahl.
 - Wetter-, Raumfilter-, Karten-, Node-Info- und Privatnachrichten-Funktionen bleiben erhalten.
 
 Der oberste Projektordner des Archivs ist `MeshCom/`.
+
+### Pakete
+- Source-/Projektarchiv: `MeshCom-Guru_v0.3.60_GITHUB.zip`
+- Debian-Paket: `MeshCom-Guru_v0.3.60_all.deb`
+- Installation des Debian-Pakets erfolgt nach `/usr/share/MeshCom`.
+- Desktop-Menüeintrag und Icon sind im Debian-Paket enthalten.
