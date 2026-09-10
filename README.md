@@ -29,7 +29,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.63
+## Aktueller Funktionsumfang v0.3.64
 
 - Raum-Chats, Privat-Chats und Tab „Alle“
 - Einheitliche Chat-Bubbles in normalen Raum-Tabs
