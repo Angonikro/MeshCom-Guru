@@ -1,0 +1,48 @@
+name: Windows Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: cmd
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build application
+        shell: cmd
+        run: |
+          pyinstaller --noconfirm --clean --windowed --name MeshCom-Guru main.py
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: |
+          choco install innosetup --yes --no-progress
+
+      - name: Create installer
+        shell: cmd
+        run: |
+          iscc installer\MeshCom-Guru.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeshCom-Guru-Windows-Setup
+          path: installer\Output\MeshCom-Guru_v*.exe
