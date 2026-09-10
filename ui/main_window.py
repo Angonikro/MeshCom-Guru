@@ -3353,10 +3353,45 @@ renderStations(initialStations);</script></body></html>"""
                     parts = self._private_participants(block)
                     if parts:
                         sender, target = parts[0], parts[1]
+
+                # Room messages returned by some MeshCom dashboards do not
+                # contain the explicit "Von:/Nach:" labels used by private
+                # messages.  Their header is instead simply CALLSIGN>ROOM.
+                # Recover the same sender/target information here so normal
+                # room tabs get exactly the same bubble layout and direction
+                # handling as the working private-chat tab.  The "Alle" tab
+                # is deliberately not affected because it uses the other
+                # rendering branch below.
+                if not sender:
+                    hm = re.search(
+                        r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)\s*"
+                        r">\s*(?P<right>\d{1,8})\b",
+                        plain, re.IGNORECASE,
+                    )
+                    if hm:
+                        sender = hm.group("left")
+                        target = hm.group("right")
+
                 sender = self._normalize_callsign(sender) or sender
                 time_text = self._timestamp_from_block(block) or ""
                 nm = re.search(r"(?:💬\s*)?Nachricht\s*:\s*(.*)$", plain, re.IGNORECASE)
-                body = nm.group(1).strip() if nm else plain
+                if nm:
+                    body = nm.group(1).strip()
+                else:
+                    # Compact room cards can contain only:
+                    # CALLSIGN>ROOM [date] time message
+                    # Remove that transport header and timestamp so the
+                    # bubble shows the same clean message text as private chat.
+                    body = plain
+                    if sender and target:
+                        body = re.sub(
+                            rf"^{re.escape(sender)}\s*>\s*{re.escape(str(target))}\b\s*",
+                            "", body, count=1, flags=re.IGNORECASE,
+                        ).strip()
+                    body = re.sub(
+                        r"^20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+[01]\d:[0-5]\d(?::[0-5]\d)?\s*",
+                        "", body, count=1, flags=re.IGNORECASE,
+                    ).strip()
                 body = re.sub(r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*", "", body).strip()
                 if not body:
                     body = " "

@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.60**
+**Version 0.3.61**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -25,6 +19,9 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
 - **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
+- **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
+- **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
+- **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
 ---
 
@@ -35,11 +32,11 @@ Unter **Einstellungen → Wetterdaten** kann die Wetteranzeige aktiviert werden.
 
 Wenn am MeshCom-Node ein **BME280 oder BMP280 Wettermodul** erkannt wird, können die Wetterinformationen genutzt werden. Der eingegebene **Stadtname** wird zusammen mit den aktuellen Wetterwerten über **Wetter senden** ohne Raumangabe übertragen.
 
-Ist die Wetterfunktion aktiviert, wird die WX-Information nach jedem Programmstart automatisch neu geladen. Die Funktion ist in v0.3.57 weiterhin als **Testfunktion** gedacht.
+Ist die Wetterfunktion aktiviert, wird die WX-Information nach jedem Programmstart automatisch neu geladen. Die Funktion ist weiterhin als **Testfunktion** gedacht.
 
 # OSM-Karte
 
-Die OSM-/Leaflet-Kartenansicht wurde in v0.3.57 vergrößert und bietet mehr sichtbare Kartenfläche.
+Die OSM-/Leaflet-Kartenansicht bietet eine vergrößerte Kartenfläche.
 
 # Persönliche Einstellungen
 
@@ -242,7 +239,7 @@ Dort stehen zwei Funktionen zur Verfügung:
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.60**
+**Version 0.3.61**
 
 **By Goldisoft 2026**
 
@@ -382,7 +379,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.60**  
+**MeshCom-Guru v0.3.61**  
 **By Goldisoft 2026**
 
 
@@ -395,7 +392,7 @@ Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
 Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
-`docs/MeshCom-Guru_Anleitung_v0.3.57.pdf` bei.
+Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
 
 
 ## Hilfe und Info

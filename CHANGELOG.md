@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## v0.3.61 – Einheitliche Chat-Bubbles für Raum-Tabs
+
+- **Raum-Tabs:** Die funktionierende Bubble-Anordnung und Farbgebung des Privat-Chats wird jetzt auch für alle normalen Raum-Tabs verwendet.
+- **Eigene Raum-Nachrichten:** Eigene Nachrichten werden in normalen Räumen wieder zuverlässig erkannt und wie im Privat-Chat rechts in **Grün** dargestellt.
+- **Empfangene Raum-Nachrichten:** Fremde Nachrichten bleiben links in **Blau**.
+- **Raum-Header:** Kompakte `CALLSIGN>RAUM`-Antworten des MeshCom-WebService werden korrekt in Absender, Zielraum und Nachricht zerlegt.
+- **Tab „Alle“:** Unverändert; die neue Bubble-Darstellung wird ausdrücklich **nicht** auf „Alle“ angewendet.
+- **Bestehende Funktionen:** Nachrichtenlogik, Filter, Privat-Chats, Karte, Monitor, MH und Wetter bleiben unangetastet.
+
+## v0.3.60 – Schnelltexte, Sendebestätigung, Monitor, MH und Chat-Bubbles
+
+- **Schnelltexte:** Neuer Schnelltexte-Button neben dem Nachrichtenfeld.
+- **Schnelltexte verwalten:** Voreingestellte Schnelltexte können eingefügt und gelöscht werden; eigene Schnelltexte können hinzugefügt werden.
+- **Schnelltexte speichern:** Persönliche Schnelltexte werden in den Benutzereinstellungen gespeichert.
+- **Sendebestätigung:** Eigene Nachrichten zeigen ihren Versandstatus mit **⏳**, **✓** und **✓✓**.
+- **Echo-/ACK-Auswertung:** Die Sendebestätigung berücksichtigt MeshCom-Echo und ACK-Rückmeldungen.
+- **Neuer Tab „Monitor“:** Empfangene MeshCom-Pakete können übersichtlich überwacht werden.
+- **Monitor-Filter:** Filter für **ALLE / MSG / POS / TEL / ACK**.
+- **Monitor-Suche:** Empfangene Pakete können über eine Suchfunktion gefiltert werden.
+- **Monitor-Steuerung:** Auto-Scroll, Pause und Leeren stehen direkt im Monitor zur Verfügung.
+- **Monitor-Details:** Angezeigt werden unter anderem Zeit, Pakettyp, Von, Nach, RSSI, SNR und weitere Paketinformationen.
+- **POS-Auswertung:** Positionsdaten werden mit Koordinaten, Höhe und Batterieinformationen aufbereitet.
+- **TEL-Auswertung:** TEL-Daten werden im Monitor übersichtlich dargestellt.
+- **ACK-Auswertung:** ACK-Pakete werden als eigener Pakettyp angezeigt.
+- **Eigene Nachrichten im Monitor:** Auch selbst gesendete Nachrichten werden im Monitor berücksichtigt.
+- **Neuer Tab „MH“:** Zuletzt gehörte Stationen werden in einer eigenen Übersicht angezeigt.
+- **MH-Informationen:** Rufzeichen, Entfernung, RSSI, SNR, Batterie und letzter Empfang werden angezeigt.
+- **MH-Entfernung:** Die Entfernung wird aus den vorhandenen GPS-Positionen berechnet.
+- **MH-Auswahl:** Das eigene Rufzeichen wird nicht in der MH-Liste angezeigt; bestimmte Test-/Fremdstationen werden ausgeschlossen.
+- **Chat-Bubbles:** Die Chatdarstellung wurde auf eine neue Bubble-Darstellung umgestellt.
+- **Tab „Alle“:** Das Scrollverhalten wurde korrigiert, sodass die Scrollposition beim Aktualisieren des Nachrichtenverlaufs erhalten bleibt.
+- **Benutzereinstellungen:** Die persönliche `settings.ini` liegt nicht mehr im Projektverzeichnis unter `data/`.
+- **Standard-Einstellungen:** `data/default_settings.ini` dient als neutrale Vorlage.
+- **Erststart:** Beim ersten Start wird daraus die persönliche Konfiguration unter `~/.MeshCom/settings.ini` erzeugt.
+- **Bestehende Funktionen:** Die vorhandenen Raum-, Privat-, Karten-, Wetter- und Node-Info-Funktionen bleiben erhalten.
+
 ## v0.3.59 – Emoji-Unterstützung
 
 - **Emoji-Anzeige vergrößert:** Die Smileys im Auswahlfenster sind jetzt etwas größer und dadurch beim Auswählen besser erkennbar, ohne den Picker unnötig groß zu machen.
@@ -8,7 +44,6 @@
 - **Einfügen an Cursorposition:** Das ausgewählte Emoji wird direkt in die aktuelle Nachricht eingefügt.
 - **149-Zeichen-Limit:** Die bestehende Nachrichtenbegrenzung bleibt aktiv; ein Emoji wird nicht eingefügt, wenn dadurch die Grenze überschritten würde.
 - **Sende-/Empfangslogik:** Die bestehende MeshCom-Kommunikation wurde nicht verändert.
-
 
 ## v0.3.58 – Wetterraum, Raumfilter und Entfernungsanzeige
 
