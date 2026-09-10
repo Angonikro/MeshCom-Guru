@@ -4,7 +4,7 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru.png)
+![MeshCom-Guru](meshcom-guru1.png)
 
 ![MeshCom-Guru](meshcom-guru.png)
 
