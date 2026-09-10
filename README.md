@@ -6,6 +6,8 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ![MeshCom-Guru](meshcom-guru.png)
 
+![MeshCom-Guru](meshcom-guru1.png)
+
 [Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
