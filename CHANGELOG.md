@@ -1,11 +1,13 @@
 # Changelog
 
-## v0.3.66 – Stabiler privater Chat ohne Flackern
+## v0.3.67 – Privatchat-Schließen korrigiert
 
-- Die Darstellung der Raum- und Privatnachrichten wurde auf eine stabile `QTextDocument`-/`QTextBrowser`-Darstellung umgestellt.
-- Der bisherige periodische Austausch des Bubble-Widget-Containers entfällt. Dadurch wird das beim Refresh auftretende Flackern verhindert.
-- Eingehende Nachrichten werden wieder zuverlässig im geöffneten privaten Chat angezeigt, einschließlich der ersten neu empfangenen Nachricht.
-- Nachrichten werden aktuell als farbige Nachrichtenfelder innerhalb des stabilen Chat-Dokuments dargestellt.
+- Fehler behoben, durch den ein bewusst geschlossener Privat-Chat nach einem späteren Nachrichten-Refresh wieder automatisch geöffnet werden konnte, obwohl keine neue Nachricht eingetroffen war.
+- Der Schließzustand eines Privat-Tabs wird jetzt mit exakt demselben Nachrichtenstand verglichen, der beim Refresh geprüft wird.
+- Ein geschlossener Privat-Tab bleibt geschlossen, solange keine tatsächlich neue private Nachricht für dieses Rufzeichen eingetroffen ist.
+- Wird eine neue private Nachricht empfangen, darf der entsprechende Privat-Tab weiterhin automatisch wieder erscheinen.
+- Wird nach dem Schließen erneut bewusst an dasselbe Rufzeichen gesendet, wird der Privat-Tab wie bisher sofort wieder geöffnet.
+- Die bestehenden Flacker- und Stabilitätsverbesserungen aus v0.3.66 bleiben erhalten.
 - Nachrichten-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH- und Wetterfunktionen bleiben ansonsten unverändert.
 
 

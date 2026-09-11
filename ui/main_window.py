@@ -2589,12 +2589,21 @@ class MainWindow(QMainWindow):
             return
         self.tabs.removeTab(index)
         self.tab_keys.pop(key, None)
-        # Merke den aktuellen Inhalt des geschlossenen Privat-Tabs.
-        # Solange beim Refresh exakt derselbe Nachrichtenstand vorliegt,
-        # wird der Tab nicht sofort wieder künstlich geöffnet. Sobald aber
-        # eine neue Nachricht für diesen Chat eintrifft, ändert sich der
-        # Inhalt-Digest und der Tab darf automatisch wieder erscheinen.
-        closed_hash = self.tab_hashes.get(key, "")
+        # Merke den aktuellen Nachrichtenstand des geschlossenen Privat-Tabs.
+        # WICHTIG: tab_hashes enthält bei normalen Privat-Tabs den Digest der
+        # gerenderten Chat-Bubbles. Weiter unten wurde dagegen bisher der
+        # Digest von _render_blocks() verglichen. Diese beiden Darstellungen
+        # sind absichtlich unterschiedlich und konnten deshalb niemals gleich
+        # sein. Ergebnis: Ein geschlossener Privat-Tab wurde beim nächsten
+        # Refresh fälschlich wieder als "neue Nachricht" geöffnet.
+        #
+        # Für geschlossene Privat-Tabs verwenden wir deshalb auf beiden Seiten
+        # exakt denselben Digest: den des privaten Nachrichtenblocks.
+        closed_blocks = self._private_blocks(list(self.message_cache.values()), key[1])
+        closed_rendered = self._render_blocks(closed_blocks)
+        closed_hash = hashlib.sha1(
+            closed_rendered.encode("utf-8", errors="ignore")
+        ).hexdigest()
         self.tab_hashes.pop(key, None)
         self.unread.discard(key)
         self.closed_private[key[1].upper()] = closed_hash

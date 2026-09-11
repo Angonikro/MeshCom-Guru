@@ -1,15 +1,17 @@
-# MeshCom-Guru v0.3.66
+# MeshCom-Guru v0.3.67
 
-## Release v0.3.66
+## Release v0.3.67
 
-v0.3.66 ist der stabile Release-Stand von MeshCom-Guru mit einer überarbeiteten Darstellung für Raum- und Privatnachrichten.
+v0.3.67 ist der stabile Release-Stand von MeshCom-Guru mit einer überarbeiteten Darstellung für Raum- und Privatnachrichten.
 
 ### Fehlerbehebung
 
-- Das bisherige Flackern beim periodischen Aktualisieren des privaten Chats wurde beseitigt.
-- Die Chat-Darstellung verwendet einen dauerhaft vorhandenen `QTextBrowser`/`QTextDocument`, sodass der Scrollbereich nicht bei jedem Refresh durch einen neuen Widget-Container ersetzt wird.
-- Eingehende Nachrichten werden zuverlässig angezeigt, auch die erste neu empfangene Nachricht.
-- Die aktuelle Darstellung verwendet farbige Nachrichtenfelder im stabilen Dokument.
+- Fehler behoben, durch den ein bewusst geschlossener Privat-Chat nach einem späteren Refresh wieder geöffnet werden konnte, obwohl keine neue private Nachricht eingetroffen war.
+- Der Schließzustand wird jetzt mit exakt demselben privaten Nachrichtenstand verglichen, der beim Refresh verwendet wird.
+- Ein geschlossener Privat-Tab bleibt geschlossen, solange keine tatsächlich neue private Nachricht für dieses Rufzeichen vorliegt.
+- Eine tatsächlich neue private Nachricht öffnet den Privat-Tab weiterhin automatisch.
+- Ein erneutes bewusstes Senden an ein zuvor geschlossenes privates Ziel öffnet den zugehörigen Tab weiterhin sofort.
+- Die Stabilitäts- und Flackerverbesserungen aus v0.3.66 bleiben erhalten.
 
 ### Bestehende Funktionen
 
