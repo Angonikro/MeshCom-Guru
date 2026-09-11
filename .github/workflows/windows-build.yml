@@ -17,16 +17,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get version
+      - name: Determine version
         shell: powershell
         run: |
           if ("${{ github.ref }}" -like "refs/tags/v*") {
             $version = "${{ github.ref_name }}" -replace "^v", ""
+
+            if ($version -notmatch '^\d+\.\d+\.\d+$') {
+              Write-Error "Invalid version tag: $version"
+              exit 1
+            }
           } else {
-            $version = "0.3.65"
+            $version = (Get-Content VERSION -Raw).Trim()
           }
-          "APP_VERSION=$version" >> $env:GITHUB_ENV
+
           Write-Host "Building MeshCom-Guru version $version"
+          "APP_VERSION=$version" >> $env:GITHUB_ENV
 
       - name: Setup Python
         uses: actions/setup-python@v5
