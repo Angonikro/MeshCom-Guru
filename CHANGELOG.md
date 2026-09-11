@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.66 – Stabiler privater Chat ohne Flackern
+
+- Die Darstellung der Raum- und Privatnachrichten wurde auf eine stabile `QTextDocument`-/`QTextBrowser`-Darstellung umgestellt.
+- Der bisherige periodische Austausch des Bubble-Widget-Containers entfällt. Dadurch wird das beim Refresh auftretende Flackern verhindert.
+- Eingehende Nachrichten werden wieder zuverlässig im geöffneten privaten Chat angezeigt, einschließlich der ersten neu empfangenen Nachricht.
+- Nachrichten werden aktuell als farbige Nachrichtenfelder innerhalb des stabilen Chat-Dokuments dargestellt.
+- Nachrichten-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH- und Wetterfunktionen bleiben ansonsten unverändert.
+
+
 ## v0.3.65 – Chat-Bubble-Flackerfix
 
 - Gezielten Fehler beim gelegentlichen Flackern der Nachrichtenblasen behoben.

@@ -359,51 +359,85 @@ class ChatView(QScrollArea):
         QTimer.singleShot(0, restore)
 
     def set_bubbles(self, items):
+        """Render chat bubbles in one QTextDocument instead of QWidget rows.
+
+        This deliberately avoids rebuilding/replacing a QWidget bubble tree.
+        The QTextBrowser itself stays the permanent child of the QScrollArea;
+        only its document is replaced when the actual rendered message list
+        changes.  This keeps the first received message visible while avoiding
+        the geometry churn caused by repeatedly replacing the bubble container.
+        """
         self._all_mode = False
-        old_bar = self.verticalScrollBar()
+        self._bubble_mode = True
+
+        browser = self._html_view
+        old_bar = browser.verticalScrollBar()
         old_value = old_bar.value()
         old_max = old_bar.maximum()
         was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
-        self._bubble_mode = True
-        self._bubble_container = QWidget()
-        self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
-        self._bubble_layout = QVBoxLayout(self._bubble_container)
-        self._bubble_layout.setContentsMargins(10, 8, 10, 8)
-        self._bubble_layout.setSpacing(8)
-        self._bubble_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
-        self.setWidget(self._bubble_container)
-        self._bubble_rows = []
 
-        if not items:
-            empty = QLabel("Keine Nachrichten.")
-            empty.setStyleSheet(f"color:{self.chat_text_color}; padding:18px;")
-            self._bubble_layout.addWidget(empty, 0, Qt.AlignmentFlag.AlignLeft)
+        self._apply_html_style()
+        browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        browser.setReadOnly(True)
+        browser.setOpenLinks(False)
+        browser.setOpenExternalLinks(False)
+        self.setWidget(browser)
+
+        width = max(260, int(self.viewport().width() * 0.75))
+        bubble_parts = []
+        for item in items:
+            content = str(item.get("html", ""))
+            outgoing = bool(item.get("outgoing", False))
+            if outgoing:
+                bg = "#78d86b"
+                border = "#6bc65f"
+                align = "right"
+                pad = "10px 18px 10px 14px"
+            else:
+                bg = "#4d98e8"
+                border = "#4186ce"
+                align = "left"
+                pad = "10px 14px 10px 18px"
+            bubble_parts.append(
+                f"<div style='width:100%; margin:0 0 8px 0; text-align:{align};'>"
+                f"<table cellspacing='0' cellpadding='0' style='margin:0 0 0 auto;'"
+                f" align='{align}'><tr><td style='background:{bg}; border:1px solid {border};"
+                f" border-radius:18px; padding:{pad}; color:#081018;'>"
+                f"{content}</td></tr></table></div>"
+            )
+
+        if bubble_parts:
+            html = (
+                "<html><body style='margin:0; padding:8px 10px; background:"
+                + self.chat_background
+                + ";'>"
+                + "".join(bubble_parts)
+                + "</body></html>"
+            )
         else:
-            width = max(260, int(self.viewport().width() * 0.75))
-            for item in items:
-                row = QHBoxLayout()
-                row.setContentsMargins(0, 0, 0, 0)
-                row.setSpacing(0)
-                bubble = BubbleWidget(item["html"], item["outgoing"])
-                bubble.set_content(item["html"], width)
-                if item["outgoing"]:
-                    row.addStretch(1)
-                    row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignRight)
-                else:
-                    row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
-                    row.addStretch(1)
-                self._bubble_layout.addLayout(row)
-                self._bubble_rows.append(bubble)
-        self._update_bubble_container_height()
+            html = (
+                "<html><body style='margin:0; padding:18px; background:"
+                + self.chat_background
+                + "; color:" + self.chat_text_color + ";'>"
+                "Keine Nachrichten.</body></html>"
+            )
+
+        # Keep one QTextDocument alive.  There is no QWidget/layout teardown.
+        browser.setHtml(html)
+        doc = browser.document()
+        doc.setTextWidth(max(100, self.viewport().width() - 20))
 
         def restore():
-            new_bar = self.verticalScrollBar()
+            if not self._bubble_mode or self.widget() is not browser:
+                return
+            bar = browser.verticalScrollBar()
             if was_at_bottom:
-                new_bar.setValue(new_bar.maximum())
+                bar.setValue(bar.maximum())
             else:
-                new_bar.setValue(min(old_value, new_bar.maximum()))
+                bar.setValue(min(old_value, bar.maximum()))
+
         QTimer.singleShot(0, restore)
-        QTimer.singleShot(50, restore)
 
     def _update_bubble_container_height(self):
         if not self._bubble_mode:

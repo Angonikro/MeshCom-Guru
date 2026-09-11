@@ -1,22 +1,21 @@
-# MeshCom-Guru v0.3.65
+# MeshCom-Guru v0.3.66
 
-## Release v0.3.65
+## Release v0.3.66
 
-v0.3.65 ist der aktuelle Release-Stand von MeshCom-Guru. Diese Version enthält einen gezielten Fix gegen das gelegentliche Flackern der Nachrichtenblasen im Chat.
+v0.3.66 ist der stabile Release-Stand von MeshCom-Guru mit einer überarbeiteten Darstellung für Raum- und Privatnachrichten.
 
 ### Fehlerbehebung
 
-- Gelegentliches Flackern der Nachrichtenblasen beim periodischen Chat-Refresh behoben.
-- Bereits dargestellte Bubble-Widgets werden nicht mehr unnötig entfernt und neu erzeugt, wenn sich an der sichtbaren Darstellung nichts geändert hat.
-- Ein tatsächlicher Neuaufbau erfolgt weiterhin bei neuen bzw. geänderten Nachrichten oder relevanten Statusänderungen.
-- Die Änderung ist bewusst klein gehalten und greift nicht in die bestehende Nachrichtenlogik ein.
+- Das bisherige Flackern beim periodischen Aktualisieren des privaten Chats wurde beseitigt.
+- Die Chat-Darstellung verwendet einen dauerhaft vorhandenen `QTextBrowser`/`QTextDocument`, sodass der Scrollbereich nicht bei jedem Refresh durch einen neuen Widget-Container ersetzt wird.
+- Eingehende Nachrichten werden zuverlässig angezeigt, auch die erste neu empfangene Nachricht.
+- Die aktuelle Darstellung verwendet farbige Nachrichtenfelder im stabilen Dokument.
 
 ### Bestehende Funktionen
 
 - Raum-Chats und Privat-Chats
 - Tab „Alle“
 - Tab „Weltweit“
-- einheitliche Chat-Bubbles in den Chat-Ansichten
 - Privat-Sendestatus mit **⏳** und Empfänger-ACK **✓✓**
 - **⚡ Schnelltexte**
 - **😊 Emoji-Picker**
