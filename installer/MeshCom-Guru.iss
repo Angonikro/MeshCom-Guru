@@ -1,11 +1,15 @@
+#ifndef APP_VERSION
+#define APP_VERSION "0.3.65"
+#endif
+
 [Setup]
 AppName=MeshCom-Guru
-AppVersion=0.3.65
+AppVersion={#APP_VERSION}
 AppPublisher=Angonikro
 DefaultDirName={autopf}\MeshCom-Guru
 DefaultGroupName=MeshCom-Guru
 OutputDir=Output
-OutputBaseFilename=MeshCom-Guru_v0.3.65_Setup
+OutputBaseFilename=MeshCom-Guru_v{#APP_VERSION}_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
