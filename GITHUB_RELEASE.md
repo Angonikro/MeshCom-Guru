@@ -1,30 +1,23 @@
-# MeshCom-Guru v0.3.67
+# MeshCom-Guru v0.3.68
 
-## Release v0.3.67
+## Release v0.3.68
 
-v0.3.67 ist der stabile Release-Stand von MeshCom-Guru mit einer überarbeiteten Darstellung für Raum- und Privatnachrichten.
+Die v0.3.68 ist der GitHub-Release-Stand mit verbesserter Statusanzeige und einem festen Statistik-Tab.
 
-### Fehlerbehebung
+### Neu
 
-- Fehler behoben, durch den ein bewusst geschlossener Privat-Chat nach einem späteren Refresh wieder geöffnet werden konnte, obwohl keine neue private Nachricht eingetroffen war.
-- Der Schließzustand wird jetzt mit exakt demselben privaten Nachrichtenstand verglichen, der beim Refresh verwendet wird.
-- Ein geschlossener Privat-Tab bleibt geschlossen, solange keine tatsächlich neue private Nachricht für dieses Rufzeichen vorliegt.
-- Eine tatsächlich neue private Nachricht öffnet den Privat-Tab weiterhin automatisch.
-- Ein erneutes bewusstes Senden an ein zuvor geschlossenes privates Ziel öffnet den zugehörigen Tab weiterhin sofort.
-- Die Stabilitäts- und Flackerverbesserungen aus v0.3.66 bleiben erhalten.
+- **🟢 ONLINE / 🔴 OFFLINE** in der oberen Statuszeile.
+- Anzeige der aktuellen Verbindungsdauer: **seit HH:MM:SS**.
+- Datum und Uhrzeit in gut lesbarer Größe.
+- Neuer fester **📊 Statistik**-Tab ohne Schließen-X.
+- Statistikübersicht für Nachrichten und Räume.
 
-### Bestehende Funktionen
+### Erhaltene Funktionen
 
 - Raum-Chats und Privat-Chats
-- Tab „Alle“
-- Tab „Weltweit“
-- Privat-Sendestatus mit **⏳** und Empfänger-ACK **✓✓**
-- **⚡ Schnelltexte**
-- **😊 Emoji-Picker**
-- 149-Zeichen-Limit mit Live-Zähler
-- anklickbare HTTP-/HTTPS-Links
-- **📡 Monitor**
-- **📋 MH – Most Recently Heard**
+- Tab „Alle“ und Tab „Weltweit“
+- **⚡ Schnelltexte** und **😊 Emoji-Picker**
+- **📡 Monitor** und **📋 MH**
 - OSM-/Leaflet-Karte und Positionsdaten
 - Node Info
 - Wetterdaten / WX
@@ -34,7 +27,7 @@ v0.3.67 ist der stabile Release-Stand von MeshCom-Guru mit einer überarbeiteten
 - persönliche Einstellungen unter `~/.MeshCom/settings.ini`
 - Linux-, Windows- und Debian-Startwege
 
-### Release-Dateien
+### Release-Struktur
 
 - oberster Projektordner im Archiv: `MeshCom/`
 - persönliche Einstellungen nicht im Projektarchiv

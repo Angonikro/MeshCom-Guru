@@ -522,6 +522,9 @@ class MainWindow(QMainWindow):
         self._sound_effect = None
         self._prepare_sound()
         self.mesh = MeshCom(settings.get("ip", ""))
+        # Verbindungsanzeige: Beginn der aktuell bestehenden HTTP-Verbindung.
+        self.connection_online = False
+        self.connection_since = None
         self.refresh_in_progress = False
         self.last_sent = None
         self.last_sent_time = None
@@ -977,6 +980,43 @@ class MainWindow(QMainWindow):
         except (TypeError, ValueError):
             return str(value)
 
+    def _update_statistics(self):
+        """Aktualisiert die Sitzungsstatistik ohne zusätzliche Netzwerkabfragen."""
+        if not hasattr(self, "statistics_summary"):
+            return
+
+        message_count = len(self.message_cache)
+        node_count = len(self.mh_stations)
+        position_count = len(self.station_positions)
+        monitor_count = len(self.monitor_rows)
+
+        private_count = 0
+        room_counts = {}
+        for block in self.message_cache.values():
+            participants = self._private_participants(block)
+            if participants:
+                private_count += 1
+                continue
+            text = self._plain(block)
+            m = re.search(r"\b(?:Raum|room)\s*[:#]?\s*(\d+)\b", text, re.I)
+            if m:
+                room = m.group(1)
+                room_counts[room] = room_counts.get(room, 0) + 1
+
+        self.statistics_summary.setText(
+            f"Nachrichten: <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"Nodes: <b>{node_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"Positionen: <b>{position_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"Privatnachrichten: <b>{private_count}</b><br>"
+            f"Monitor-Einträge: <b>{monitor_count}</b>"
+        )
+
+        if room_counts:
+            parts = [f"Raum {room}: <b>{count}</b>" for room, count in sorted(room_counts.items(), key=lambda x: int(x[0]))]
+            self.statistics_room_label.setText("<b>Nachrichten nach Raum:</b><br>" + " &nbsp;&nbsp; | &nbsp;&nbsp; ".join(parts))
+        else:
+            self.statistics_room_label.setText("<b>Nachrichten nach Raum:</b> noch keine Daten")
+
     def _render_mh(self):
         if not hasattr(self, "mh_table"):
             return
@@ -1147,15 +1187,26 @@ class MainWindow(QMainWindow):
         help_menu.addAction(info_action)
 
     def _build_ui(self, settings):
-        # Uhr/Datum oben rechts in der Oberfläche.
+        # Verbindungsstatus links und Uhr/Datum rechts in derselben Zeile.
+        # Alle drei Anzeigen bewusst gleich groß/fett, damit sie auch bei
+        # kleiner Fensterbreite gut lesbar bleiben.
+        self.connection_label = QLabel()
+        self.connection_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.connection_label.setMinimumWidth(230)
+        self.connection_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700;")
+
         self.datetime_label = QLabel()
         self.datetime_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.datetime_label.setMinimumWidth(190)
+        self.datetime_label.setMinimumWidth(260)
         self.datetime_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.datetime_label.setStyleSheet("font-size: 12pt; font-weight: 700;")
 
         top_row = QHBoxLayout()
+        top_row.addWidget(self.connection_label)
         top_row.addStretch(1)
         top_row.addWidget(self.datetime_label)
+        self._set_connection_status(False)
 
         self.ip_input = QLineEdit(settings.get("ip", ""))
         self.target_input = QLineEdit(settings.get("target", ""))
@@ -1367,6 +1418,41 @@ class MainWindow(QMainWindow):
             None,
         )
         self._render_mh()
+
+        # ---------- 📊 Statistik ----------
+        # Fester Tab ohne Schließen-X. Die Statistik verwendet ausschließlich
+        # Daten, die MeshCom-Guru bereits während der laufenden Sitzung kennt.
+        self.statistics_view = QWidget()
+        statistics_layout = QVBoxLayout(self.statistics_view)
+        statistics_layout.setContentsMargins(12, 12, 12, 12)
+        statistics_layout.setSpacing(10)
+
+        stats_title = QLabel("📊 MeshCom-Guru Statistik")
+        stats_title.setStyleSheet("font-size: 14pt; font-weight: 700;")
+        statistics_layout.addWidget(stats_title)
+
+        self.statistics_summary = QLabel()
+        self.statistics_summary.setWordWrap(True)
+        self.statistics_summary.setStyleSheet("font-size: 11pt;")
+        statistics_layout.addWidget(self.statistics_summary)
+
+        self.statistics_room_label = QLabel()
+        self.statistics_room_label.setWordWrap(True)
+        self.statistics_room_label.setStyleSheet("font-size: 10.5pt;")
+        statistics_layout.addWidget(self.statistics_room_label)
+
+        statistics_layout.addStretch(1)
+
+        self.statistics_tab_index = self.tabs.insertTab(
+            self.mh_tab_index + 1, self.statistics_view, "📊 Statistik"
+        )
+        # Statistik ist ein fester Tab und darf nicht geschlossen werden.
+        self.tabs.tabBar().setTabButton(
+            self.statistics_tab_index,
+            self.tabs.tabBar().ButtonPosition.RightSide,
+            None,
+        )
+        self._update_statistics()
 
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Nachricht eingeben …")
@@ -1615,9 +1701,37 @@ class MainWindow(QMainWindow):
             field.setText(settings.get(f"filter_room{i}", ""))
         self._ensure_room_tabs()
 
+    def _set_connection_status(self, online):
+        """Update the clearly visible connection status and online duration."""
+        online = bool(online)
+        now = datetime.now()
+        if online and not self.connection_online:
+            self.connection_since = now
+        elif not online:
+            self.connection_since = None
+        self.connection_online = online
+        self._update_connection_label(now)
+
+    def _update_connection_label(self, now=None):
+        if not hasattr(self, "connection_label"):
+            return
+        now = now or datetime.now()
+        if self.connection_online and self.connection_since is not None:
+            elapsed = max(0, int((now - self.connection_since).total_seconds()))
+            hours, remainder = divmod(elapsed, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            self.connection_label.setText(f"🟢 ONLINE  |  seit {duration}")
+            self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #20e060;")
+        else:
+            self.connection_label.setText("🔴 OFFLINE  |  keine Verbindung")
+            self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #ff3b30;")
+
     def _update_clock(self):
         now = datetime.now()
         self.datetime_label.setText(now.strftime("%d.%m.%Y  |  %H:%M:%S"))
+        self.datetime_label.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        self._update_connection_label(now)
 
     # ---------- Theme ----------
     def _apply_theme(self, theme):
@@ -2016,6 +2130,7 @@ class MainWindow(QMainWindow):
         self.own_lat, self.own_lon = lat, lon
         self._write_settings()
         self.mesh = MeshCom(ip)
+        self._set_connection_status(False)
         self._ensure_room_tabs()
         self._update_map()
         self.status.setText(ui_text("Einstellungen gespeichert"))
@@ -3439,6 +3554,7 @@ renderStations(initialStations);</script></body></html>"""
         self.refresh_in_progress = True
         try:
             page = self.mesh.get_messages()
+            self._set_connection_status(True)
             blocks = self._extract_message_blocks(page)
             if not blocks:
                 # Keep compatibility with nodes that return the message HTML directly.
@@ -3459,6 +3575,7 @@ renderStations(initialStations);</script></body></html>"""
                         if heard:
                             self.station_last_heard[key] = heard
             self._update_map()
+            self._update_statistics()
 
             self._ensure_room_tabs()
             # Der HTTP-Nachrichtenstrom bleibt für Chat/Privatnachrichten zuständig.
@@ -3486,6 +3603,7 @@ renderStations(initialStations);</script></body></html>"""
                     if identity and identity not in self.startup_message_identities:
                         self.message_cache[identity] = block
 
+            self._update_statistics()
             cached_blocks = list(self.message_cache.values())
             cached_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
@@ -3668,6 +3786,7 @@ renderStations(initialStations);</script></body></html>"""
             else:
                 self.status.setText(ui_text("Nachrichten aktualisiert – alle Räume"))
         except Exception as exc:
+            self._set_connection_status(False)
             self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
         finally:
             self.refresh_in_progress = False

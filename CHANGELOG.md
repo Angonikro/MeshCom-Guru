@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.68 – Online-Status und Statistik
+
+- Sichtbare Verbindungsanzeige in der oberen Statuszeile ergänzt.
+- **🟢 ONLINE** bei erfolgreicher Verbindung zum MeshCom-WebService.
+- **🔴 OFFLINE** bei fehlender Verbindung.
+- Anzeige der aktuellen Verbindungsdauer mit **„seit HH:MM:SS“**.
+- Online-Status und Uhr/Datum deutlich größer und besser lesbar dargestellt.
+- Neuer fester Tab **📊 Statistik** ohne Schließen-X.
+- Statistik zeigt die vorhandenen Nachrichten- und Raumdaten übersichtlich an.
+- Bestehende Nachrichten-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH- und Wetterfunktionen bleiben erhalten.
+
 ## v0.3.67 – Privatchat-Schließen korrigiert
 
 - Fehler behoben, durch den ein bewusst geschlossener Privat-Chat nach einem späteren Nachrichten-Refresh wieder automatisch geöffnet werden konnte, obwohl keine neue Nachricht eingetroffen war.
