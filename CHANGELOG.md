@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.69 – Englische Übersetzung der neuen Funktionen
+- Statistik-Tab wechselt beim Umschalten der Sprache sofort zwischen Deutsch und Englisch; kein Neustart mehr erforderlich.
+
+- Die neuen Funktionen aus v0.3.68 wurden in die englische Benutzeroberfläche aufgenommen.
+- **Statistik** wird auf Englisch als **Statistics** angezeigt.
+- **Verbinden** wird als **Connect** angezeigt.
+- **Trennen** wird als **Disconnect** angezeigt.
+- Die zugehörigen Online-/Offline-Statusmeldungen, Verbindungsmeldungen und Fehlermeldungen wurden ergänzt.
+- Die neuen Statistik-Bezeichnungen wurden ergänzt.
+- Bestehende Übersetzungen und Funktionen wurden nicht verändert.
+
 ## v0.3.68 – Online-Status und Statistik
 
 - Sichtbare Verbindungsanzeige in der oberen Statuszeile ergänzt.

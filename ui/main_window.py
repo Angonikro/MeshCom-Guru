@@ -585,6 +585,9 @@ class MainWindow(QMainWindow):
             self.own_lat = None
             self.own_lon = None
 
+        # Verbindungssteuerung: WebService erst nach Klick auf "Verbinden".
+        self.connected = False
+
         self._build_menu()
         self._build_ui(settings)
         self._apply_language_ui()
@@ -611,11 +614,8 @@ class MainWindow(QMainWindow):
         self.clock_timer.timeout.connect(self._update_clock)
         self.clock_timer.start(1000)
         self._update_clock()
-
-        # Der Nachrichtenstrom wird über den funktionierenden HTTP-WebService
-        # abgerufen. Positionskarten sind Bestandteil desselben HTML-Responses
-        # und werden dort direkt aus den message-row/message-bubble-Blöcken
-        QTimer.singleShot(200, self.update_messages)
+        # Keine automatische Verbindung beim Programmstart.
+        # Der Benutzer entscheidet mit "Verbinden", wann der WebService abgefragt wird.
 
     # ---------- MeshCom UDP-Schnittstelle ----------
     def _start_udp_listener(self, port=1799):
@@ -1004,18 +1004,19 @@ class MainWindow(QMainWindow):
                 room_counts[room] = room_counts.get(room, 0) + 1
 
         self.statistics_summary.setText(
-            f"Nachrichten: <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
-            f"Nodes: <b>{node_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
-            f"Positionen: <b>{position_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
-            f"Privatnachrichten: <b>{private_count}</b><br>"
-            f"Monitor-Einträge: <b>{monitor_count}</b>"
+            f"{ui_text('Nachrichten:')} <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"{ui_text('Nodes:')} <b>{node_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"{ui_text('Positionen:')} <b>{position_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"{ui_text('Privatnachrichten:')} <b>{private_count}</b><br>"
+            f"{ui_text('Monitor-Einträge:')} <b>{monitor_count}</b>"
         )
 
         if room_counts:
-            parts = [f"Raum {room}: <b>{count}</b>" for room, count in sorted(room_counts.items(), key=lambda x: int(x[0]))]
-            self.statistics_room_label.setText("<b>Nachrichten nach Raum:</b><br>" + " &nbsp;&nbsp; | &nbsp;&nbsp; ".join(parts))
+            room_label = ui_text("Raum")
+            parts = [f"{room_label} {room}: <b>{count}</b>" for room, count in sorted(room_counts.items(), key=lambda x: int(x[0]))]
+            self.statistics_room_label.setText("<b>" + ui_text("Nachrichten nach Raum:") + "</b><br>" + " &nbsp;&nbsp; | &nbsp;&nbsp; ".join(parts))
         else:
-            self.statistics_room_label.setText("<b>Nachrichten nach Raum:</b> noch keine Daten")
+            self.statistics_room_label.setText("<b>" + ui_text("Nachrichten nach Raum:") + "</b> " + ui_text("noch keine Daten"))
 
     def _render_mh(self):
         if not hasattr(self, "mh_table"):
@@ -1202,8 +1203,22 @@ class MainWindow(QMainWindow):
         self.datetime_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         self.datetime_label.setStyleSheet("font-size: 12pt; font-weight: 700;")
 
+        self.connect_button = QPushButton(ui_text("🔗 Verbinden"))
+        self.connect_button.setFixedWidth(125)
+        self.connect_button.setToolTip(ui_text("Mit dem MeshCom-WebService verbinden"))
+        self.connect_button.clicked.connect(self.connect_mesh)
+
+        self.disconnect_button = QPushButton(ui_text("⛓️ Trennen"))
+        self.disconnect_button.setFixedWidth(110)
+        self.disconnect_button.setToolTip(ui_text("Verbindung zum MeshCom-WebService trennen"))
+        self.disconnect_button.clicked.connect(self.disconnect_mesh)
+        self.disconnect_button.setEnabled(False)
+
         top_row = QHBoxLayout()
         top_row.addWidget(self.connection_label)
+        top_row.addSpacing(8)
+        top_row.addWidget(self.connect_button)
+        top_row.addWidget(self.disconnect_button)
         top_row.addStretch(1)
         top_row.addWidget(self.datetime_label)
         self._set_connection_status(False)
@@ -1427,7 +1442,7 @@ class MainWindow(QMainWindow):
         statistics_layout.setContentsMargins(12, 12, 12, 12)
         statistics_layout.setSpacing(10)
 
-        stats_title = QLabel("📊 MeshCom-Guru Statistik")
+        stats_title = QLabel(ui_text("📊 MeshCom-Guru Statistik"))
         stats_title.setStyleSheet("font-size: 14pt; font-weight: 700;")
         statistics_layout.addWidget(stats_title)
 
@@ -1444,7 +1459,7 @@ class MainWindow(QMainWindow):
         statistics_layout.addStretch(1)
 
         self.statistics_tab_index = self.tabs.insertTab(
-            self.mh_tab_index + 1, self.statistics_view, "📊 Statistik"
+            self.mh_tab_index + 1, self.statistics_view, ui_text("📊 Statistik")
         )
         # Statistik ist ein fester Tab und darf nicht geschlossen werden.
         self.tabs.tabBar().setTabButton(
@@ -1721,10 +1736,10 @@ class MainWindow(QMainWindow):
             hours, remainder = divmod(elapsed, 3600)
             minutes, seconds = divmod(remainder, 60)
             duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-            self.connection_label.setText(f"🟢 ONLINE  |  seit {duration}")
+            self.connection_label.setText(f"🟢 {ui_text('ONLINE  |  seit')} {duration}")
             self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #20e060;")
         else:
-            self.connection_label.setText("🔴 OFFLINE  |  keine Verbindung")
+            self.connection_label.setText("🔴 " + ui_text("OFFLINE  |  keine Verbindung"))
             self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #ff3b30;")
 
     def _update_clock(self):
@@ -2102,6 +2117,14 @@ class MainWindow(QMainWindow):
                 elif title == "📋 MH":
                     self.tabs.setTabText(i, tr("📋 MH"))
 
+            # Statistik-Tab muss beim Sprachwechsel sofort umbenannt werden.
+            # Da der aktuelle Tab-Titel bereits "📊 Statistics" sein kann,
+            # reicht eine reine Prüfung auf den deutschen Ausgangstext nicht.
+            if hasattr(self, "statistics_view"):
+                stats_idx = self.tabs.indexOf(self.statistics_view)
+                if stats_idx >= 0:
+                    self.tabs.setTabText(stats_idx, ui_text("📊 Statistik"))
+
         # Table headers
         if hasattr(self, "monitor_table"):
             self.monitor_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Zeit", "Typ", "Von", "Nach", "RSSI", "SNR", "Information"]])
@@ -2315,6 +2338,10 @@ class MainWindow(QMainWindow):
             <p><b>Room / Target:</b> Enter a room number such as 262 or a callsign for a private message.</p>
             <p><b>Own station / GPS:</b> Enter your own callsign and optionally latitude and longitude.</p>
             <p><b>Save settings:</b> Stores personal settings in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connection status</h3>
+            <p>Use <b>Connect</b> to connect to the MeshCom WebService. <b>Disconnect</b> stops the connection and automatic message polling.</p>
+            <h3>Statistics</h3>
+            <p>The <b>Statistics</b> tab shows session counts for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
             <h3>Language</h3>
             <p>Use <b>Settings → Language / Sprache …</b> to switch between German and English. The selection is stored and restored after restart.</p>
             <h3>Messages and rooms</h3>
@@ -2360,6 +2387,10 @@ class MainWindow(QMainWindow):
             <p><b>Raum / Ziel:</b> Eine Raumnummer wie 262 oder ein Rufzeichen für eine private Nachricht eintragen.</p>
             <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
             <p><b>Einstellungen speichern:</b> Speichert die persönlichen Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Verbindungsstatus</h3>
+            <p>Mit <b>Verbinden</b> wird die Verbindung zum MeshCom-WebService hergestellt. <b>Trennen</b> beendet die Verbindung und die automatische Nachrichtenabfrage.</p>
+            <h3>Statistik</h3>
+            <p>Der Tab <b>Statistik</b> zeigt Sitzungszähler für Nachrichten, Nodes, Positionen, Privatnachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
             <h3>Sprache</h3>
             <p>Unter <b>Einstellungen → Sprache / Language …</b> kann zwischen Deutsch und English gewechselt werden. Die Auswahl wird gespeichert und nach dem Neustart wieder geladen.</p>
             <h3>Nachrichten und Räume</h3>
@@ -3547,8 +3578,45 @@ renderStations(initialStations);</script></body></html>"""
         # gepuffert, bis Leaflet/JavaScript nach setHtml() vollständig bereit ist.
         self._push_map_stations(stations)
 
+    # ---------- Verbindung ----------
+    def connect_mesh(self):
+        """Test the configured WebService and start automatic refresh."""
+        ip = self.ip_input.text().strip().rstrip("/")
+        if not ip:
+            self.status.setText(ui_text("Fehler: Keine Hotspot-IP eingetragen"))
+            return
+
+        try:
+            self.mesh = MeshCom(ip)
+            self.status.setText(ui_text("Verbinde mit MeshCom-WebService …"))
+            self.connect_button.setEnabled(False)
+            self.disconnect_button.setEnabled(True)
+
+            # Echter WebService-Abruf als Verbindungstest.
+            self.mesh.get_messages()
+            self.connected = True
+            self._set_connection_status(True)
+            self.status.setText(ui_text("Mit MeshCom-WebService verbunden"))
+            self.update_messages()
+        except Exception as exc:
+            self.connected = False
+            self.connect_button.setEnabled(True)
+            self.disconnect_button.setEnabled(False)
+            self._set_connection_status(False)
+            self.status.setText(ui_text(f"Verbindung fehlgeschlagen: {exc}"))
+
+    def disconnect_mesh(self):
+        """Stop WebService polling and mark the connection offline."""
+        self.connected = False
+        self._set_connection_status(False)
+        self.connect_button.setEnabled(True)
+        self.disconnect_button.setEnabled(False)
+        self.status.setText(ui_text("Vom MeshCom-WebService getrennt"))
+
     # ---------- Refresh ----------
     def update_messages(self):
+        if not self.connected:
+            return
         if self.refresh_in_progress:
             return
         self.refresh_in_progress = True
@@ -3786,7 +3854,10 @@ renderStations(initialStations);</script></body></html>"""
             else:
                 self.status.setText(ui_text("Nachrichten aktualisiert – alle Räume"))
         except Exception as exc:
+            self.connected = False
             self._set_connection_status(False)
+            self.connect_button.setEnabled(True)
+            self.disconnect_button.setEnabled(False)
             self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
         finally:
             self.refresh_in_progress = False
@@ -4160,6 +4231,9 @@ renderStations(initialStations);</script></body></html>"""
         self._render_monitor()
 
     def send(self):
+        if not self.connected:
+            self.status.setText(ui_text("Bitte zuerst mit dem MeshCom-WebService verbinden"))
+            return
         text = self.message_input.text().strip()
         target = self.target_input.text().strip()
         if not text:

@@ -1,10 +1,14 @@
-# MeshCom-Guru v0.3.68
+# MeshCom-Guru v0.3.69
 
-## Release v0.3.68
+## Release v0.3.69
 
-Die v0.3.68 ist der GitHub-Release-Stand mit verbesserter Statusanzeige und einem festen Statistik-Tab.
+Die v0.3.69 ist der GitHub-Release-Stand mit den neuen Verbindungsbuttons, dem festen Statistik-Tab und der aktualisierten englischen Übersetzung.
 
 ### Neu
+
+- **🔗 Verbinden / ⛓️ Trennen** zur manuellen Steuerung der WebService-Verbindung.
+- **📊 Statistik** als fester Tab.
+- Englische Übersetzung der neuen Verbindungs- und Statistikfunktionen inklusive Status- und Fehlermeldungen.
 
 - **🟢 ONLINE / 🔴 OFFLINE** in der oberen Statuszeile.
 - Anzeige der aktuellen Verbindungsdauer: **seit HH:MM:SS**.
