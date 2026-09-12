@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.70**
+**Version 0.3.71**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,7 +23,14 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.70
+## Aktueller Funktionsumfang v0.3.71
+
+### MH-Liste – Korrektur in v0.3.71
+
+- Die MH-Liste übernimmt nur noch Stationen aus tatsächlich über LoRa empfangenen EXTUDP-Paketen (`src_type=lora` bzw. `node`).
+- UDP-/Gateway-Verkehr wird nicht mehr fälschlich als „gehörte“ Station in MH eingetragen.
+- Bei Relay-Pfaden wird ausschließlich das erste Rufzeichen als ursprünglicher Absender verwendet; weitere Rufzeichen sind Relay-Hops.
+
 
 ### Neu in v0.3.70
 
@@ -440,7 +441,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.70**  
+**MeshCom-Guru v0.3.71**  
 **By Goldisoft 2026**
 
 
@@ -459,5 +460,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

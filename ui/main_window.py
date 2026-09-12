@@ -919,9 +919,25 @@ class MainWindow(QMainWindow):
             return None
 
     def _update_mh_from_packet(self, packet):
-        """Update one MH station from an already received EXTUDP packet."""
+        """Update MH only from stations actually received over LoRa.
+
+        EXTUDP uses ``src`` as a source/relay path and ``src_type`` to tell
+        where the packet came from.  Packets with ``src_type=udp`` are
+        server/gateway traffic and must not create a "heard" station.
+        For LoRa packets the FIRST callsign in ``src`` is the original
+        sender; later callsigns are relay hops and are therefore ignored.
+        """
         if not isinstance(packet, dict):
             return
+
+        src_type = str(packet.get("src_type", packet.get("source_type", "")) or "").strip().lower()
+        # According to the MeshCom EXTUDP protocol, only these source types
+        # represent packets received from the LoRa side.  In particular,
+        # ``udp`` must never populate MH because it can contain gateway/server
+        # traffic and relay paths that are not locally heard stations.
+        if src_type not in {"lora", "node"}:
+            return
+
         callsign = self._udp_callsign(packet.get("src", ""))
         if not callsign:
             return

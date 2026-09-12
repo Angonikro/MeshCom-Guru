@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.71
+
+- **MH-Liste korrigiert:** Nur tatsächlich über LoRa empfangene Pakete (`src_type=lora` bzw. `node`) dürfen neue Stationen in die MH-Liste eintragen. UDP-/Gateway-Verkehr wird nicht mehr als gehörte Station übernommen.
+- Bei Relay-Pfaden wird weiterhin ausschließlich das **erste Rufzeichen** als ursprünglicher Absender verwendet; nachfolgende Rufzeichen sind Relay-Hops.
+
 ## v0.3.70 – Automatische Wiederverbindung nach Verbindungsverlust
 
 - Die integrierte **Hilfe → Anleitung** wurde auf v0.3.70 aktualisiert und unterstützt jetzt Deutsch, English, Italiano, Nederlands und Français.
