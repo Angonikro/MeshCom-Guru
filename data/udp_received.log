@@ -1,1 +1,4 @@
-2026-09-12 15:28:59 {"dst": "*", "firmware": 0, "fw_sub": "#", "msg": "{CET}2026-09-12 13:28:59", "msg_id": "6A9F6EA7", "rssi": 0, "snr": 0, "src": "OE1XAR-33", "src_type": "udp", "type": "msg"}
+2026-09-12 19:21:30 {"dst": "*", "firmware": 0, "fw_sub": "#", "msg": "{CET}2026-09-12 17:21:30", "msg_id": "6A9F6EC5", "rssi": 0, "snr": 0, "src": "OE1XAR-33", "src_type": "udp", "type": "msg"}
+2026-09-12 19:22:23 {"alt": 1010, "aprs_symbol": "#", "aprs_symbol_group": "/", "batt": 52, "firmware": 35, "fw_sub": "p", "hw_id": 43, "lat": 51.6745, "lat_dir": "N", "long": 9.0493, "long_dir": "E", "msg": "", "msg_id": "694F930C", "rssi": -96, "snr": 4, "src": "DB1YKA-1,DL1YAU-12", "src_type": "lora", "type": "pos"}
+2026-09-12 19:22:23 {"batt": 52, "co2": 0, "gas": 0, "hum": 0, "qfe": 0, "qnh": 0, "src": "DB1YKA-1,DL1YAU-12", "src_type": "lora", "temp1": 0, "temp2": 0, "type": "tele"}
+2026-09-12 19:22:36 {"dst": "*", "firmware": 0, "fw_sub": "#", "msg": "{CET}2026-09-12 17:21:33", "msg_id": "6A9F6F13", "rssi": -95, "snr": 4, "src": "OE1XAR-62,DB0OHL-12,DM0DOS-11,DL1YAU-12", "src_type": "lora", "type": "msg"}

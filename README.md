@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.69**
+**Version 0.3.70**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,9 +23,9 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.69
+## Aktueller Funktionsumfang v0.3.70
 
-### Neu in v0.3.69
+### Neu in v0.3.70
 
 - Sichtbare Verbindungsanzeige oben im Fenster: **🟢 ONLINE** bzw. **🔴 OFFLINE**.
 - Anzeige, wie lange die aktuelle Verbindung bereits besteht (**Online seit HH:MM:SS**).
@@ -39,7 +33,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Neuer fester Tab **📊 Statistik** ohne Schließen-X.
 - Statistikübersicht für Nachrichten und Räume.
 
-### Neu in v0.3.69
+### Neu in v0.3.70
 
 - Die neuen Funktionen **Statistics**, **Connect** und **Disconnect** sowie die zugehörigen Status-, Verbindungs- und Fehlermeldungen sind vollständig in der englischen Benutzeroberfläche enthalten.
 - Bestehende Funktionen und bisherige Übersetzungen bleiben unverändert.
@@ -59,7 +53,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Sound-Einstellungen und Hell-/Dunkel-Theme
 - Raumfilter für bis zu fünf Räume
 - persönliche Einstellungen unter `~/.MeshCom/settings.ini`
-- **Deutsch / English:** umschaltbare Benutzeroberfläche mit gespeicherter Spracheinstellung
+- **Deutsch / English / Italiano / Nederlands / Français:** umschaltbare Benutzeroberfläche mit gespeicherter Spracheinstellung
 - **Chat-Farben:** gemeinsamer Chat-Hintergrund für alle Chat-Ansichten; separate Schriftfarbe für „Alle“
 - Standard für Chat-Farben: **schwarzer Hintergrund / weiße Schrift**
 - Übersetztes Qt-Kontextmenü für Eingabefelder (Kopieren, Einfügen, Ausschneiden, Löschen usw.)
@@ -73,7 +67,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 # Sprache / Language
 
-Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch** und **English** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
+Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch, English, Italiano, Nederlands und Français** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
 
 Die Benutzeroberfläche wird übersetzt; empfangene Nachrichten, Rufzeichen, Raum- und Zielnummern sowie persönliche Inhalte bleiben unverändert. Die integrierte **Hilfe → Anleitung** folgt der gewählten Sprache.
 
@@ -440,7 +434,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.61**  
+**MeshCom-Guru v0.3.70**  
 **By Goldisoft 2026**
 
 
@@ -452,8 +446,8 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die separate PDF-Anleitung liegt dem GitHub-Paket ebenfalls als
-Die im Projekt enthaltenen PDF-Anleitungen liegen im Ordner `docs/`.
+Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` im Projekt.
+Ältere PDF-Versionen bleiben zur Dokumentationshistorie im Ordner `docs/` erhalten.
 
 
 ## Hilfe und Info

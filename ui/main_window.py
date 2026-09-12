@@ -498,7 +498,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 930)
 
         settings = load_settings()
-        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en") else "de"
+        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
         set_language(self.language)
         # Let Qt translate its own standard context menus (Undo/Copy/Paste/...).
         # This is safer than intercepting ContextMenu events with a global
@@ -585,8 +585,15 @@ class MainWindow(QMainWindow):
             self.own_lat = None
             self.own_lon = None
 
-        # Verbindungssteuerung: WebService erst nach Klick auf "Verbinden".
+        # Verbindungssteuerung:
+        # - Kein automatisches Verbinden beim Programmstart.
+        # - Nach einem manuellen Klick auf "Verbinden" bleibt die Verbindung
+        #   für Auto-Reconnect freigegeben, auch wenn ein späterer Abruf
+        #   vorübergehend fehlschlägt.
+        # - "Trennen" deaktiviert Auto-Reconnect ausdrücklich.
         self.connected = False
+        self.auto_reconnect_enabled = False
+        self.reconnect_in_progress = False
 
         self._build_menu()
         self._build_ui(settings)
@@ -1257,7 +1264,7 @@ class MainWindow(QMainWindow):
         filter_row = QHBoxLayout()
         for i in range(5):
             field = QLineEdit()
-            field.setPlaceholderText(f"Raum {i + 1}")
+            field.setPlaceholderText(ui_text("Raum") + f" {i + 1}")
             field.setMaxLength(10)
             self.filter_inputs.append(field)
             filter_row.addWidget(field)
@@ -1994,7 +2001,7 @@ class MainWindow(QMainWindow):
         section["theme"] = self.current_theme
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
-        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en") else "de"
+        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
@@ -2018,7 +2025,7 @@ class MainWindow(QMainWindow):
             config.write(f)
 
     def open_language_dialog(self):
-        """Show a small, explicit Deutsch/English language selector."""
+        """Show the available UI languages."""
         from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QComboBox, QPushButton
         dialog = QDialog(self)
         dialog.setWindowTitle(tr("language_title"))
@@ -2027,7 +2034,11 @@ class MainWindow(QMainWindow):
         combo = QComboBox()
         combo.addItem(tr("german"), "de")
         combo.addItem(tr("english"), "en")
-        combo.setCurrentIndex(0 if getattr(self, "language", "de") == "de" else 1)
+        combo.addItem(tr("italian"), "it")
+        combo.addItem(tr("dutch"), "nl")
+        combo.addItem(tr("french"), "fr")
+        current = getattr(self, "language", "de")
+        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4}.get(current, 0))
         layout.addWidget(label)
         layout.addWidget(combo)
         button = QPushButton("OK")
@@ -2044,12 +2055,12 @@ class MainWindow(QMainWindow):
         if self._qt_translator_loaded:
             app.removeTranslator(self._qt_translator)
             self._qt_translator_loaded = False
-        # English is Qt's source language, so no Qt translator is needed.
-        if language != "de":
+        # Qt provides standard translations for common dialogs/widgets.
+        if language == "en":
             return
         try:
             path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
-            if self._qt_translator.load("qtbase_de", path):
+            if self._qt_translator.load(f"qtbase_{language}", path):
                 app.installTranslator(self._qt_translator)
                 self._qt_translator_loaded = True
         except Exception:
@@ -2057,7 +2068,7 @@ class MainWindow(QMainWindow):
 
     def _set_ui_language(self, language):
         """Save and immediately apply the selected UI language."""
-        language = language if language in ("de", "en") else "de"
+        language = language if language in ("de", "en", "it", "nl", "fr") else "de"
         self.language = language
         set_language(language)
         self._apply_qt_translation(language)
@@ -2101,21 +2112,26 @@ class MainWindow(QMainWindow):
             for i in range(combo.count()):
                 combo.setItemText(i, ui_text(combo.itemText(i)))
 
-        # Tab labels: only static UI tabs are translated; private callsigns stay untouched.
+        # Tab labels: use the stable internal tab key instead of the visible
+        # label. This is important for multilingual room tabs because a
+        # translated label (e.g. "Stanza 10" or "Salon 10") must not be
+        # mistaken for the German source text on the next language change.
         if hasattr(self, "tabs"):
             for i in range(self.tabs.count()):
-                title = self.tabs.tabText(i)
-                if title == "Alle" or title == "All":
+                widget = self.tabs.widget(i)
+                key = getattr(widget, "_mesh_key", None)
+                if key and key[0] == "all":
                     self.tabs.setTabText(i, tr("Alle"))
-                elif title.startswith("Raum ") or title.startswith("Room "):
-                    num = title.split()[-1]
-                    self.tabs.setTabText(i, ("Room " if self.language == "en" else "Raum ") + num)
-                elif title == "Karte" or title == "Map":
-                    self.tabs.setTabText(i, tr("Karte"))
-                elif title == "📡 Monitor":
-                    self.tabs.setTabText(i, tr("📡 Monitor"))
-                elif title == "📋 MH":
-                    self.tabs.setTabText(i, tr("📋 MH"))
+                elif key and key[0] == "room":
+                    self.tabs.setTabText(i, self._room_tab_title(key[1]))
+                else:
+                    title = self.tabs.tabText(i)
+                    if title == "Karte" or title == "Map":
+                        self.tabs.setTabText(i, tr("Karte"))
+                    elif title in {"📡 Monitor", "📡 Moniteur", "📡 Monitor"}:
+                        self.tabs.setTabText(i, tr("📡 Monitor"))
+                    elif title == "📋 MH":
+                        self.tabs.setTabText(i, tr("📋 MH"))
 
             # Statistik-Tab muss beim Sprachwechsel sofort umbenannt werden.
             # Da der aktuelle Tab-Titel bereits "📊 Statistics" sein kann,
@@ -2317,117 +2333,116 @@ class MainWindow(QMainWindow):
     def open_help(self):
         """Show the built-in MeshCom-Guru user guide in the selected language."""
         dialog = QDialog(self)
-        is_en = False
         try:
             from i18n import get_language
-            is_en = get_language() == "en"
+            lang = get_language()
         except Exception:
-            pass
-        dialog.setWindowTitle("MeshCom-Guru – User guide" if is_en else "MeshCom-Guru – Anleitung")
-        dialog.resize(800, 680)
+            lang = "de"
+        titles = {
+            "de": "MeshCom-Guru – Anleitung",
+            "en": "MeshCom-Guru – User guide",
+            "it": "MeshCom-Guru – Guida utente",
+            "nl": "MeshCom-Guru – Gebruikershandleiding",
+            "fr": "MeshCom-Guru – Guide utilisateur",
+        }
+        dialog.setWindowTitle(titles.get(lang, titles["de"]))
+        dialog.resize(820, 700)
         layout = QVBoxLayout(dialog)
         view = QTextBrowser(dialog)
         view.setOpenExternalLinks(True)
 
-        if is_en:
-            guide = f"""
-            <h2>MeshCom-Guru v{VERSION}</h2>
-            <h3>Quick guide</h3>
-            <h3>Connection and settings</h3>
-            <p><b>Hotspot IP:</b> Enter the IP address of the MeshCom WebService.</p>
-            <p><b>Room / Target:</b> Enter a room number such as 262 or a callsign for a private message.</p>
-            <p><b>Own station / GPS:</b> Enter your own callsign and optionally latitude and longitude.</p>
-            <p><b>Save settings:</b> Stores personal settings in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Connection status</h3>
-            <p>Use <b>Connect</b> to connect to the MeshCom WebService. <b>Disconnect</b> stops the connection and automatic message polling.</p>
-            <h3>Statistics</h3>
-            <p>The <b>Statistics</b> tab shows session counts for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
-            <h3>Language</h3>
-            <p>Use <b>Settings → Language / Sprache …</b> to switch between German and English. The selection is stored and restored after restart.</p>
-            <h3>Messages and rooms</h3>
-            <p>The message filter supports up to <b>five rooms</b>. <b>Refresh</b> retrieves messages from the MeshCom WebService. <b>Send</b> transmits a message to the selected room or private target.</p>
-            <p>Messages are limited to <b>149 characters</b>. The live counter shows the current length.</p>
-            <p>Normal room chats use message bubbles. The <b>All</b> tab keeps its separate display.</p>
-            <p><b>Bubble position:</b> The first and last visible messages are aligned from the bottom of the chat area. With only one or a few messages, the bubbles start at the bottom. When the chat contains more messages than fit on screen, normal scrolling is used; manual scrolling is not overridden by new messages.</p>
-            <h3>Chat colors</h3>
-            <p>Under <b>Settings → Chat colors …</b> you can choose a shared background for all chat views. The text color is applied only to <b>All</b>. Normal room bubbles keep their existing text colors.</p>
-            <p><b>Restore defaults</b> sets the chat colors to black background and white text.</p>
-            <h3>Input-field context menu</h3>
-            <p>Right-click an input field to use standard commands such as Undo, Redo, Cut, Copy, Paste, Delete and Select All. These commands follow the selected interface language.</p>
-            <h3>Private chat and delivery status</h3>
-            <p>A freshly sent private message first shows <b>⏳</b>. Only a recognized recipient ACK changes the status to <b>✓✓</b>.</p>
-            <h3>⚡ Quick texts</h3>
-            <p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically.</p>
-            <h3>😊 Emojis</h3>
-            <p>The emoji picker inserts the selected emoji at the cursor position. The 149-character limit remains active.</p>
-            <h3>📡 Monitor</h3>
-            <p>The Monitor displays received MeshCom UDP packets on <b>port 1799</b>. Filters include <b>ALL, MSG, POS, TEL, ACK</b>, plus search, pause, auto-scroll and clear.</p>
-            <h3>📋 MH – Most Recently Heard</h3>
-            <p>MH lists recently heard stations with callsign, distance, RSSI, SNR, battery and last heard time where available.</p>
-            <h3>🗺 Map and position data</h3>
-            <p>Position data is processed through UDP 1799 and displayed on the OSM/Leaflet map.</p>
-            <h3>🌤 Weather data</h3>
-            <p>The WX display shows temperature, humidity, QFE and QNH when supplied by the WebService. It is intended for suitable weather hardware such as BME280/BMP280.</p>
-            <h3>🔊 Sound and theme</h3>
-            <p>Sound notifications and the light/dark theme can be configured in the settings.</p>
-            <h3>Node Info</h3>
-            <p><b>Open Node Info</b> opens the information of the connected MeshCom WebService.</p>
-            <h3>Installation</h3>
-            <p><b>Linux ZIP:</b> Extract the <code>MeshCom</code> folder and run <code>./run_linux.sh</code>.</p>
-            <p><b>Windows:</b> Run <code>run_windows.bat</code>.</p>
-            <p><b>Debian:</b> The package installs to <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Help → About</h3><p>Shows version and program information.</p>
-            """
-        else:
-            guide = f"""
-            <h2>MeshCom-Guru v{VERSION}</h2>
-            <h3>Kurzanleitung</h3>
+        guides = {
+            "de": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Kurzanleitung</h3>
             <h3>Verbindung und Einstellungen</h3>
-            <p><b>Hotspot IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
+            <p><b>Hotspot-IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
             <p><b>Raum / Ziel:</b> Eine Raumnummer wie 262 oder ein Rufzeichen für eine private Nachricht eintragen.</p>
             <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
-            <p><b>Einstellungen speichern:</b> Speichert die persönlichen Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Verbindungsstatus</h3>
-            <p>Mit <b>Verbinden</b> wird die Verbindung zum MeshCom-WebService hergestellt. <b>Trennen</b> beendet die Verbindung und die automatische Nachrichtenabfrage.</p>
+            <p><b>Einstellungen speichern:</b> Speichert persönliche Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Verbinden und Trennen / Auto-Reconnect</h3>
+            <p>Mit <b>Verbinden</b> wird die Verbindung zum MeshCom-WebService hergestellt. Nach einer manuellen Verbindung ist die automatische Wiederverbindung aktiv.</p>
+            <p>Wenn die Verbindung durch einen vorübergehenden Netzwerk-, Hotspot- oder WebService-Fehler verloren geht, versucht MeshCom-Guru automatisch erneut zu verbinden.</p>
+            <p><b>Wichtig:</b> Mit <b>Trennen</b> wird die automatische Wiederverbindung bewusst abgeschaltet. Danach verbindet sich das Programm nicht selbstständig wieder. Ein erneuter Druck auf <b>Verbinden</b> aktiviert sie wieder.</p>
+            <p>Beim Programmstart wird <b>nicht automatisch</b> verbunden.</p>
             <h3>Statistik</h3>
             <p>Der Tab <b>Statistik</b> zeigt Sitzungszähler für Nachrichten, Nodes, Positionen, Privatnachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
             <h3>Sprache</h3>
-            <p>Unter <b>Einstellungen → Sprache / Language …</b> kann zwischen Deutsch und English gewechselt werden. Die Auswahl wird gespeichert und nach dem Neustart wieder geladen.</p>
+            <p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert und nach dem Neustart wieder geladen. Raum-Tabs werden passend zur gewählten Sprache angezeigt; Raum- und Zielnummern selbst bleiben unverändert.</p>
             <h3>Nachrichten und Räume</h3>
             <p>Der Nachrichtenfilter unterstützt bis zu <b>fünf Räume</b>. Mit <b>Aktualisieren</b> werden Nachrichten vom MeshCom-WebService abgerufen. Mit <b>Senden</b> wird eine Nachricht an den ausgewählten Raum oder das private Ziel übertragen.</p>
             <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Live-Zähler zeigt die aktuelle Länge.</p>
             <p>Normale Raum-Chats verwenden Nachrichten-Bubbles. Der Tab <b>Alle</b> behält seine eigene Darstellung.</p>
-            <p><b>Position der Bubbles:</b> Die erste bzw. letzte sichtbare Nachricht wird am unteren Rand des Chatbereichs ausgerichtet. Bei nur einer oder wenigen Nachrichten beginnen die Bubbles unten. Sind mehr Nachrichten vorhanden als in den sichtbaren Bereich passen, steht normales Scrollen zur Verfügung; beim manuellen Hochscrollen wird die Position nicht durch neue Nachrichten überschrieben.</p>
-            <h3>Chat-Farben</h3>
-            <p>Unter <b>Einstellungen → Chat-Farben …</b> kann ein gemeinsamer Hintergrund für alle Chat-Ansichten gewählt werden. Die Schriftfarbe gilt nur für <b>Alle</b>. Die normalen Raum-Bubbles behalten ihre bisherigen Textfarben.</p>
-            <p><b>Standard wiederherstellen</b> setzt die Chat-Farben auf schwarzen Hintergrund und weiße Schrift zurück.</p>
-            <h3>Kontextmenü in Eingabefeldern</h3>
-            <p>Mit der rechten Maustaste können in Eingabefeldern Standardbefehle wie Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen verwendet werden. Die Begriffe folgen der gewählten Sprache.</p>
-            <h3>Privat-Chat und Sendestatus</h3>
-            <p>Eine frisch gesendete private Nachricht zeigt zunächst <b>⏳</b>. Erst ein erkannter Empfänger-ACK setzt den Status auf <b>✓✓</b>.</p>
-            <h3>⚡ Schnelltexte</h3>
-            <p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet den Text nicht automatisch.</p>
-            <h3>😊 Emojis</h3>
-            <p>Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein. Das 149-Zeichen-Limit bleibt aktiv.</p>
-            <h3>📡 Monitor</h3>
-            <p>Der Monitor zeigt empfangene MeshCom-UDP-Pakete auf <b>Port 1799</b>. Filter: <b>ALLE, MSG, POS, TEL, ACK</b>, zusätzlich Suche, Pause, Auto-Scroll und Leeren.</p>
-            <h3>📋 MH – Most Recently Heard</h3>
-            <p>MH zeigt zuletzt gehörte Stationen mit Rufzeichen, Entfernung, RSSI, SNR, Batterie und letzter Empfangszeit, sofern vorhanden.</p>
-            <h3>🗺 Karte und Positionsdaten</h3>
-            <p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt.</p>
-            <h3>🌤 Wetterdaten</h3>
-            <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Vorgesehen ist die Funktion für geeignete Wetterhardware wie BME280/BMP280.</p>
-            <h3>🔊 Sound und Theme</h3>
-            <p>Benachrichtigungston und Hell-/Dunkel-Theme können in den Einstellungen konfiguriert werden.</p>
-            <h3>Node Info</h3>
-            <p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
-            <h3>Installation</h3>
-            <p><b>Linux ZIP:</b> Den Projektordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten.</p>
-            <p><b>Windows:</b> <code>run_windows.bat</code> starten.</p>
-            <p><b>Debian:</b> Das Paket installiert nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+            <p><b>Position der Bubbles:</b> Bei wenigen Nachrichten beginnen die Bubbles unten. Bei längeren Chats steht normales Scrollen zur Verfügung; beim manuellen Hochscrollen wird die Position nicht durch neue Nachrichten überschrieben.</p>
+            <h3>Chat-Farben</h3><p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund und die Schriftfarbe für „Alle“ eingestellt werden. <b>Standard wiederherstellen</b> setzt die Standardfarben zurück.</p>
+            <h3>Kontextmenü</h3><p>Mit der rechten Maustaste stehen in Eingabefeldern Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen zur Verfügung.</p>
+            <h3>Privat-Chat und Sendestatus</h3><p>Eine frisch gesendete private Nachricht zeigt zunächst <b>⏳</b>. Erst ein erkannter Empfänger-ACK setzt den Status auf <b>✓✓</b>.</p>
+            <h3>⚡ Schnelltexte und 😊 Emojis</h3><p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
+            <h3>📡 Monitor und 📋 MH</h3><p>Der Monitor zeigt MeshCom-UDP-Pakete auf <b>Port 1799</b> mit Filtern, Suche, Pause, Auto-Scroll und Leeren. MH zeigt zuletzt gehörte Stationen mit verfügbaren Informationen wie Rufzeichen, Entfernung, RSSI, SNR, Batterie und Empfangszeit.</p>
+            <h3>🗺 Karte und Positionsdaten</h3><p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt.</p>
+            <h3>🌤 Wetterdaten</h3><p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Geeignete Wetterhardware kann z. B. BME280/BMP280 sein.</p>
+            <h3>🔊 Sound und Theme</h3><p>Benachrichtigungston, Soundtreiber, Lautstärke und Hell-/Dunkel-Theme können in den Einstellungen konfiguriert werden.</p>
+            <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Hilfe → Info</h3><p>Zeigt Versions- und Programminformationen.</p>
-            """
-        view.setHtml(guide)
+            """,
+            "en": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
+            <h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Room / Target:</b> Enter a room number such as 262 or a callsign for a private message.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed.</p><p>If the connection is lost because of a temporary network, hotspot or WebService error, MeshCom-Guru automatically tries to reconnect.</p><p><b>Important:</b> Pressing <b>Disconnect</b> deliberately disables automatic reconnection. The program will not reconnect by itself until you press <b>Connect</b> again.</p><p>The program does <b>not</b> connect automatically at startup.</p>
+            <h3>Statistics</h3><p>The <b>Statistics</b> tab shows session counts for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
+            <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The selection is saved and restored after restart. Room tabs are translated while room and target numbers remain unchanged.</p>
+            <h3>Messages and rooms</h3><p>The message filter supports up to <b>five rooms</b>. <b>Refresh</b> retrieves messages; <b>Send</b> transmits to the selected room or private target. Messages are limited to <b>149 characters</b>.</p><p>Normal room chats use message bubbles. The <b>All</b> tab keeps its separate display. Manual scrolling is respected.</p>
+            <h3>Chat colors and context menu</h3><p>Chat background and the text color for <b>All</b> can be configured. Input fields provide standard Undo, Redo, Cut, Copy, Paste, Delete and Select All commands.</p>
+            <h3>Private chat, quick texts and emojis</h3><p>A new private message first shows <b>⏳</b>; a recognized recipient ACK changes it to <b>✓✓</b>. Quick texts are inserted only and are not sent automatically. The emoji picker inserts the selected emoji at the cursor.</p>
+            <h3>📡 Monitor / 📋 MH / 🗺 Map</h3><p>Monitor displays MeshCom UDP packets on <b>port 1799</b>. MH lists recently heard stations. Position data is processed through UDP 1799 and shown on the OSM/Leaflet map.</p>
+            <h3>🌤 Weather / 🔊 Sound / Node Info</h3><p>WX can show temperature, humidity, QFE and QNH when supplied by the WebService. Sound, volume and light/dark theme are configurable. <b>Open Node Info</b> opens WebService information.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> Run <code>run_windows.bat</code>. <b>Debian:</b> Installed to <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Help → About</h3><p>Shows version and program information.</p>
+            """,
+            "it": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
+            <h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> Inserire l'indirizzo IP del WebService MeshCom.</p><p><b>Stanza / Destinazione:</b> Inserire un numero di stanza, ad esempio 262, oppure un nominativo per un messaggio privato.</p><p><b>Stazione propria / GPS:</b> Inserire il proprio nominativo e, facoltativamente, latitudine e longitudine.</p><p><b>Salva impostazioni:</b> Le impostazioni personali vengono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p>Con <b>Connetti</b> viene stabilita la connessione al WebService MeshCom. Dopo una connessione manuale la riconnessione automatica viene attivata.</p><p>Se la connessione viene persa per un problema temporaneo di rete, hotspot o WebService, MeshCom-Guru prova automaticamente a riconnettersi.</p><p><b>Importante:</b> premendo <b>Disconnetti</b> la riconnessione automatica viene disattivata. Il programma non si riconnetterà da solo finché non verrà premuto nuovamente <b>Connetti</b>.</p><p>All'avvio il programma <b>non</b> si connette automaticamente.</p>
+            <h3>Statistiche</h3><p>La scheda <b>Statistiche</b> mostra i contatori della sessione per messaggi, nodi, posizioni, messaggi privati, monitor e messaggi per stanza.</p>
+            <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. La scelta viene salvata e ripristinata dopo il riavvio. Le schede delle stanze vengono tradotte, mentre numeri di stanza e destinazioni restano invariati.</p>
+            <h3>Messaggi e stanze</h3><p>Il filtro messaggi supporta fino a <b>cinque stanze</b>. <b>Aggiorna</b> recupera i messaggi; <b>Invia</b> trasmette alla stanza o destinazione privata selezionata. Il limite è di <b>149 caratteri</b>.</p><p>Le chat normali usano fumetti di messaggio. La scheda <b>Tutti</b> mantiene la propria visualizzazione; lo scorrimento manuale viene rispettato.</p>
+            <h3>Colori chat e menu contestuale</h3><p>È possibile configurare lo sfondo delle chat e il colore del testo per <b>Tutti</b>. Nei campi di testo sono disponibili Annulla, Ripeti, Taglia, Copia, Incolla, Elimina e Seleziona tutto.</p>
+            <h3>Chat privata, testi rapidi ed emoji</h3><p>Un nuovo messaggio privato mostra inizialmente <b>⏳</b>; un ACK riconosciuto del destinatario lo cambia in <b>✓✓</b>. I testi rapidi vengono inseriti senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
+            <h3>📡 Monitor / 📋 MH / 🗺 Mappa</h3><p>Monitor mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b>. MH mostra le stazioni ascoltate di recente. I dati di posizione vengono elaborati tramite UDP 1799 e visualizzati sulla mappa OSM/Leaflet.</p>
+            <h3>🌤 Meteo / 🔊 Suono / Info nodo</h3><p>WX può mostrare temperatura, umidità, QFE e QNH quando forniti dal WebService. Suono, volume e tema chiaro/scuro sono configurabili. <b>Apri info nodo</b> apre le informazioni del WebService.</p>
+            <h3>Installazione</h3><p><b>ZIP Linux:</b> Estrarre <code>MeshCom</code> ed eseguire <code>./run_linux.sh</code>. <b>Windows:</b> eseguire <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>; le impostazioni personali restano in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Aiuto → Info</h3><p>Mostra versione e informazioni del programma.</p>
+            """,
+            "nl": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Beknopte handleiding</h3>
+            <h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> Vul het IP-adres van de MeshCom-WebService in.</p><p><b>Ruimte / Doel:</b> Vul een ruimtenummer, bijvoorbeeld 262, of een roepnaam voor een privébericht in.</p><p><b>Eigen station / GPS:</b> Vul uw eigen roepnaam en eventueel breedte- en lengtegraad in.</p><p><b>Instellingen opslaan:</b> Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Verbinden / Verbinding verbreken / Automatisch opnieuw verbinden</h3><p>Met <b>Verbinden</b> wordt verbinding gemaakt met de MeshCom-WebService. Na een handmatige verbinding wordt automatisch opnieuw verbinden ingeschakeld.</p><p>Als de verbinding door een tijdelijke netwerk-, hotspot- of WebService-fout wegvalt, probeert MeshCom-Guru automatisch opnieuw verbinding te maken.</p><p><b>Belangrijk:</b> Met <b>Verbinding verbreken</b> wordt automatisch opnieuw verbinden bewust uitgeschakeld. Het programma maakt pas weer automatisch verbinding nadat u opnieuw op <b>Verbinden</b> hebt gedrukt.</p><p>Bij het starten maakt het programma <b>niet automatisch</b> verbinding.</p>
+            <h3>Statistieken</h3><p>Het tabblad <b>Statistieken</b> toont sessietellers voor berichten, nodes, posities, privéberichten, monitorregels en berichten per ruimte.</p>
+            <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De keuze wordt opgeslagen en na opnieuw starten hersteld. Ruimtetabs worden vertaald; ruimte- en doel­nummers blijven ongewijzigd.</p>
+            <h3>Berichten en ruimtes</h3><p>Het berichtenfilter ondersteunt maximaal <b>vijf ruimtes</b>. <b>Vernieuwen</b> haalt berichten op; <b>Verzenden</b> stuurt naar de gekozen ruimte of het privédoel. Het maximum is <b>149 tekens</b>.</p><p>Normale ruimtechats gebruiken berichtbubbels. Het tabblad <b>Alles</b> behoudt zijn eigen weergave; handmatig scrollen wordt gerespecteerd.</p>
+            <h3>Chatkleuren en contextmenu</h3><p>De chatachtergrond en tekstkleur voor <b>Alles</b> kunnen worden ingesteld. In invoervelden zijn Ongedaan maken, Opnieuw, Knippen, Kopiëren, Plakken, Verwijderen en Alles selecteren beschikbaar.</p>
+            <h3>Privéchat, snelteksten en emoji's</h3><p>Een nieuw privébericht toont eerst <b>⏳</b>; een herkende ACK van de ontvanger verandert dit in <b>✓✓</b>. Snelteksten worden alleen ingevoegd en niet automatisch verzonden. De emoji-kiezer voegt de emoji op de cursorpositie in.</p>
+            <h3>📡 Monitor / 📋 MH / 🗺 Kaart</h3><p>Monitor toont MeshCom-UDP-pakketten op <b>poort 1799</b>. MH toont recent gehoorde stations. Positiegegevens worden via UDP 1799 verwerkt en op de OSM/Leaflet-kaart weergegeven.</p>
+            <h3>🌤 Weer / 🔊 Geluid / Node-info</h3><p>WX kan temperatuur, luchtvochtigheid, QFE en QNH tonen wanneer de WebService deze levert. Geluid, volume en licht/donker-thema zijn instelbaar. <b>Node-info openen</b> toont de WebService-informatie.</p>
+            <h3>Installatie</h3><p><b>Linux ZIP:</b> Pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>; persoonlijke instellingen blijven in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Help → Info</h3><p>Toont versie- en programma-informatie.</p>
+            """,
+            "fr": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Guide rapide</h3>
+            <h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> Saisir l'adresse IP du WebService MeshCom.</p><p><b>Salon / Destination :</b> Saisir un numéro de salon, par exemple 262, ou un indicatif pour un message privé.</p><p><b>Station personnelle / GPS :</b> Saisir votre indicatif et, si nécessaire, la latitude et la longitude.</p><p><b>Enregistrer les paramètres :</b> Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p>Avec <b>Connecter</b>, la connexion au WebService MeshCom est établie. Après une connexion manuelle, la reconnexion automatique est activée.</p><p>Si la connexion est perdue à cause d'une erreur temporaire du réseau, du hotspot ou du WebService, MeshCom-Guru tente automatiquement de se reconnecter.</p><p><b>Important :</b> Le bouton <b>Déconnecter</b> désactive volontairement la reconnexion automatique. Le programme ne se reconnectera pas seul tant que vous n'aurez pas appuyé de nouveau sur <b>Connecter</b>.</p><p>Au démarrage, le programme ne se connecte <b>pas automatiquement</b>.</p>
+            <h3>Statistiques</h3><p>L'onglet <b>Statistiques</b> affiche les compteurs de session pour les messages, nœuds, positions, messages privés, entrées du moniteur et messages par salon.</p>
+            <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le choix est enregistré et restauré après redémarrage. Les onglets des salons sont traduits, tandis que les numéros de salon et de destination restent inchangés.</p>
+            <h3>Messages et salons</h3><p>Le filtre de messages prend en charge jusqu'à <b>cinq salons</b>. <b>Actualiser</b> récupère les messages ; <b>Envoyer</b> transmet au salon ou à la destination privée sélectionnée. La limite est de <b>149 caractères</b>.</p><p>Les salons utilisent des bulles de messages. L'onglet <b>Tous</b> conserve son affichage propre et le défilement manuel est respecté.</p>
+            <h3>Couleurs du chat et menu contextuel</h3><p>L'arrière-plan du chat et la couleur du texte de <b>Tous</b> peuvent être configurés. Les champs de saisie proposent Annuler, Rétablir, Couper, Copier, Coller, Supprimer et Tout sélectionner.</p>
+            <h3>Chat privé, textes rapides et emojis</h3><p>Un nouveau message privé affiche d'abord <b>⏳</b> ; un ACK reconnu du destinataire le transforme en <b>✓✓</b>. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
+            <h3>📡 Moniteur / 📋 MH / 🗺 Carte</h3><p>Le Moniteur affiche les paquets UDP MeshCom sur le <b>port 1799</b>. MH affiche les stations entendues récemment. Les positions sont traitées via UDP 1799 et affichées sur la carte OSM/Leaflet.</p>
+            <h3>🌤 Météo / 🔊 Son / Informations du nœud</h3><p>WX peut afficher température, humidité, QFE et QNH lorsque le WebService les fournit. Le son, le volume et le thème clair/sombre sont configurables. <b>Ouvrir les infos du nœud</b> affiche les informations du WebService.</p>
+            <h3>Installation</h3><p><b>ZIP Linux :</b> Extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code> ; les paramètres personnels restent dans <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Aide → Info</h3><p>Affiche la version et les informations du programme.</p>
+            """,
+        }
+        view.setHtml(guides.get(lang, guides["de"]))
         layout.addWidget(view, 1)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(dialog.reject)
@@ -2686,11 +2701,15 @@ class MainWindow(QMainWindow):
                 result.append(value)
         return result
 
+    def _room_tab_title(self, room):
+        """Return the translated display title for a MeshCom room tab."""
+        return f"{ui_text('Raum')} {room}"
+
     def _ensure_room_tabs(self):
-        self._ensure_tab(("all", "all"), "Alle")
+        self._ensure_tab(("all", "all"), tr("Alle"))
         rooms = self._rooms()
         for room in rooms:
-            self._ensure_tab(("room", room), f"Raum {room}")
+            self._ensure_tab(("room", room), self._room_tab_title(room))
 
         # Remove room tabs whose filter entry was cleared.
         wanted = set(rooms)
@@ -3579,16 +3598,30 @@ renderStations(initialStations);</script></body></html>"""
         self._push_map_stations(stations)
 
     # ---------- Verbindung ----------
-    def connect_mesh(self):
-        """Test the configured WebService and start automatic refresh."""
+    def connect_mesh(self, automatic=False):
+        """Connect to the WebService; after a user connection, auto-reconnect is armed."""
+        # A manual click explicitly enables automatic recovery.  Automatic
+        # retries do not change this flag, so a transient network/node failure
+        # cannot permanently disable the connection.
+        if not automatic:
+            self.auto_reconnect_enabled = True
+
         ip = self.ip_input.text().strip().rstrip("/")
         if not ip:
+            self.auto_reconnect_enabled = False
             self.status.setText(ui_text("Fehler: Keine Hotspot-IP eingetragen"))
             return
 
+        if self.reconnect_in_progress:
+            return
+
+        self.reconnect_in_progress = True
         try:
             self.mesh = MeshCom(ip)
-            self.status.setText(ui_text("Verbinde mit MeshCom-WebService …"))
+            if automatic:
+                self.status.setText(ui_text("Verbindung verloren – verbinde erneut …"))
+            else:
+                self.status.setText(ui_text("Verbinde mit MeshCom-WebService …"))
             self.connect_button.setEnabled(False)
             self.disconnect_button.setEnabled(True)
 
@@ -3600,14 +3633,25 @@ renderStations(initialStations);</script></body></html>"""
             self.update_messages()
         except Exception as exc:
             self.connected = False
-            self.connect_button.setEnabled(True)
-            self.disconnect_button.setEnabled(False)
             self._set_connection_status(False)
-            self.status.setText(ui_text(f"Verbindung fehlgeschlagen: {exc}"))
+            # IMPORTANT: Do not clear auto_reconnect_enabled here.  A failed
+            # request is a lost connection, not a user-requested disconnect.
+            if self.auto_reconnect_enabled:
+                self.connect_button.setEnabled(False)
+                self.disconnect_button.setEnabled(True)
+                self.status.setText(ui_text(f"Verbindung verloren – neuer Versuch: {exc}"))
+            else:
+                self.connect_button.setEnabled(True)
+                self.disconnect_button.setEnabled(False)
+                self.status.setText(ui_text(f"Verbindung fehlgeschlagen: {exc}"))
+        finally:
+            self.reconnect_in_progress = False
 
     def disconnect_mesh(self):
-        """Stop WebService polling and mark the connection offline."""
+        """Manually disconnect and permanently cancel automatic reconnect."""
+        self.auto_reconnect_enabled = False
         self.connected = False
+        self.reconnect_in_progress = False
         self._set_connection_status(False)
         self.connect_button.setEnabled(True)
         self.disconnect_button.setEnabled(False)
@@ -3616,6 +3660,12 @@ renderStations(initialStations);</script></body></html>"""
     # ---------- Refresh ----------
     def update_messages(self):
         if not self.connected:
+            # The normal 5-second refresh timer also acts as the reconnect
+            # timer.  Once the user has connected, a lost WebService
+            # connection is recovered automatically.  Manual "Trennen" clears
+            # auto_reconnect_enabled, so it never reconnects by itself.
+            if self.auto_reconnect_enabled and not self.reconnect_in_progress:
+                self.connect_mesh(automatic=True)
             return
         if self.refresh_in_progress:
             return
@@ -3678,7 +3728,7 @@ renderStations(initialStations);</script></body></html>"""
             # Configured room tabs.
             for room in self._rooms():
                 key = ("room", room)
-                idx = self._ensure_tab(key, f"Raum {room}")
+                idx = self._ensure_tab(key, self._room_tab_title(room))
                 room_blocks = self._room_blocks(cached_blocks, room)
                 self._update_tab_content(key, idx, room_blocks)
 
@@ -3856,9 +3906,16 @@ renderStations(initialStations);</script></body></html>"""
         except Exception as exc:
             self.connected = False
             self._set_connection_status(False)
-            self.connect_button.setEnabled(True)
-            self.disconnect_button.setEnabled(False)
-            self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
+            # Do not interpret a temporary HTTP/network error as a manual
+            # disconnect.  The next 5-second timer tick will reconnect.
+            if self.auto_reconnect_enabled:
+                self.connect_button.setEnabled(False)
+                self.disconnect_button.setEnabled(True)
+                self.status.setText(ui_text(f"Verbindung verloren – verbinde erneut … ({exc})"))
+            else:
+                self.connect_button.setEnabled(True)
+                self.disconnect_button.setEnabled(False)
+                self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
         finally:
             self.refresh_in_progress = False
 
@@ -4282,7 +4339,7 @@ renderStations(initialStations);</script></body></html>"""
             if target:
                 if target.isdigit():
                     key = ("room", target)
-                    idx = self._ensure_tab(key, f"Raum {target}")
+                    idx = self._ensure_tab(key, self._room_tab_title(target))
                 else:
                     key = ("private", target.upper())
                     # Wurde dieser Privat-Tab vorher bewusst geschlossen und

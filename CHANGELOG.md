@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.3.70 – Automatische Wiederverbindung nach Verbindungsverlust
+
+- Die integrierte **Hilfe → Anleitung** wurde auf v0.3.70 aktualisiert und unterstützt jetzt Deutsch, English, Italiano, Nederlands und Français.
+- Die separate PDF-Anleitung wurde auf den Funktionsstand v0.3.70 aktualisiert.
+
+- Italienisch, Niederländisch und Französisch als zusätzliche UI-Sprachen ergänzt.
+- Sprachauswahl erweitert; Sprache wird in `settings.ini` gespeichert.
+- Übersetzungskataloge für alle drei neuen Sprachen vollständig ergänzt, einschließlich Statusmeldungen, Wetteranzeige, Schnelltexte, Sound-Einstellungen, Statistik und Kontextmenüs.
+- Fehlende bzw. noch deutsche/englische UI-Texte in Italienisch, Niederländisch und Französisch korrigiert.
+- Dynamische Raum-Tabs werden jetzt korrekt in der jeweils gewählten Sprache angezeigt (z. B. **Stanza 10**, **Ruimte 10**, **Salon 10**) und bleiben auch nach einem Sprachwechsel korrekt übersetzt.
+- Sprachbezeichnungen im Sprachauswahl-Dialog wurden für Französisch, Italienisch und Niederländisch korrigiert.
+- Mehrere sprachlich unnatürliche Wetter-/Statusformulierungen in Französisch, Italienisch und Niederländisch verbessert.
+- Die Übersetzung der sichtbaren UI-Texte verwendet bei dynamischen Tabs jetzt den internen Raum-Schlüssel statt des bereits übersetzten Tab-Titels. Dadurch werden doppelte oder falsche Sprachwechsel verhindert.
+
+
+- Die Verbindung zum MeshCom-WebService wird nach einem einmaligen Klick auf **Verbinden** automatisch wiederhergestellt, wenn der WebService, das Netzwerk oder der Hotspot die Verbindung verliert.
+- Der vorhandene 5-Sekunden-Refresh prüft gleichzeitig, ob eine verlorene Verbindung wieder verfügbar ist.
+- Ein vorübergehender HTTP-/Netzwerkfehler schaltet die automatische Wiederverbindung nicht mehr dauerhaft ab.
+- **Trennen** beendet die automatische Wiederverbindung ausdrücklich. Nach einem manuellen Trennen verbindet sich das Programm nicht selbst wieder.
+- Beim erneuten Verbinden wird der normale Verbindungsstatus wieder auf **ONLINE** gesetzt.
+- Beim Programmstart bleibt das bisherige Verhalten erhalten: Es wird **nicht automatisch verbunden**; erst **Verbinden** aktiviert die automatische Wiederverbindung.
+- Bestehende Nachrichten-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH-, Wetter- und Statistikfunktionen bleiben unverändert.
+
 ## v0.3.69 – Englische Übersetzung der neuen Funktionen
 - Statistik-Tab wechselt beim Umschalten der Sprache sofort zwischen Deutsch und Englisch; kein Neustart mehr erforderlich.
 

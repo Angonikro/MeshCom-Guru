@@ -1,25 +1,23 @@
-# MeshCom-Guru v0.3.69
+# MeshCom-Guru v0.3.70
 
-## Release v0.3.69
+## Release v0.3.70
 
-Die v0.3.69 ist der GitHub-Release-Stand mit den neuen Verbindungsbuttons, dem festen Statistik-Tab und der aktualisierten englischen Übersetzung.
+MeshCom-Guru v0.3.70 erweitert die Verbindungssteuerung um eine zuverlässige automatische Wiederverbindung und ergänzt die Benutzeroberfläche um Italienisch, Niederländisch und Französisch.
 
 ### Neu
 
 - **🔗 Verbinden / ⛓️ Trennen** zur manuellen Steuerung der WebService-Verbindung.
-- **📊 Statistik** als fester Tab.
-- Englische Übersetzung der neuen Verbindungs- und Statistikfunktionen inklusive Status- und Fehlermeldungen.
-
-- **🟢 ONLINE / 🔴 OFFLINE** in der oberen Statuszeile.
-- Anzeige der aktuellen Verbindungsdauer: **seit HH:MM:SS**.
-- Datum und Uhrzeit in gut lesbarer Größe.
-- Neuer fester **📊 Statistik**-Tab ohne Schließen-X.
-- Statistikübersicht für Nachrichten und Räume.
+- **Automatische Wiederverbindung** nach einem unbeabsichtigten Verbindungsverlust.
+- **Trennen** deaktiviert Auto-Reconnect ausdrücklich.
+- Beim Programmstart wird weiterhin **nicht automatisch verbunden**.
+- **Deutsch / English / Italiano / Nederlands / Français** als umschaltbare UI-Sprachen.
+- Dynamische Raum-Tabs werden sprachabhängig korrekt dargestellt.
+- Übersetzungen für Status, Wetter, Schnelltexte, Statistik, Sound-Einstellungen, Kontextmenüs und weitere sichtbare UI-Texte ergänzt bzw. korrigiert.
 
 ### Erhaltene Funktionen
 
 - Raum-Chats und Privat-Chats
-- Tab „Alle“ und Tab „Weltweit“
+- Tab **Alle** und Tab **Weltweit**
 - **⚡ Schnelltexte** und **😊 Emoji-Picker**
 - **📡 Monitor** und **📋 MH**
 - OSM-/Leaflet-Karte und Positionsdaten

@@ -1,7 +1,10 @@
 {
-  "language": "Sprache / Language",
+  "language": "Sprache",
   "german": "Deutsch",
-  "english": "English",
+  "english": "Englisch",
+  "italian": "Italienisch",
+  "dutch": "Niederländisch",
+  "french": "Französisch",
   "language_saved": "Sprache gespeichert. Bitte Programm neu starten.",
   "language_title": "Sprache"
 }

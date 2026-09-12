@@ -3,14 +3,23 @@ import os
 import re
 
 _language = "de"
+_SUPPORTED_LANGUAGES = ("de", "en", "it", "nl", "fr")
 _catalogs = {}
 _base = os.path.dirname(__file__)
-for _lang in ("de", "en"):
+for _lang in ("de", "en", "it", "nl", "fr"):
     try:
         with open(os.path.join(_base, _lang + ".json"), "r", encoding="utf-8") as _f:
             _catalogs[_lang] = json.load(_f)
     except Exception:
         _catalogs[_lang] = {}
+
+# Load the additional UI language catalogs.
+for _lang in ("it", "nl", "fr"):
+    try:
+        with open(os.path.join(_base, _lang + ".json"), "r", encoding="utf-8") as _f:
+            _catalogs[_lang].update(json.load(_f))
+    except Exception:
+        pass
 
 # Static UI translations. Runtime/user data (messages, callsigns, room numbers,
 # weather values, etc.) is deliberately not translated here.
@@ -218,60 +227,79 @@ _UI = {
     "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Map view requires PySide6-WebEngine.\nPlease install requirements.txt again.",
 }
 
+# Complete multilingual coverage for UI labels and runtime status text.
+EXTRA_UI_TRANSLATIONS = {'Node Information des verbundenen MeshCom-WebService anzeigen': 'Show Node Information of the connected MeshCom WebService', 'Raum {i + 1}': 'Room {i + 1}', '0 angezeigt · 0 gespeichert': '0 displayed · 0 stored', 'Verbindung verloren – verbinde erneut …': 'Connection lost – reconnecting …', 'Verbindung verloren – neuer Versuch: ': 'Connection lost – retry: ', 'Verbindung verloren – verbinde erneut … (': 'Connection lost – reconnecting … (', 'Theme gespeichert: ': 'Theme saved: ', 'Letzter Wetter-Sendeauftrag ': 'Last weather send request ', 'Letzter Sendeauftrag ': 'Last send request ', 'Node Info konnte nicht geöffnet werden: ': 'Node Info could not be opened: ', 'Privatchat geöffnet: ': 'Private chat opened: ', 'Privatchat geschlossen: ': 'Private chat closed: ', 'Nachrichten aktualisiert – Filter: ': 'Messages refreshed – Filter: ', 'Senden fehlgeschlagen: ': 'Sending failed: ', 'Abruf fehlgeschlagen: ': 'Request failed: ', 'Position empfangen: ': 'Position received: ', 'Filter gespeichert: ': 'Filter saved: ', 'Einstellungen gespeichert': 'Settings saved', 'Sound-Einstellungen gespeichert': 'Sound settings saved', 'Emoji passt nicht mehr in die 149 Zeichen': 'Emoji no longer fits within the 149-character limit', 'Nachricht eingeben …': 'Enter message …', 'Nachricht eingeben ...': 'Enter message ...', 'Suchen …': 'Search …', 'Schnelltexte bearbeiten': 'Edit quick texts', 'Schnelltext eingeben …': 'Enter quick text …', 'leer = mitgelieferten Signalton verwenden': 'empty = use the bundled notification sound', 'Chat-Farben': 'Chat colors', 'Über MeshCom-Guru': 'About MeshCom-Guru', 'Sound-Einstellungen': 'Sound settings', 'Node Information': 'Node Information', 'Wetterdaten': 'Weather data', 'Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.': 'Map view requires PySide6-WebEngine.\nPlease install requirements.txt again.', 'Breitengrad, z. B. 51.93': 'Latitude, e.g. 51.93', 'Längengrad, z. B. 8.88': 'Longitude, e.g. 8.88', 'eigenes Rufzeichen, z. B. DL9ABC-1': 'own callsign, e.g. DL9ABC-1', 'Raum oder Ziel, z. B. 262 oder DL9ABC-1': 'room or target, e.g. 262 or DL9ABC-1'}
+_UI.update(EXTRA_UI_TRANSLATIONS)
+
 _REVERSE = {v: k for k, v in _UI.items()}
 
 def set_language(language):
     global _language
-    _language = language if language in ("de", "en") else "de"
+    _language = language if language in _SUPPORTED_LANGUAGES else "de"
 
 def get_language():
     return _language
 
-def tr(key, fallback=None):
-    # JSON entries remain available for the language dialog and future strings.
+def _translated(key, language=None):
+    lang = language or _language
+    if lang == "de":
+        return _catalogs.get("de", {}).get(key, key) if key in _catalogs.get("de", {}) else key
+    if lang == "en" and key in _UI:
+        return _UI[key]
+    if lang in _catalogs and key in _catalogs[lang]:
+        return _catalogs[lang][key]
     if key in _UI:
-        return key if _language == "de" else _UI[key]
-    if _language == "en" and key in _REVERSE:
-        return key
-    return _catalogs.get(_language, {}).get(
-        key, _catalogs.get("de", {}).get(key, fallback if fallback is not None else key)
-    )
+        return _UI[key]
+    return _catalogs.get("en", {}).get(key, key)
+
+def tr(key, fallback=None):
+    value = _translated(key)
+    if value == key and fallback is not None:
+        return fallback
+    return value
 
 def ui_text(text):
-    """Translate static UI text and known runtime status phrases.
-    Dynamic/user content is not translated unless it is a known UI phrase.
-    """
-    if text in _UI:
-        return _UI[text] if _language == "en" else text
-    if text in _REVERSE:
-        return _REVERSE[text] if _language == "de" else text
+    """Translate static UI text and known runtime status phrases."""
+    if text is None:
+        return text
 
-    # Runtime status strings contain timestamps, room numbers or error details.
-    # Translate only the fixed UI phrases around those dynamic values.
+    # Direct German source text.
+    if text in _UI or text in _catalogs.get(_language, {}):
+        return _translated(text)
+
+    # Also recognize an already translated phrase and map it back to German.
+    for lang in _SUPPORTED_LANGUAGES:
+        if lang == "de":
+            continue
+        for de_key, translated in _catalogs.get(lang, {}).items():
+            if text == translated:
+                return _translated(de_key)
+        if text in _UI.values() and _language != "en":
+            for de_key, en_value in _UI.items():
+                if text == en_value:
+                    return _translated(de_key)
+
     if isinstance(text, str):
         def replace_ui_phrase(value, source, target):
-            # Replace complete UI words/phrases only.  This is important for
-            # pairs such as "Temperatur" -> "Temperature": a plain
-            # str.replace() would see "Temperatur" inside the already
-            # translated word "Temperature" and append another "e"
-            # each time the language UI is refreshed.
             pattern = re.escape(source)
             if source and source[0].isalnum():
-                pattern = r"(?<!\w)" + pattern
+                pattern = r"(?<!\\w)" + pattern
             if source and source[-1].isalnum():
-                pattern = pattern + r"(?!\w)"
+                pattern = pattern + r"(?!\\w)"
             return re.sub(pattern, lambda _m: target, value)
 
-        if _language == "en":
-            replacements = sorted(_UI.items(), key=lambda kv: len(kv[0]), reverse=True)
-            for de, en in replacements:
-                if de:
-                    text = replace_ui_phrase(text, de, en)
-            return text
-        else:
-            replacements = sorted(_REVERSE.items(), key=lambda kv: len(kv[0]), reverse=True)
-            for en, de in replacements:
-                if en:
-                    text = replace_ui_phrase(text, en, de)
-            return text
+        # Always replace from German source phrases to the selected language.
+        # This keeps dynamic values such as callsigns, rooms and timestamps intact.
+        replacements = []
+        for de_key in _UI:
+            target = _translated(de_key)
+            if target != de_key:
+                replacements.append((de_key, target))
+        for de_key in _catalogs.get("de", {}):
+            target = _translated(de_key)
+            if target != de_key:
+                replacements.append((de_key, target))
+        for de, target in sorted(replacements, key=lambda kv: len(kv[0]), reverse=True):
+            text = replace_ui_phrase(text, de, target)
+        return text
     return text
