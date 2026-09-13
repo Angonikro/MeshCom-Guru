@@ -1,10 +1,12 @@
-# MeshCom-Guru v0.3.71
+# MeshCom-Guru v0.3.72
 
-## Release v0.3.71
+## Release v0.3.72
 
-MeshCom-Guru v0.3.71 korrigiert die MH-Liste: UDP-/Gateway-Verkehr wird nicht mehr als gehörte Station übernommen. Nur tatsächlich über LoRa empfangene EXTUDP-Pakete (`src_type=lora` bzw. `node`) erzeugen MH-Einträge.
+MeshCom-Guru v0.3.72 enthält die dunklere Rufzeichenfarbe in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats. Der Tab „Alle“ bleibt unverändert. Die MH-Liste-Korrektur aus v0.3.71 bleibt erhalten: UDP-/Gateway-Verkehr wird nicht mehr als gehörte Station übernommen. Nur tatsächlich über LoRa empfangene EXTUDP-Pakete (`src_type=lora` bzw. `node`) erzeugen MH-Einträge.
 
 ### Neu
+
+- **Rufzeichenfarbe:** Rufzeichen in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats werden dunkler dargestellt. Der Tab **Alle** bleibt unverändert.
 
 - **MH-Liste korrigiert:** UDP-/Gateway-Pakete werden nicht mehr als gehörte Stationen übernommen.
 - Bei Relay-Pfaden wird das erste Rufzeichen als ursprünglicher Absender verwendet; weitere Rufzeichen werden nicht als eigene MH-Stationen eingetragen.

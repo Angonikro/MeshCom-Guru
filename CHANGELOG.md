@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.72
+
+- Rufzeichen in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats werden dunkler dargestellt.
+- Der Tab „Alle“ bleibt von dieser Änderung ausgenommen.
+- Alle übrigen Funktionen und Inhalte von v0.3.71 bleiben unverändert.
+
 ## v0.3.71
 
 - **MH-Liste korrigiert:** Nur tatsächlich über LoRa empfangene Pakete (`src_type=lora` bzw. `node`) dürfen neue Stationen in die MH-Liste eintragen. UDP-/Gateway-Verkehr wird nicht mehr als gehörte Station übernommen.

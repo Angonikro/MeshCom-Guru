@@ -409,7 +409,7 @@ class ChatView(QScrollArea):
 
         if bubble_parts:
             html = (
-                "<html><body style='margin:0; padding:8px 10px; background:"
+                "<html><head><style>a[href^=\"meshcom://call/\"]{color:#0b4f8a;}</style></head><body style='margin:0; padding:8px 10px; background:"
                 + self.chat_background
                 + ";'>"
                 + "".join(bubble_parts)
