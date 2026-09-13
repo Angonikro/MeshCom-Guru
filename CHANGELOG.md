@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.73
+
+- **Onlinezeit korrigiert:** Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten. Nach dem automatischen Reconnect läuft die Onlinezeit weiter, statt wieder bei `00:00:00` zu beginnen.
+- **Manuelles Trennen:** Ein bewusstes Trennen setzt die Onlinezeit weiterhin auf `00:00:00` zurück.
+- Alle übrigen Funktionen und Inhalte aus v0.3.72 bleiben unverändert.
+
 ## v0.3.72
 
 - Rufzeichen in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats werden dunkler dargestellt.

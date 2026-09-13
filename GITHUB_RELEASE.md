@@ -1,8 +1,8 @@
-# MeshCom-Guru v0.3.72
+# MeshCom-Guru v0.3.73
 
-## Release v0.3.72
+## Release v0.3.73
 
-MeshCom-Guru v0.3.72 enthält die dunklere Rufzeichenfarbe in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats. Der Tab „Alle“ bleibt unverändert. Die MH-Liste-Korrektur aus v0.3.71 bleibt erhalten: UDP-/Gateway-Verkehr wird nicht mehr als gehörte Station übernommen. Nur tatsächlich über LoRa empfangene EXTUDP-Pakete (`src_type=lora` bzw. `node`) erzeugen MH-Einträge.
+MeshCom-Guru v0.3.73 enthält die Korrektur der Onlinezeit: Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten und läuft nach dem automatischen Reconnect weiter. Ein bewusstes manuelles Trennen setzt die Onlinezeit wieder auf `00:00:00` zurück. Alle übrigen Funktionen aus v0.3.72 bleiben unverändert.
 
 ### Neu
 

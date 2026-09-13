@@ -522,9 +522,12 @@ class MainWindow(QMainWindow):
         self._sound_effect = None
         self._prepare_sound()
         self.mesh = MeshCom(settings.get("ip", ""))
-        # Verbindungsanzeige: Beginn der aktuell bestehenden HTTP-Verbindung.
+        # Verbindungsanzeige: Die Onlinezeit wird über automatische
+        # Reconnects hinweg fortgeführt. Nur ein bewusstes manuelles
+        # Trennen setzt die Gesamtzeit zurück.
         self.connection_online = False
         self.connection_since = None
+        self.connection_elapsed = 0
         self.refresh_in_progress = False
         self.last_sent = None
         self.last_sent_time = None
@@ -1740,22 +1743,38 @@ class MainWindow(QMainWindow):
         self._ensure_room_tabs()
 
     def _set_connection_status(self, online):
-        """Update the clearly visible connection status and online duration."""
+        """Update connection status and preserve online time across auto-reconnects."""
         online = bool(online)
         now = datetime.now()
+
         if online and not self.connection_online:
+            # Neuer Online-Abschnitt: bereits gesammelte Zeit bleibt erhalten.
             self.connection_since = now
-        elif not online:
+        elif not online and self.connection_online:
+            # Nur den gerade laufenden Abschnitt einmal aufsummieren.
+            if self.connection_since is not None:
+                self.connection_elapsed += max(
+                    0, int((now - self.connection_since).total_seconds())
+                )
             self.connection_since = None
+
         self.connection_online = online
         self._update_connection_label(now)
+
+    def _reset_connection_duration(self):
+        """Reset online duration after an explicit manual disconnect."""
+        self.connection_elapsed = 0
+        self.connection_since = None
 
     def _update_connection_label(self, now=None):
         if not hasattr(self, "connection_label"):
             return
         now = now or datetime.now()
         if self.connection_online and self.connection_since is not None:
-            elapsed = max(0, int((now - self.connection_since).total_seconds()))
+            current_elapsed = max(
+                0, int((now - self.connection_since).total_seconds())
+            )
+            elapsed = self.connection_elapsed + current_elapsed
             hours, remainder = divmod(elapsed, 3600)
             minutes, seconds = divmod(remainder, 60)
             duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
@@ -3669,6 +3688,10 @@ renderStations(initialStations);</script></body></html>"""
         self.connected = False
         self.reconnect_in_progress = False
         self._set_connection_status(False)
+        # Bewusstes manuelles Trennen beendet die aktuelle Session.
+        # Beim nächsten manuellen Verbinden startet die Onlinezeit wieder bei 00:00:00.
+        self._reset_connection_duration()
+        self._update_connection_label()
         self.connect_button.setEnabled(True)
         self.disconnect_button.setEnabled(False)
         self.status.setText(ui_text("Vom MeshCom-WebService getrennt"))
