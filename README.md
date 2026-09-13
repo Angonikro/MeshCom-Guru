@@ -4,6 +4,12 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
+![MeshCom-Guru](meshcom-guru1.png)
+
+![MeshCom-Guru](meshcom-guru.png)
+
+[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
+
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -465,3 +471,5 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
+
+73 de DO2QG Andreas
