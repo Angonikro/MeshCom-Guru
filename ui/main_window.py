@@ -121,9 +121,10 @@ from i18n import tr, set_language, ui_text
 
 class BubbleWidget(QWidget):
     """Compact WhatsApp-style message bubble with a small inward tail."""
-    def __init__(self, text, outgoing=False, parent=None):
+    def __init__(self, text, outgoing=False, link_color="#062f6f", parent=None):
         super().__init__(parent)
         self.outgoing = outgoing
+        self.link_color = str(link_color or "#062f6f")
         self.bg = QColor("#78d86b" if outgoing else "#4d98e8")
         self.border = QColor("#6bc65f" if outgoing else "#4186ce")
         self.label = QLabel()
@@ -133,6 +134,7 @@ class BubbleWidget(QWidget):
         self.label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
         self.label.setStyleSheet("background: transparent; color: #081018; border: none;")
         self.label.linkActivated.connect(self._link_activated)
+        self._content_html = ""
         layout = QVBoxLayout(self)
         if outgoing:
             layout.setContentsMargins(14, 9, 20, 9)
@@ -149,6 +151,21 @@ class BubbleWidget(QWidget):
             w._bubble_link_activated(url)
 
     def set_content(self, text, max_width):
+        self._content_html = str(text)
+        # Force the user-selected color directly into every clickable link.
+        # This avoids Qt theme/link defaults overriding the chosen color.
+        def color_link(match):
+            attrs = match.group(1) or ""
+            style_match = re.search(r"\bstyle\s*=\s*([\"\'])(.*?)\1", attrs, re.I | re.S)
+            if style_match:
+                style = style_match.group(2)
+                style = re.sub(r"(?:^|;)\s*color\s*:[^;]+;?", ";", style, flags=re.I)
+                new_style = f"color:{self.link_color};" + style
+                attrs = attrs[:style_match.start(2)] + new_style + attrs[style_match.end(2):]
+            else:
+                attrs += f' style="color:{self.link_color};"'
+            return f"<a{attrs}>"
+        text = re.sub(r"<a\b([^>]*)>", color_link, str(text), flags=re.I)
         self.setFixedWidth(max_width)
         self.label.setMaximumWidth(max(120, max_width - 34))
         self.label.setText(text)
@@ -191,6 +208,7 @@ class ChatView(QScrollArea):
         super().__init__(parent)
         self.chat_background = "#101722"
         self.chat_text_color = "#e6edf3"
+        self.chat_link_color = "#062f6f"
         self._bubble_mode = False
         self._all_mode = False
         self._bubble_rows = []
@@ -229,14 +247,21 @@ class ChatView(QScrollArea):
             f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
         )
 
-    def set_chat_colors(self, background, text):
+    def set_chat_colors(self, background, text, link=None):
         """Apply chat colors without changing the actual message layout."""
         self.chat_background = self._normalize_color(background)
         self.chat_text_color = self._normalize_color(text)
+        self.chat_link_color = self._normalize_color(link or self.chat_link_color)
         self._apply_scroll_style()
         self._apply_html_style()
         if hasattr(self, "_bubble_container"):
             self._bubble_container.setStyleSheet(f"background: {self.chat_background};")
+        for bubble in self.findChildren(BubbleWidget):
+            try:
+                bubble.link_color = self.chat_link_color
+                bubble.set_content(bubble._content_html, bubble.width())
+            except Exception:
+                pass
         for browser in getattr(self, "_all_message_views", []):
             browser.setStyleSheet(
                 f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; }}"
@@ -303,7 +328,7 @@ class ChatView(QScrollArea):
         browser.setStyleSheet(
             f"QTextBrowser {{ background: {self.chat_background}; color: {self.chat_text_color}; border: none; padding: 0; }}"
         )
-        browser.setHtml(str(html_text))
+        browser.setHtml(f"<style>a {{ color: {self.chat_link_color}; }}</style>" + str(html_text))
         self._all_message_views.append(browser)
         layout.addStretch(1)
         layout.addWidget(browser, 0)
@@ -348,7 +373,7 @@ class ChatView(QScrollArea):
         self._apply_html_style()
         self._html_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setWidget(self._html_view)
-        self._html_view.setHtml(str(html_text))
+        self._html_view.setHtml(f"<style>a {{ color: {self.chat_link_color}; }}</style>" + str(html_text))
 
         def restore():
             new_bar = self._html_view.verticalScrollBar()
@@ -364,7 +389,7 @@ class ChatView(QScrollArea):
         old=self.verticalScrollBar(); oldv=old.value(); oldm=old.maximum(); bottom=oldm<=0 or oldv>=max(0,oldm-8)
         container=QWidget(); container.setStyleSheet(f"background:{self.chat_background};"); lay=QVBoxLayout(container); lay.setContentsMargins(10,8,10,8); lay.setSpacing(8)
         for item in items:
-            row=QHBoxLayout(); row.setContentsMargins(0,0,0,0); bubble=BubbleWidget(str(item.get('html','')),bool(item.get('outgoing',False))); bubble.set_content(str(item.get('html','')),max(260,int(self.viewport().width()*0.75)))
+            row=QHBoxLayout(); row.setContentsMargins(0,0,0,0); bubble=BubbleWidget(str(item.get('html','')),bool(item.get('outgoing',False)), self.chat_link_color); bubble.set_content(str(item.get('html','')),max(260,int(self.viewport().width()*0.75)))
             if item.get('outgoing',False): row.addStretch(1); row.addWidget(bubble,0,Qt.AlignmentFlag.AlignRight)
             else: row.addWidget(bubble,0,Qt.AlignmentFlag.AlignLeft); row.addStretch(1)
             lay.addLayout(row)
@@ -439,6 +464,7 @@ class MainWindow(QMainWindow):
         self._apply_qt_translation(self.language)
         self.chat_background = self._normalize_chat_color(settings.get("chat_background", "#101722"))
         self.chat_text_color = self._normalize_chat_color(settings.get("chat_text_color", "#e6edf3"))
+        self.chat_link_color = self._normalize_chat_color(settings.get("chat_link_color", "#062f6f"))
         self._all_chat_views = []
         self.current_theme = settings.get("theme", "dark").strip().lower()
         if self.current_theme not in {"light", "dark"}:
@@ -1092,6 +1118,11 @@ class MainWindow(QMainWindow):
         refresh_action = QAction("Nachrichten aktualisieren", self)
         refresh_action.triggered.connect(self.update_messages)
         file_menu.addAction(refresh_action)
+
+        export_action = QAction("Chat exportieren …", self)
+        export_action.triggered.connect(self._export_current_chat)
+        file_menu.addAction(export_action)
+        self.export_chat_action = export_action
         file_menu.addSeparator()
 
         exit_action = QAction("Beenden", self)
@@ -1890,16 +1921,30 @@ class MainWindow(QMainWindow):
         text_row.addWidget(text_button, 1)
         layout.addLayout(text_row)
 
+        link_row = QHBoxLayout()
+        link_label = QLabel("Anklickbare Rufzeichen / Internetlinks:")
+        link_preview = QLabel()
+        link_preview.setFixedSize(70, 30)
+        link_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        link_button = QPushButton("🔗 Farbe auswählen …")
+        link_row.addWidget(link_label)
+        link_row.addWidget(link_preview)
+        link_row.addWidget(link_button, 1)
+        layout.addLayout(link_row)
+
         reset = QPushButton("🔄 Standard wiederherstellen")
         layout.addWidget(reset)
 
         def refresh():
             bg = self.chat_background
             fg = self.chat_text_color
+            link = self.chat_link_color
             bg_preview.setText(bg)
             bg_preview.setStyleSheet(f"background:{bg}; color:{'#ffffff' if QColor(bg).lightness() < 160 else '#000000'}; border:1px solid #777; border-radius:5px;")
             text_preview.setText(fg)
             text_preview.setStyleSheet(f"background:{bg}; color:{fg}; border:1px solid #777; border-radius:5px;")
+            link_preview.setText(link)
+            link_preview.setStyleSheet(f"background:{bg}; color:{link}; border:1px solid #777; border-radius:5px;")
             self._update_chat_color_preview(preview, bg, fg)
 
         def pick_bg():
@@ -1914,12 +1959,19 @@ class MainWindow(QMainWindow):
                 self._set_chat_colors_live(text=color.name(QColor.NameFormat.HexRgb))
                 refresh()
 
+        def pick_link():
+            color = QColorDialog.getColor(QColor(self.chat_link_color), dialog, "Farbe für Rufzeichen und Internetlinks")
+            if color.isValid():
+                self._set_chat_colors_live(link=color.name(QColor.NameFormat.HexRgb))
+                refresh()
+
         def do_reset():
-            self._set_chat_colors_live(background="#000000", text="#ffffff")
+            self._set_chat_colors_live(background="#000000", text="#ffffff", link="#062f6f")
             refresh()
 
         bg_button.clicked.connect(pick_bg)
         text_button.clicked.connect(pick_text)
+        link_button.clicked.connect(pick_link)
         reset.clicked.connect(do_reset)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -1929,11 +1981,13 @@ class MainWindow(QMainWindow):
         self._apply_language_ui()
         dialog.exec()
 
-    def _set_chat_colors_live(self, background=None, text=None):
+    def _set_chat_colors_live(self, background=None, text=None, link=None):
         if background is not None:
             self.chat_background = self._normalize_chat_color(background)
         if text is not None:
             self.chat_text_color = self._normalize_chat_color(text)
+        if link is not None:
+            self.chat_link_color = self._normalize_chat_color(link)
         self._write_settings()
 
         views = []
@@ -1946,11 +2000,11 @@ class MainWindow(QMainWindow):
                 views.append(view)
         for view in views:
             try:
-                view.set_chat_colors(self.chat_background, self.chat_text_color)
+                view.set_chat_colors(self.chat_background, self.chat_text_color, self.chat_link_color)
             except Exception:
                 pass
         self.status.setText(
-            f"Chat-Farben geändert: Hintergrund {self.chat_background} (alle Chats), Schrift {self.chat_text_color} (nur „Alle“) – {len(views)} Ansichten"
+            f"Chat-Farben geändert: Hintergrund {self.chat_background}, Schrift {self.chat_text_color}, Links {self.chat_link_color} – {len(views)} Ansichten"
         )
 
     # ---------- Settings ----------
@@ -1967,6 +2021,7 @@ class MainWindow(QMainWindow):
         section["theme"] = self.current_theme
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
+        section["chat_link_color"] = self.chat_link_color
         section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
@@ -2339,7 +2394,8 @@ class MainWindow(QMainWindow):
             <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Live-Zähler zeigt die aktuelle Länge.</p>
             <p>Normale Raum-Chats verwenden Nachrichten-Bubbles. Der Tab <b>Alle</b> behält seine eigene Darstellung.</p>
             <p><b>Position der Bubbles:</b> Bei wenigen Nachrichten beginnen die Bubbles unten. Bei längeren Chats steht normales Scrollen zur Verfügung; beim manuellen Hochscrollen wird die Position nicht durch neue Nachrichten überschrieben.</p>
-            <h3>Chat-Farben</h3><p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund und die Schriftfarbe für „Alle“ eingestellt werden. <b>Standard wiederherstellen</b> setzt die Standardfarben zurück.</p>
+            <h3>Chat-Farben</h3><p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund und die Schriftfarbe für „Alle“ eingestellt werden. Zusätzlich lässt sich die Farbe für <b>anklickbare Rufzeichen und Internetlinks</b> unabhängig auswählen. Die gewählte Linkfarbe wird gespeichert und auch in den Chat-Bubbles verwendet. <b>Standard wiederherstellen</b> setzt die Standardfarben einschließlich der Linkfarbe zurück.</p>
+            <h3>Chat exportieren</h3><p>Über <b>Datei → Chat exportieren …</b> kann der aktuell ausgewählte Chat als <b>HTML, TXT oder CSV</b> gespeichert werden. Der HTML-Export übernimmt die Darstellung der Nachrichten sowie anklickbare Rufzeichen und Internetlinks.</p>
             <h3>Kontextmenü</h3><p>Mit der rechten Maustaste stehen in Eingabefeldern Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen zur Verfügung.</p>
             <h3>Privat-Chat und Sendestatus</h3><p>Eine frisch gesendete private Nachricht zeigt zunächst <b>⏳</b>. Erst ein erkannter Empfänger-ACK setzt den Status auf <b>✓✓</b>.</p>
             <h3>⚡ Schnelltexte und 😊 Emojis</h3><p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
@@ -2358,7 +2414,8 @@ class MainWindow(QMainWindow):
             <h3>Statistics</h3><p>The <b>Statistics</b> tab shows session counts for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
             <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The selection is saved and restored after restart. Room tabs are translated while room and target numbers remain unchanged.</p>
             <h3>Messages and rooms</h3><p>The message filter supports up to <b>five rooms</b>. <b>Refresh</b> retrieves messages; <b>Send</b> transmits to the selected room or private target. Messages are limited to <b>149 characters</b>.</p><p>Normal room chats use message bubbles. The <b>All</b> tab keeps its separate display. Manual scrolling is respected.</p>
-            <h3>Chat colors and context menu</h3><p>Chat background and the text color for <b>All</b> can be configured. Input fields provide standard Undo, Redo, Cut, Copy, Paste, Delete and Select All commands.</p>
+            <h3>Chat colors and link colors</h3><p>Chat background and the text color for <b>All</b> can be configured. The color of <b>clickable callsigns and Internet links</b> can also be selected independently and is saved for future sessions.</p>
+            <h3>Chat export</h3><p>Use <b>File → Export chat …</b> to save the currently selected chat as <b>HTML, TXT or CSV</b>. HTML keeps clickable callsigns and Internet links.</p><p>Input fields provide standard Undo, Redo, Cut, Copy, Paste, Delete and Select All commands.</p>
             <h3>Private chat, quick texts and emojis</h3><p>A new private message first shows <b>⏳</b>; a recognized recipient ACK changes it to <b>✓✓</b>. Quick texts are inserted only and are not sent automatically. The emoji picker inserts the selected emoji at the cursor.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Map</h3><p>Monitor displays MeshCom UDP packets on <b>port 1799</b>. MH lists recently heard stations. Position data is processed through UDP 1799 and shown on the OSM/Leaflet map.</p>
             <h3>🌤 Weather / 🔊 Sound / Node Info</h3><p>WX can show temperature, humidity, QFE and QNH when supplied by the WebService. Sound, volume and light/dark theme are configurable. <b>Open Node Info</b> opens WebService information.</p>
@@ -2372,7 +2429,7 @@ class MainWindow(QMainWindow):
             <h3>Statistiche</h3><p>La scheda <b>Statistiche</b> mostra i contatori della sessione per messaggi, nodi, posizioni, messaggi privati, monitor e messaggi per stanza.</p>
             <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. La scelta viene salvata e ripristinata dopo il riavvio. Le schede delle stanze vengono tradotte, mentre numeri di stanza e destinazioni restano invariati.</p>
             <h3>Messaggi e stanze</h3><p>Il filtro messaggi supporta fino a <b>cinque stanze</b>. <b>Aggiorna</b> recupera i messaggi; <b>Invia</b> trasmette alla stanza o destinazione privata selezionata. Il limite è di <b>149 caratteri</b>.</p><p>Le chat normali usano fumetti di messaggio. La scheda <b>Tutti</b> mantiene la propria visualizzazione; lo scorrimento manuale viene rispettato.</p>
-            <h3>Colori chat e menu contestuale</h3><p>È possibile configurare lo sfondo delle chat e il colore del testo per <b>Tutti</b>. Nei campi di testo sono disponibili Annulla, Ripeti, Taglia, Copia, Incolla, Elimina e Seleziona tutto.</p>
+            <h3>Colori chat e link</h3><p>È possibile configurare lo sfondo delle chat e il colore del testo per <b>Tutti</b>. È inoltre possibile scegliere separatamente il colore dei <b>nominativi e dei link Internet cliccabili</b>.</p><h3>Esportazione chat</h3><p>Con <b>File → Esporta chat …</b> la chat selezionata può essere salvata come <b>HTML, TXT o CSV</b>. L'HTML mantiene i nominativi e i link Internet cliccabili.</p><h3>Menu contestuale</h3><p>Nei campi di testo sono disponibili Annulla, Ripeti, Taglia, Copia, Incolla, Elimina e Seleziona tutto.</p>
             <h3>Chat privata, testi rapidi ed emoji</h3><p>Un nuovo messaggio privato mostra inizialmente <b>⏳</b>; un ACK riconosciuto del destinatario lo cambia in <b>✓✓</b>. I testi rapidi vengono inseriti senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Mappa</h3><p>Monitor mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b>. MH mostra le stazioni ascoltate di recente. I dati di posizione vengono elaborati tramite UDP 1799 e visualizzati sulla mappa OSM/Leaflet.</p>
             <h3>🌤 Meteo / 🔊 Suono / Info nodo</h3><p>WX può mostrare temperatura, umidità, QFE e QNH quando forniti dal WebService. Suono, volume e tema chiaro/scuro sono configurabili. <b>Apri info nodo</b> apre le informazioni del WebService.</p>
@@ -2386,7 +2443,7 @@ class MainWindow(QMainWindow):
             <h3>Statistieken</h3><p>Het tabblad <b>Statistieken</b> toont sessietellers voor berichten, nodes, posities, privéberichten, monitorregels en berichten per ruimte.</p>
             <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De keuze wordt opgeslagen en na opnieuw starten hersteld. Ruimtetabs worden vertaald; ruimte- en doel­nummers blijven ongewijzigd.</p>
             <h3>Berichten en ruimtes</h3><p>Het berichtenfilter ondersteunt maximaal <b>vijf ruimtes</b>. <b>Vernieuwen</b> haalt berichten op; <b>Verzenden</b> stuurt naar de gekozen ruimte of het privédoel. Het maximum is <b>149 tekens</b>.</p><p>Normale ruimtechats gebruiken berichtbubbels. Het tabblad <b>Alles</b> behoudt zijn eigen weergave; handmatig scrollen wordt gerespecteerd.</p>
-            <h3>Chatkleuren en contextmenu</h3><p>De chatachtergrond en tekstkleur voor <b>Alles</b> kunnen worden ingesteld. In invoervelden zijn Ongedaan maken, Opnieuw, Knippen, Kopiëren, Plakken, Verwijderen en Alles selecteren beschikbaar.</p>
+            <h3>Chatkleuren en linkkleur</h3><p>De chatachtergrond en tekstkleur voor <b>Alles</b> kunnen worden ingesteld. Ook de kleur van <b>klikbare roepnamen en internetlinks</b> kan afzonderlijk worden gekozen en opgeslagen.</p><h3>Chat exporteren</h3><p>Via <b>Bestand → Chat exporteren …</b> kan de geselecteerde chat als <b>HTML, TXT of CSV</b> worden opgeslagen. HTML behoudt klikbare roepnamen en internetlinks.</p><h3>Contextmenu</h3><p>In invoervelden zijn Ongedaan maken, Opnieuw, Knippen, Kopiëren, Plakken, Verwijderen en Alles selecteren beschikbaar.</p>
             <h3>Privéchat, snelteksten en emoji's</h3><p>Een nieuw privébericht toont eerst <b>⏳</b>; een herkende ACK van de ontvanger verandert dit in <b>✓✓</b>. Snelteksten worden alleen ingevoegd en niet automatisch verzonden. De emoji-kiezer voegt de emoji op de cursorpositie in.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Kaart</h3><p>Monitor toont MeshCom-UDP-pakketten op <b>poort 1799</b>. MH toont recent gehoorde stations. Positiegegevens worden via UDP 1799 verwerkt en op de OSM/Leaflet-kaart weergegeven.</p>
             <h3>🌤 Weer / 🔊 Geluid / Node-info</h3><p>WX kan temperatuur, luchtvochtigheid, QFE en QNH tonen wanneer de WebService deze levert. Geluid, volume en licht/donker-thema zijn instelbaar. <b>Node-info openen</b> toont de WebService-informatie.</p>
@@ -2400,6 +2457,7 @@ class MainWindow(QMainWindow):
             <h3>Statistiques</h3><p>L'onglet <b>Statistiques</b> affiche les compteurs de session pour les messages, nœuds, positions, messages privés, entrées du moniteur et messages par salon.</p>
             <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le choix est enregistré et restauré après redémarrage. Les onglets des salons sont traduits, tandis que les numéros de salon et de destination restent inchangés.</p>
             <h3>Messages et salons</h3><p>Le filtre de messages prend en charge jusqu'à <b>cinq salons</b>. <b>Actualiser</b> récupère les messages ; <b>Envoyer</b> transmet au salon ou à la destination privée sélectionnée. La limite est de <b>149 caractères</b>.</p><p>Les salons utilisent des bulles de messages. L'onglet <b>Tous</b> conserve son affichage propre et le défilement manuel est respecté.</p>
+            <h3>Couleur des liens et export du chat</h3><p>Dans <b>Paramètres → Couleurs du chat …</b>, la couleur des <b>indicatifs et liens Internet cliquables</b> peut être choisie séparément. Avec <b>Fichier → Exporter le chat …</b>, le chat sélectionné peut être enregistré en <b>HTML, TXT ou CSV</b>.</p>
             <h3>Couleurs du chat et menu contextuel</h3><p>L'arrière-plan du chat et la couleur du texte de <b>Tous</b> peuvent être configurés. Les champs de saisie proposent Annuler, Rétablir, Couper, Copier, Coller, Supprimer et Tout sélectionner.</p>
             <h3>Chat privé, textes rapides et emojis</h3><p>Un nouveau message privé affiche d'abord <b>⏳</b> ; un ACK reconnu du destinataire le transforme en <b>✓✓</b>. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
             <h3>📡 Moniteur / 📋 MH / 🗺 Carte</h3><p>Le Moniteur affiche les paquets UDP MeshCom sur le <b>port 1799</b>. MH affiche les stations entendues récemment. Les positions sont traitées via UDP 1799 et affichées sur la carte OSM/Leaflet.</p>
@@ -2696,7 +2754,7 @@ class MainWindow(QMainWindow):
         if key in self.tab_keys:
             return self.tab_keys[key]
         view = ChatView()
-        view.set_chat_colors(self.chat_background, self.chat_text_color)
+        view.set_chat_colors(self.chat_background, self.chat_text_color, self.chat_link_color)
         view._mesh_key = key
         # Keep a direct registry of every chat view.  This is intentionally
         # independent of the current tab index, so every room is updated
@@ -3106,7 +3164,7 @@ class MainWindow(QMainWindow):
                     def anchor_call(call_match):
                         call = cls._normalize_callsign(call_match.group(0))
                         return (
-                            f'<a href="meshcom://call/{html.escape(call)}" style="color:#062f6f;">'
+                            f'<a href="meshcom://call/{html.escape(call)}">'
                             f'{html.escape(call_match.group(0))}</a>'
                         ) if call else call_match.group(0)
                     parts[i] = CALLSIGN_RE.sub(anchor_call, parts[i])
@@ -3122,7 +3180,7 @@ class MainWindow(QMainWindow):
             text = match.group(0)
             if text.isdigit():
                 return text
-            return f'<a href="meshcom://call/{html.escape(text.upper())}" style="color:#062f6f;">{html.escape(text)}</a>'
+            return f'<a href="meshcom://call/{html.escape(text.upper())}">{html.escape(text)}</a>'
 
         # Plain-Text-Internetlinks anklickbar machen. Bereits vorhandene HTML-Tags
         # bleiben unangetastet. Satzzeichen am Ende werden nicht Teil des Links.
@@ -4237,6 +4295,104 @@ renderStations(initialStations);</script></body></html>"""
         # follows the newest message when the user was already at the bottom.
         if changed and self.tabs.currentIndex() != index:
             self._set_tab_unread(key)
+
+    def _export_current_chat(self):
+        """Experimental export of the currently selected chat tab.
+
+        The export reads the same session cache that feeds the chat tabs. It
+        does not change message handling or the existing bubble renderer.
+        """
+        index = self.tabs.currentIndex()
+        key = self._key_for_index(index)
+        if key is None:
+            self.status.setText(ui_text("Kein Chat zum Exportieren ausgewählt"))
+            return
+
+        cached_blocks = list(self.message_cache.values())
+        if key[0] == "room":
+            blocks = self._room_blocks(cached_blocks, key[1])
+            title = self._room_tab_title(key[1])
+        elif key[0] == "private":
+            blocks = self._private_blocks(cached_blocks, key[1])
+            title = f"Privatchat {key[1]}"
+        else:
+            blocks = self._filter_blocks(cached_blocks)
+            title = "Alle Nachrichten"
+
+        blocks = sorted(blocks, key=lambda b: self._timestamp_from_block(b) or "99:99:99")
+        if not blocks:
+            self.status.setText(ui_text("Keine Nachrichten zum Exportieren"))
+            return
+
+        default_name = "meshcom_chat_export.html"
+        path, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Chat exportieren",
+            default_name,
+            "HTML-Datei (*.html);;Textdatei (*.txt);;CSV-Datei (*.csv)"
+        )
+        if not path:
+            return
+
+        try:
+            suffix = Path(path).suffix.lower()
+            records = []
+            for block in blocks:
+                plain = self._normalized_plain(block)
+                if not plain:
+                    continue
+                time_text = self._timestamp_from_block(block) or ""
+                participants = self._private_participants(block)
+                sender = participants[0] if participants else ""
+                target = participants[1] if participants else ""
+                if not sender:
+                    hm = re.search(
+                        r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)\s*>\s*(?P<right>[A-Z0-9*\-]{1,20})",
+                        plain, re.IGNORECASE)
+                    if hm:
+                        sender = self._normalize_callsign(hm.group("left")) or hm.group("left")
+                        target = hm.group("right")
+                nm = re.search(r"(?:💬\s*)?Nachricht\s*:\s*(.*)$", plain, re.IGNORECASE)
+                body = nm.group(1).strip() if nm else plain
+                body = re.sub(r"^(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?[01]\d:[0-5]\d(?::[0-5]\d)?\s*", "", body).strip()
+                records.append({"time": time_text, "sender": sender or "-", "target": target or "-", "body": body})
+
+            if suffix == ".txt":
+                lines = [f"MeshCom-Guru Chat-Export", f"{title}", "", *[
+                    f"{r['time']}  {r['sender']}  -> {r['target']}  {r['body']}" for r in records
+                ]]
+                Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+            elif suffix == ".csv":
+                import csv
+                with open(path, "w", encoding="utf-8", newline="") as fh:
+                    writer = csv.writer(fh, delimiter=";")
+                    writer.writerow(["Datum/Zeit", "Rufzeichen", "Ziel", "Nachricht"])
+                    for r in records:
+                        writer.writerow([r["time"], r["sender"], r["target"], r["body"]])
+            else:
+                rows = []
+                for r in records:
+                    body_html = self._make_clickable(self._chat_escape(r["body"]))
+                    rows.append(
+                        "<article class='message'>"
+                        f"<div class='meta'>{self._chat_escape(r['time'])} &nbsp; <b>{self._chat_escape(r['sender'])}</b> &nbsp;→&nbsp; {self._chat_escape(r['target'])}</div>"
+                        f"<div class='body'>{body_html}</div>"
+                        "</article>"
+                    )
+                document = (
+                    "<!doctype html><html><head><meta charset='utf-8'>"
+                    f"<title>{self._chat_escape(title)}</title>"
+                    "<style>body{font-family:sans-serif;background:#101722;color:#e6edf3;margin:24px}"
+                    ".message{max-width:900px;margin:0 auto 12px;padding:12px 16px;border-radius:12px;background:#1b2635}"
+                    ".meta{font-size:13px;color:#aeb9c7;margin-bottom:7px}.body{font-size:15px;white-space:pre-wrap}"
+                    f"a{{color:{self.chat_link_color};}}</style></head><body>"
+                    f"<h2>{self._chat_escape(title)}</h2>{''.join(rows)}</body></html>"
+                )
+                Path(path).write_text(document, encoding="utf-8")
+
+            self.status.setText(ui_text(f"Chat exportiert: {path}"))
+        except Exception as exc:
+            self.status.setText(ui_text(f"Export fehlgeschlagen: {exc}"))
 
     # ---------- Send ----------
     def _monitor_add_local_message(self, text, target):

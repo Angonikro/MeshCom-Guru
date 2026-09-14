@@ -1,6 +1,6 @@
 # MeshCom-Guru
 
-**Version 0.3.74**
+**Version 0.3.75**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
@@ -23,14 +23,12 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.74
+## Aktueller Funktionsumfang v0.3.75
 
-## Onlinezeit – Korrektur in v0.3.74
-
-- Die Onlinezeit wird bei einem unbeabsichtigten Verbindungsverlust und anschließendem automatischen Reconnect nicht mehr auf `00:00:00` zurückgesetzt.
-- Die bereits erreichte Onlinezeit bleibt erhalten und läuft nach der Wiederverbindung weiter.
-- Ein bewusstes manuelles **Trennen** setzt die Onlinezeit weiterhin auf `00:00:00` zurück.
-
+- **Chat-Export (Testfunktion):** Über **Datei → Chat exportieren …** kann der aktuell ausgewählte Chat als HTML, TXT oder CSV gespeichert werden.
+- **Linkfarben:** Unter **Einstellungen → Chat-Farben** kann die Farbe für anklickbare Rufzeichen und Internetlinks unabhängig ausgewählt und gespeichert werden.
+- **Onlinezeit:** Bei unbeabsichtigtem Verbindungsverlust bleibt die bereits erreichte Onlinezeit beim automatischen Reconnect erhalten.
+- **Stabile Chat-Bubbles:** Eigene Nachrichten stehen rechts/grün, empfangene links/blau.
 
 ### Rufzeichenfarbe – Änderung in v0.3.72
 
@@ -52,10 +50,6 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Neuer fester Tab **📊 Statistik** ohne Schließen-X.
 - Statistikübersicht für Nachrichten und Räume.
 
-### Neu in v0.3.70
-
-- Die neuen Funktionen **Statistics**, **Connect** und **Disconnect** sowie die zugehörigen Status-, Verbindungs- und Fehlermeldungen sind vollständig in der englischen Benutzeroberfläche enthalten.
-- Bestehende Funktionen und bisherige Übersetzungen bleiben unverändert.
 
 
 - Raum-Chats, Privat-Chats und Tab „Alle“
@@ -92,9 +86,9 @@ Die Benutzeroberfläche wird übersetzt; empfangene Nachrichten, Rufzeichen, Rau
 
 # Chat-Farben
 
-Unter **Einstellungen → Chat-Farben …** können die Chat-Farben angepasst werden. Die Hintergrundfarbe gilt gemeinsam für alle Raum- und Chat-Ansichten. Die Schriftfarbe wird nur für den Tab **Alle** verwendet; die normalen Chat-Bubbles behalten ihre bestehende Farb- und Textdarstellung.
+Unter **Einstellungen → Chat-Farben …** können die Chat-Farben angepasst werden. Die Hintergrundfarbe gilt gemeinsam für alle Raum- und Chat-Ansichten. Die Schriftfarbe wird nur für den Tab **Alle** verwendet; die normalen Chat-Bubbles behalten ihre bestehende Farb- und Textdarstellung. Zusätzlich kann die Farbe für **anklickbare Rufzeichen und Internetlinks** unabhängig ausgewählt werden.
 
-Mit **Standard wiederherstellen** werden die Chat-Farben auf **schwarz / weiß** zurückgesetzt.
+Die gewählte Linkfarbe wird gespeichert und in den Chat-Bubbles sowie beim HTML-Chat-Export verwendet. Mit **Standard wiederherstellen** werden die Chat-Farben einschließlich der Linkfarbe auf die Standardwerte zurückgesetzt; die Standard-Linkfarbe ist `#062f6f`.
 
 # Kontextmenü in Eingabefeldern
 
@@ -141,6 +135,10 @@ Damit ist sofort sichtbar, wie viele Zeichen noch zur Verfügung stehen.
 ## Internetlinks im Chat
 
 Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Links dargestellt. Ein Klick auf einen Link mit `http://` oder `https://` öffnet die Adresse im Standard-Webbrowser des Systems.
+
+## Chat-Export
+
+Über **Datei → Chat exportieren …** kann der aktuell ausgewählte Chat als **HTML, TXT oder CSV** gespeichert werden. Der HTML-Export enthält anklickbare Rufzeichen und Internetlinks und verwendet die aktuell eingestellte Linkfarbe. Der Export greift auf die vorhandenen Chatdaten zu und verändert die laufende Chat-Darstellung nicht.
 
 ---
 
@@ -453,7 +451,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.74**  
+**MeshCom-Guru v0.3.75**  
 **By Goldisoft 2026**
 
 

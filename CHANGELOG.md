@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.75
+
+- **Chat-Export (Testfunktion):** Der aktuell ausgewählte Chat kann über **Datei → Chat exportieren …** als HTML-, TXT- oder CSV-Datei gespeichert werden.
+- Der HTML-Export übernimmt anklickbare Rufzeichen und Internetlinks sowie die aktuell eingestellte Linkfarbe.
+- Der Export verwendet die vorhandenen Chatdaten und verändert die bestehende Chat-Darstellung und Nachrichtenverarbeitung nicht.
+- **Farbwahl für anklickbare Rufzeichen und Internetlinks:** Unter **Einstellungen → Chat-Farben** kann die Farbe dieser Links jetzt unabhängig von der normalen Chat-Schriftfarbe ausgewählt werden.
+- Die ausgewählte Linkfarbe wird gespeichert und in den runden Chat-Bubbles verwendet.
+- **Standard wiederherstellen** setzt die Linkfarbe auf `#062f6f` zurück.
+- Alle bestehenden Funktionen aus v0.3.74 bleiben erhalten.
+
+
 ## v0.3.74
 
 - **Chat-Bubbles auf Methode 4 umgestellt:** Die normalen Raum- und Privat-Chats verwenden jetzt stabile Qt-`QWidget`-Bubbles mit runden Ecken.
@@ -91,8 +102,6 @@
 ## v0.3.64
 
 - Alle-Scrollfix
-
-# CHANGELOG
 
 ## v0.3.63 – Sprache, Chat-Farben, Kontextmenü und Stabilität
 

@@ -1,23 +1,16 @@
-# MeshCom-Guru v0.3.74
+# MeshCom-Guru v0.3.75
 
-## Release v0.3.74
+## Release v0.3.75
 
-MeshCom-Guru v0.3.74 enthält die Korrektur der Onlinezeit: Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten und läuft nach dem automatischen Reconnect weiter. Ein bewusstes manuelles Trennen setzt die Onlinezeit wieder auf `00:00:00` zurück. Alle übrigen Funktionen aus v0.3.72 bleiben unverändert.
+MeshCom-Guru v0.3.75 ergänzt eine **Chat-Export-Testfunktion**. Über **Datei → Chat exportieren …** kann der aktuell ausgewählte Chat als HTML-, TXT- oder CSV-Datei gespeichert werden. Der HTML-Export enthält anklickbare Rufzeichen und Internetlinks und verwendet die eingestellte Linkfarbe.
+
+Zusätzlich kann unter **Einstellungen → Chat-Farben** die Farbe für anklickbare Rufzeichen und Internetlinks unabhängig von der normalen Chat-Schriftfarbe ausgewählt und gespeichert werden.
 
 ### Neu
 
-- **Rufzeichenfarbe:** Rufzeichen in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats werden dunkler dargestellt. Der Tab **Alle** bleibt unverändert.
-
-- **MH-Liste korrigiert:** UDP-/Gateway-Pakete werden nicht mehr als gehörte Stationen übernommen.
-- Bei Relay-Pfaden wird das erste Rufzeichen als ursprünglicher Absender verwendet; weitere Rufzeichen werden nicht als eigene MH-Stationen eingetragen.
-
-- **🔗 Verbinden / ⛓️ Trennen** zur manuellen Steuerung der WebService-Verbindung.
-- **Automatische Wiederverbindung** nach einem unbeabsichtigten Verbindungsverlust.
-- **Trennen** deaktiviert Auto-Reconnect ausdrücklich.
-- Beim Programmstart wird weiterhin **nicht automatisch verbunden**.
-- **Deutsch / English / Italiano / Nederlands / Français** als umschaltbare UI-Sprachen.
-- Dynamische Raum-Tabs werden sprachabhängig korrekt dargestellt.
-- Übersetzungen für Status, Wetter, Schnelltexte, Statistik, Sound-Einstellungen, Kontextmenüs und weitere sichtbare UI-Texte ergänzt bzw. korrigiert.
+- **Chat exportieren (Testfunktion):** Export des aktuell ausgewählten Chats als HTML, TXT oder CSV.
+- **Linkfarbe frei wählbar:** Farbe für anklickbare Rufzeichen und Internetlinks unter **Einstellungen → Chat-Farben**.
+- Die bestehende Chat-Darstellung und Nachrichtenverarbeitung bleiben erhalten.
 
 ### Erhaltene Funktionen
 
@@ -33,9 +26,3 @@ MeshCom-Guru v0.3.74 enthält die Korrektur der Onlinezeit: Bei einem unbeabsich
 - Raumfilter
 - persönliche Einstellungen unter `~/.MeshCom/settings.ini`
 - Linux-, Windows- und Debian-Startwege
-
-### Release-Struktur
-
-- oberster Projektordner im Archiv: `MeshCom/`
-- persönliche Einstellungen nicht im Projektarchiv
-- Debian-Ziel: `/usr/share/MeshCom`
