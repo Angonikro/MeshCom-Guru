@@ -359,85 +359,16 @@ class ChatView(QScrollArea):
         QTimer.singleShot(0, restore)
 
     def set_bubbles(self, items):
-        """Render chat bubbles in one QTextDocument instead of QWidget rows.
-
-        This deliberately avoids rebuilding/replacing a QWidget bubble tree.
-        The QTextBrowser itself stays the permanent child of the QScrollArea;
-        only its document is replaced when the actual rendered message list
-        changes.  This keeps the first received message visible while avoiding
-        the geometry churn caused by repeatedly replacing the bubble container.
-        """
-        self._all_mode = False
-        self._bubble_mode = True
-
-        browser = self._html_view
-        old_bar = browser.verticalScrollBar()
-        old_value = old_bar.value()
-        old_max = old_bar.maximum()
-        was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
-
-        self._apply_html_style()
-        browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        browser.setReadOnly(True)
-        browser.setOpenLinks(False)
-        browser.setOpenExternalLinks(False)
-        self.setWidget(browser)
-
-        width = max(260, int(self.viewport().width() * 0.75))
-        bubble_parts = []
+        """Variant 4: individual QWidget bubbles."""
+        self._all_mode=False; self._bubble_mode=True
+        old=self.verticalScrollBar(); oldv=old.value(); oldm=old.maximum(); bottom=oldm<=0 or oldv>=max(0,oldm-8)
+        container=QWidget(); container.setStyleSheet(f"background:{self.chat_background};"); lay=QVBoxLayout(container); lay.setContentsMargins(10,8,10,8); lay.setSpacing(8)
         for item in items:
-            content = str(item.get("html", ""))
-            outgoing = bool(item.get("outgoing", False))
-            if outgoing:
-                bg = "#78d86b"
-                border = "#6bc65f"
-                align = "right"
-                pad = "10px 18px 10px 14px"
-            else:
-                bg = "#4d98e8"
-                border = "#4186ce"
-                align = "left"
-                pad = "10px 14px 10px 18px"
-            bubble_parts.append(
-                f"<div style='width:100%; margin:0 0 8px 0; text-align:{align};'>"
-                f"<table cellspacing='0' cellpadding='0' style='margin:0 0 0 auto;'"
-                f" align='{align}'><tr><td style='background:{bg}; border:1px solid {border};"
-                f" border-radius:18px; padding:{pad}; color:#081018;'>"
-                f"{content}</td></tr></table></div>"
-            )
-
-        if bubble_parts:
-            html = (
-                "<html><head><style>a[href^=\"meshcom://call/\"]{color:#0b4f8a;}</style></head><body style='margin:0; padding:8px 10px; background:"
-                + self.chat_background
-                + ";'>"
-                + "".join(bubble_parts)
-                + "</body></html>"
-            )
-        else:
-            html = (
-                "<html><body style='margin:0; padding:18px; background:"
-                + self.chat_background
-                + "; color:" + self.chat_text_color + ";'>"
-                "Keine Nachrichten.</body></html>"
-            )
-
-        # Keep one QTextDocument alive.  There is no QWidget/layout teardown.
-        browser.setHtml(html)
-        doc = browser.document()
-        doc.setTextWidth(max(100, self.viewport().width() - 20))
-
-        def restore():
-            if not self._bubble_mode or self.widget() is not browser:
-                return
-            bar = browser.verticalScrollBar()
-            if was_at_bottom:
-                bar.setValue(bar.maximum())
-            else:
-                bar.setValue(min(old_value, bar.maximum()))
-
-        QTimer.singleShot(0, restore)
+            row=QHBoxLayout(); row.setContentsMargins(0,0,0,0); bubble=BubbleWidget(str(item.get('html','')),bool(item.get('outgoing',False))); bubble.set_content(str(item.get('html','')),max(260,int(self.viewport().width()*0.75)))
+            if item.get('outgoing',False): row.addStretch(1); row.addWidget(bubble,0,Qt.AlignmentFlag.AlignRight)
+            else: row.addWidget(bubble,0,Qt.AlignmentFlag.AlignLeft); row.addStretch(1)
+            lay.addLayout(row)
+        lay.addStretch(1); self.setWidget(container); container.adjustSize(); QTimer.singleShot(0, lambda: self.verticalScrollBar().setValue(self.verticalScrollBar().maximum() if bottom else min(oldv,self.verticalScrollBar().maximum())))
 
     def _update_bubble_container_height(self):
         if not self._bubble_mode:
@@ -3175,7 +3106,7 @@ class MainWindow(QMainWindow):
                     def anchor_call(call_match):
                         call = cls._normalize_callsign(call_match.group(0))
                         return (
-                            f'<a href="meshcom://call/{html.escape(call)}">'
+                            f'<a href="meshcom://call/{html.escape(call)}" style="color:#062f6f;">'
                             f'{html.escape(call_match.group(0))}</a>'
                         ) if call else call_match.group(0)
                     parts[i] = CALLSIGN_RE.sub(anchor_call, parts[i])
@@ -3191,7 +3122,7 @@ class MainWindow(QMainWindow):
             text = match.group(0)
             if text.isdigit():
                 return text
-            return f'<a href="meshcom://call/{html.escape(text.upper())}">{html.escape(text)}</a>'
+            return f'<a href="meshcom://call/{html.escape(text.upper())}" style="color:#062f6f;">{html.escape(text)}</a>'
 
         # Plain-Text-Internetlinks anklickbar machen. Bereits vorhandene HTML-Tags
         # bleiben unangetastet. Satzzeichen am Ende werden nicht Teil des Links.

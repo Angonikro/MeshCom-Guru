@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.73**
+**Version 0.3.74**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,9 +23,9 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.73
+## Aktueller Funktionsumfang v0.3.74
 
-## Onlinezeit – Korrektur in v0.3.73
+## Onlinezeit – Korrektur in v0.3.74
 
 - Die Onlinezeit wird bei einem unbeabsichtigten Verbindungsverlust und anschließendem automatischen Reconnect nicht mehr auf `00:00:00` zurückgesetzt.
 - Die bereits erreichte Onlinezeit bleibt erhalten und läuft nach der Wiederverbindung weiter.
@@ -459,7 +453,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.73**  
+**MeshCom-Guru v0.3.74**  
 **By Goldisoft 2026**
 
 
@@ -478,5 +472,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.74
+
+- **Chat-Bubbles auf Methode 4 umgestellt:** Die normalen Raum- und Privat-Chats verwenden jetzt stabile Qt-`QWidget`-Bubbles mit runden Ecken.
+- Eigene Nachrichten werden weiterhin **rechts/grün**, empfangene Nachrichten **links/blau** dargestellt.
+- Die Bubble-Darstellung wurde mit langen Chatverläufen bis mindestens **30 Nachrichten** getestet und blieb dabei stabil.
+- Bestehende Nachrichten-, Verbindungs-, Raum-, Privat-, Alle-, Weltweit-, Karten-, Monitor-, MH-, Wetter- und Statistikfunktionen bleiben erhalten.
+
 ## v0.3.73
 
 - **Onlinezeit korrigiert:** Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten. Nach dem automatischen Reconnect läuft die Onlinezeit weiter, statt wieder bei `00:00:00` zu beginnen.

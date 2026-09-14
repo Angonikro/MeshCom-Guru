@@ -1,8 +1,8 @@
-# MeshCom-Guru v0.3.73
+# MeshCom-Guru v0.3.74
 
-## Release v0.3.73
+## Release v0.3.74
 
-MeshCom-Guru v0.3.73 enthält die Korrektur der Onlinezeit: Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten und läuft nach dem automatischen Reconnect weiter. Ein bewusstes manuelles Trennen setzt die Onlinezeit wieder auf `00:00:00` zurück. Alle übrigen Funktionen aus v0.3.72 bleiben unverändert.
+MeshCom-Guru v0.3.74 enthält die Korrektur der Onlinezeit: Bei einem unbeabsichtigten Verbindungsverlust bleibt die bereits erreichte Onlinezeit erhalten und läuft nach dem automatischen Reconnect weiter. Ein bewusstes manuelles Trennen setzt die Onlinezeit wieder auf `00:00:00` zurück. Alle übrigen Funktionen aus v0.3.72 bleiben unverändert.
 
 ### Neu
 
