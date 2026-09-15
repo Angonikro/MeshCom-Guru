@@ -31,7 +31,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ## Aktueller Funktionsumfang v0.3.77
 
-- Weltweit Tab hinzugefügt
+- Weltweit Tab hinzugefügt, er öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV.
 - **Mehrsprachige Oberfläche:** Deutsch, English, Italiano, Nederlands und Français. Auch die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind vollständig übersetzt.
 - **Chat-Export:** Der aktuell ausgewählte Chat kann als HTML-, TXT- oder CSV-Datei gespeichert werden.
 - **Erweiterte Chat-Farben:** Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe für anklickbare Rufzeichen und Internetlinks können unabhängig ausgewählt und gespeichert werden.
