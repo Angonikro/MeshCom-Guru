@@ -486,4 +486,4 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
 
-73 de DO2QG Andreas
+73 de DO2QG Andreas QRV Raum 20
