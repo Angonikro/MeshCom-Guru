@@ -1886,11 +1886,11 @@ class MainWindow(QMainWindow):
 
     def _choose_chat_background(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Chat-Farben")
+        dialog.setWindowTitle(ui_text("Chat-Farben"))
         dialog.resize(520, 430)
         layout = QVBoxLayout(dialog)
 
-        info = QLabel("Gemeinsame Farben für alle Räume und Chat-Ansichten:")
+        info = QLabel(ui_text("Gemeinsame Farben für alle Räume und Chat-Ansichten:"))
         layout.addWidget(info)
 
         preview = QTextBrowser(dialog)
@@ -1900,39 +1900,39 @@ class MainWindow(QMainWindow):
         layout.addWidget(preview)
 
         bg_row = QHBoxLayout()
-        bg_label = QLabel("Chat-Hintergrund:")
+        bg_label = QLabel(ui_text("Chat-Hintergrund:"))
         bg_preview = QLabel()
         bg_preview.setFixedSize(70, 30)
         bg_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        bg_button = QPushButton("🎨 Farbe auswählen …")
+        bg_button = QPushButton(ui_text("🎨 Farbe auswählen …"))
         bg_row.addWidget(bg_label)
         bg_row.addWidget(bg_preview)
         bg_row.addWidget(bg_button, 1)
         layout.addLayout(bg_row)
 
         text_row = QHBoxLayout()
-        text_label = QLabel("Schriftfarbe für „Alle“:")
+        text_label = QLabel(ui_text("Schriftfarbe für „Alle“:"))
         text_preview = QLabel()
         text_preview.setFixedSize(70, 30)
         text_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_button = QPushButton("✏️ Farbe auswählen …")
+        text_button = QPushButton(ui_text("✏️ Farbe auswählen …"))
         text_row.addWidget(text_label)
         text_row.addWidget(text_preview)
         text_row.addWidget(text_button, 1)
         layout.addLayout(text_row)
 
         link_row = QHBoxLayout()
-        link_label = QLabel("Anklickbare Rufzeichen / Internetlinks:")
+        link_label = QLabel(ui_text("Anklickbare Rufzeichen / Internetlinks:"))
         link_preview = QLabel()
         link_preview.setFixedSize(70, 30)
         link_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        link_button = QPushButton("🔗 Farbe auswählen …")
+        link_button = QPushButton(ui_text("🔗 Farbe auswählen …"))
         link_row.addWidget(link_label)
         link_row.addWidget(link_preview)
         link_row.addWidget(link_button, 1)
         layout.addLayout(link_row)
 
-        reset = QPushButton("🔄 Standard wiederherstellen")
+        reset = QPushButton(ui_text("🔄 Standard wiederherstellen"))
         layout.addWidget(reset)
 
         def refresh():
@@ -1948,19 +1948,19 @@ class MainWindow(QMainWindow):
             self._update_chat_color_preview(preview, bg, fg)
 
         def pick_bg():
-            color = QColorDialog.getColor(QColor(self.chat_background), dialog, "Chat-Hintergrundfarbe")
+            color = QColorDialog.getColor(QColor(self.chat_background), dialog, ui_text("Chat-Hintergrundfarbe"))
             if color.isValid():
                 self._set_chat_colors_live(background=color.name(QColor.NameFormat.HexRgb))
                 refresh()
 
         def pick_text():
-            color = QColorDialog.getColor(QColor(self.chat_text_color), dialog, "Chat-Schriftfarbe")
+            color = QColorDialog.getColor(QColor(self.chat_text_color), dialog, ui_text("Chat-Schriftfarbe"))
             if color.isValid():
                 self._set_chat_colors_live(text=color.name(QColor.NameFormat.HexRgb))
                 refresh()
 
         def pick_link():
-            color = QColorDialog.getColor(QColor(self.chat_link_color), dialog, "Farbe für Rufzeichen und Internetlinks")
+            color = QColorDialog.getColor(QColor(self.chat_link_color), dialog, ui_text("Farbe für Rufzeichen und Internetlinks"))
             if color.isValid():
                 self._set_chat_colors_live(link=color.name(QColor.NameFormat.HexRgb))
                 refresh()
@@ -4327,7 +4327,7 @@ renderStations(initialStations);</script></body></html>"""
         default_name = "meshcom_chat_export.html"
         path, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "Chat exportieren",
+            ui_text("Chat exportieren"),
             default_name,
             "HTML-Datei (*.html);;Textdatei (*.txt);;CSV-Datei (*.csv)"
         )

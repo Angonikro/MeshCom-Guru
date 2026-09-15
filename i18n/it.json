@@ -205,5 +205,14 @@
   "Verbindung verloren – verbinde erneut … (": "Connessione persa – nuovo tentativo di connessione … (",
   "Emoji passt nicht mehr in die 149 Zeichen": "L’emoji non rientra più nel limite di 149 caratteri",
   "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "La vista mappa richiede PySide6-WebEngine.\nInstallare nuovamente requirements.txt.",
-  "Wetterdaten an ": "Dati meteo trasmessi a "
+  "Wetterdaten an ": "Dati meteo trasmessi a ",
+  "Chat exportieren …": "Esporta chat …",
+  "Chat exportieren": "Esporta chat",
+  "Kein Chat zum Exportieren ausgewählt": "Nessuna chat selezionata per l’esportazione",
+  "Keine Nachrichten zum Exportieren": "Nessun messaggio da esportare",
+  "Chat exportiert: ": "Chat esportata: ",
+  "Export fehlgeschlagen: ": "Esportazione non riuscita: ",
+  "Anklickbare Rufzeichen / Internetlinks:": "Nominativi / link Internet cliccabili:",
+  "Farbe für Rufzeichen und Internetlinks": "Colore per nominativi e link Internet",
+  "🔗 Farbe auswählen …": "🔗 Scegli colore …"
 }

@@ -1,14 +1,8 @@
 # MeshCom-Guru
 
-**Version 0.3.75**
+**Version 0.3.76**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,7 +23,11 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.75
+## Aktueller Funktionsumfang v0.3.76
+
+- **Mehrsprachige Oberfläche:** Deutsch, English, Italiano, Nederlands und Français. Auch die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind vollständig übersetzt.
+- **Chat-Export:** Der aktuell ausgewählte Chat kann als HTML-, TXT- oder CSV-Datei gespeichert werden.
+- **Erweiterte Chat-Farben:** Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe für anklickbare Rufzeichen und Internetlinks können unabhängig ausgewählt und gespeichert werden.
 
 - **Chat-Export (Testfunktion):** Über **Datei → Chat exportieren …** kann der aktuell ausgewählte Chat als HTML, TXT oder CSV gespeichert werden.
 - **Linkfarben:** Unter **Einstellungen → Chat-Farben** kann die Farbe für anklickbare Rufzeichen und Internetlinks unabhängig ausgewählt und gespeichert werden.
@@ -476,5 +474,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

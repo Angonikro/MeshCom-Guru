@@ -6,5 +6,20 @@
   "dutch": "Niederländisch",
   "french": "Französisch",
   "language_saved": "Sprache gespeichert. Bitte Programm neu starten.",
-  "language_title": "Sprache"
+  "language_title": "Sprache",
+  "Chat exportieren …": "Chat exportieren …",
+  "Chat exportieren": "Chat exportieren",
+  "Kein Chat zum Exportieren ausgewählt": "Kein Chat zum Exportieren ausgewählt",
+  "Keine Nachrichten zum Exportieren": "Keine Nachrichten zum Exportieren",
+  "Chat exportiert: ": "Chat exportiert: ",
+  "Export fehlgeschlagen: ": "Export fehlgeschlagen: ",
+  "Anklickbare Rufzeichen / Internetlinks:": "Anklickbare Rufzeichen / Internetlinks:",
+  "Farbe für Rufzeichen und Internetlinks": "Farbe für Rufzeichen und Internetlinks",
+  "Chat-Hintergrund:": "Chat-Hintergrund:",
+  "Schriftfarbe für „Alle“:": "Schriftfarbe für „Alle“:",
+  "🎨 Farbe auswählen …": "🎨 Farbe auswählen …",
+  "✏️ Farbe auswählen …": "✏️ Farbe auswählen …",
+  "🔗 Farbe auswählen …": "🔗 Farbe auswählen …",
+  "🔄 Standard wiederherstellen": "🔄 Standard wiederherstellen",
+  "Gemeinsame Farben für alle Räume und Chat-Ansichten:": "Gemeinsame Farben für alle Räume und Chat-Ansichten:"
 }

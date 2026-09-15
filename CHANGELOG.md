@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.76
+
+- **Mehrsprachige Oberfläche aktualisiert:** Die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind jetzt in Deutsch, English, Italiano, Nederlands und Français berücksichtigt.
+- **Chat exportieren** ist in allen unterstützten Sprachen beschriftet, einschließlich Exportdialog, Statusmeldungen und Fehlermeldungen.
+- **Erweiterte Farbauswahl:** Die Auswahl für Chat-Hintergrund, Schriftfarbe von „Alle“ und die Farbe für anklickbare Rufzeichen und Internetlinks ist vollständig übersetzt.
+- Die bestehende Chat-Export-Funktion (HTML, TXT, CSV) und die neue Link-/Rufzeichenfarbe bleiben unverändert erhalten.
+- **Kein Weltweit-Tab in dieser GitHub-Version:** Die Weltweit-Funktion bleibt bewusst der späteren privaten Version vorbehalten.
+
+
 ## v0.3.75
 
 - **Chat-Export (Testfunktion):** Der aktuell ausgewählte Chat kann über **Datei → Chat exportieren …** als HTML-, TXT- oder CSV-Datei gespeichert werden.

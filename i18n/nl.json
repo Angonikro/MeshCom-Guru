@@ -205,5 +205,14 @@
   "Verbindung verloren – verbinde erneut … (": "Verbinding verloren – opnieuw verbinden … (",
   "Emoji passt nicht mehr in die 149 Zeichen": "Emoji past niet meer binnen de limiet van 149 tekens",
   "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Kaartweergave vereist PySide6-WebEngine.\nInstalleer requirements.txt opnieuw.",
-  "Wetterdaten an ": "Weergegevens verzonden naar "
+  "Wetterdaten an ": "Weergegevens verzonden naar ",
+  "Chat exportieren …": "Chat exporteren …",
+  "Chat exportieren": "Chat exporteren",
+  "Kein Chat zum Exportieren ausgewählt": "Geen chat geselecteerd voor export",
+  "Keine Nachrichten zum Exportieren": "Geen berichten om te exporteren",
+  "Chat exportiert: ": "Chat geëxporteerd: ",
+  "Export fehlgeschlagen: ": "Export mislukt: ",
+  "Anklickbare Rufzeichen / Internetlinks:": "Klikbare roepnamen / internetlinks:",
+  "Farbe für Rufzeichen und Internetlinks": "Kleur voor roepnamen en internetlinks",
+  "🔗 Farbe auswählen …": "🔗 Kleur kiezen …"
 }
