@@ -31,6 +31,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ## Aktueller Funktionsumfang v0.3.77
 
+- Weltweit Tab hinzugefügt
 - **Mehrsprachige Oberfläche:** Deutsch, English, Italiano, Nederlands und Français. Auch die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind vollständig übersetzt.
 - **Chat-Export:** Der aktuell ausgewählte Chat kann als HTML-, TXT- oder CSV-Datei gespeichert werden.
 - **Erweiterte Chat-Farben:** Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe für anklickbare Rufzeichen und Internetlinks können unabhängig ausgewählt und gespeichert werden.
@@ -53,7 +54,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 
 ### Neu in v0.3.70
-- Weltweit Tab hinzugefügt
+
 - Sichtbare Verbindungsanzeige oben im Fenster: **🟢 ONLINE** bzw. **🔴 OFFLINE**.
 - Anzeige, wie lange die aktuelle Verbindung bereits besteht (**Online seit HH:MM:SS**).
 - Datum und Uhrzeit in derselben gut lesbaren Größe wie der Online-Status.
