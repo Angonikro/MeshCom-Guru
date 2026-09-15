@@ -1457,6 +1457,28 @@ class MainWindow(QMainWindow):
         )
         self._update_statistics()
 
+        # ---------- 🌐 Weltweit ----------
+        # Zusätzlicher Tab direkt neben der Karte. Die vorhandene Logik
+        # bleibt unverändert; die ÖVSV-Seite übernimmt ihre eigene Aktualisierung.
+        self.worldwide_view = QWebEngineView() if QWebEngineView is not None else QLabel(
+            "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
+        )
+        self.worldwide_tab_index = self.tabs.insertTab(
+            self.map_tab_index + 1, self.worldwide_view, ui_text("🌐 Weltweit")
+        )
+        self.tabs.tabBar().setTabButton(
+            self.worldwide_tab_index,
+            self.tabs.tabBar().ButtonPosition.RightSide,
+            None,
+        )
+        if QWebEngineView is not None:
+            self.worldwide_view.loadFinished.connect(self._worldwide_load_finished)
+            self.worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+            # Die eingebettete Webansicht aktualisiert sich nicht zuverlässig
+            # in jeder WebEngine-Umgebung. Daher wird ausschließlich diese
+            # Ansicht regelmäßig neu geladen; die restliche Anwendung bleibt
+            # vollständig unberührt.
+
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Nachricht eingeben …")
         self.message_input.setMaxLength(149)
@@ -1525,6 +1547,22 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
+
+    def _worldwide_load_finished(self, ok):
+        if not ok or QWebEngineView is None:
+            return
+        # Die eingebettete ÖVSV-Seite übernimmt ihre eigene Aktualisierung.
+        # Es gibt keinen zusätzlichen 15-Sekunden-Refresh durch den Guru.
+        self.worldwide_view.page().runJavaScript(
+            """(function(){
+                const els = Array.from(document.querySelectorAll('a,button,[role=button],input'));
+                const el = els.find(e => ((e.innerText || e.textContent || e.value || e.title || '') + '').trim().toUpperCase() === 'ACTIVITY');
+                if (el) { el.click(); return true; }
+                const loose = els.find(e => ((e.innerText || e.textContent || e.value || e.title || '') + '').trim().toUpperCase().includes('ACTIVITY'));
+                if (loose) { loose.click(); return true; }
+                return false;
+            })();"""
+        )
 
     def _update_message_counter(self, text):
         """Update the visible character counter for the 149-character limit."""
@@ -2401,6 +2439,7 @@ class MainWindow(QMainWindow):
             <h3>⚡ Schnelltexte und 😊 Emojis</h3><p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
             <h3>📡 Monitor und 📋 MH</h3><p>Der Monitor zeigt MeshCom-UDP-Pakete auf <b>Port 1799</b> mit Filtern, Suche, Pause, Auto-Scroll und Leeren. MH zeigt zuletzt gehörte Stationen mit verfügbaren Informationen wie Rufzeichen, Entfernung, RSSI, SNR, Batterie und Empfangszeit.</p>
             <h3>🗺 Karte und Positionsdaten</h3><p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt.</p>
+            <h3>🌐 Weltweit</h3><p>Der Tab <b>🌐 Weltweit</b> befindet sich direkt neben <b>Karte</b> und öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru startet keinen zusätzlichen 15-Sekunden-Refresh.</p>
             <h3>🌤 Wetterdaten</h3><p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Geeignete Wetterhardware kann z. B. BME280/BMP280 sein.</p>
             <h3>🔊 Sound und Theme</h3><p>Benachrichtigungston, Soundtreiber, Lautstärke und Hell-/Dunkel-Theme können in den Einstellungen konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
@@ -2418,6 +2457,7 @@ class MainWindow(QMainWindow):
             <h3>Chat export</h3><p>Use <b>File → Export chat …</b> to save the currently selected chat as <b>HTML, TXT or CSV</b>. HTML keeps clickable callsigns and Internet links.</p><p>Input fields provide standard Undo, Redo, Cut, Copy, Paste, Delete and Select All commands.</p>
             <h3>Private chat, quick texts and emojis</h3><p>A new private message first shows <b>⏳</b>; a recognized recipient ACK changes it to <b>✓✓</b>. Quick texts are inserted only and are not sent automatically. The emoji picker inserts the selected emoji at the cursor.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Map</h3><p>Monitor displays MeshCom UDP packets on <b>port 1799</b>. MH lists recently heard stations. Position data is processed through UDP 1799 and shown on the OSM/Leaflet map.</p>
+            <h3>🌐 Worldwide</h3><p>The <b>🌐 Worldwide</b> tab is located directly next to <b>Map</b> and opens the public MeshCom activity page of ÖVSV. <b>ACTIVITY</b> is selected automatically when the page loads. The embedded website handles its own updates; MeshCom-Guru does not add a separate 15-second refresh.</p>
             <h3>🌤 Weather / 🔊 Sound / Node Info</h3><p>WX can show temperature, humidity, QFE and QNH when supplied by the WebService. Sound, volume and light/dark theme are configurable. <b>Open Node Info</b> opens WebService information.</p>
             <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> Run <code>run_windows.bat</code>. <b>Debian:</b> Installed to <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Help → About</h3><p>Shows version and program information.</p>
@@ -2432,6 +2472,7 @@ class MainWindow(QMainWindow):
             <h3>Colori chat e link</h3><p>È possibile configurare lo sfondo delle chat e il colore del testo per <b>Tutti</b>. È inoltre possibile scegliere separatamente il colore dei <b>nominativi e dei link Internet cliccabili</b>.</p><h3>Esportazione chat</h3><p>Con <b>File → Esporta chat …</b> la chat selezionata può essere salvata come <b>HTML, TXT o CSV</b>. L'HTML mantiene i nominativi e i link Internet cliccabili.</p><h3>Menu contestuale</h3><p>Nei campi di testo sono disponibili Annulla, Ripeti, Taglia, Copia, Incolla, Elimina e Seleziona tutto.</p>
             <h3>Chat privata, testi rapidi ed emoji</h3><p>Un nuovo messaggio privato mostra inizialmente <b>⏳</b>; un ACK riconosciuto del destinatario lo cambia in <b>✓✓</b>. I testi rapidi vengono inseriti senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Mappa</h3><p>Monitor mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b>. MH mostra le stazioni ascoltate di recente. I dati di posizione vengono elaborati tramite UDP 1799 e visualizzati sulla mappa OSM/Leaflet.</p>
+            <h3>🌐 Mondiale</h3><p>La scheda <b>🌐 Mondiale</b> si trova direttamente accanto a <b>Mappa</b> e apre la pagina pubblica delle attività MeshCom dell’ÖVSV. Al caricamento viene selezionato automaticamente <b>ACTIVITY</b>. La pagina integrata gestisce i propri aggiornamenti; MeshCom-Guru non aggiunge un aggiornamento separato ogni 15 secondi.</p>
             <h3>🌤 Meteo / 🔊 Suono / Info nodo</h3><p>WX può mostrare temperatura, umidità, QFE e QNH quando forniti dal WebService. Suono, volume e tema chiaro/scuro sono configurabili. <b>Apri info nodo</b> apre le informazioni del WebService.</p>
             <h3>Installazione</h3><p><b>ZIP Linux:</b> Estrarre <code>MeshCom</code> ed eseguire <code>./run_linux.sh</code>. <b>Windows:</b> eseguire <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>; le impostazioni personali restano in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Aiuto → Info</h3><p>Mostra versione e informazioni del programma.</p>
@@ -2446,6 +2487,7 @@ class MainWindow(QMainWindow):
             <h3>Chatkleuren en linkkleur</h3><p>De chatachtergrond en tekstkleur voor <b>Alles</b> kunnen worden ingesteld. Ook de kleur van <b>klikbare roepnamen en internetlinks</b> kan afzonderlijk worden gekozen en opgeslagen.</p><h3>Chat exporteren</h3><p>Via <b>Bestand → Chat exporteren …</b> kan de geselecteerde chat als <b>HTML, TXT of CSV</b> worden opgeslagen. HTML behoudt klikbare roepnamen en internetlinks.</p><h3>Contextmenu</h3><p>In invoervelden zijn Ongedaan maken, Opnieuw, Knippen, Kopiëren, Plakken, Verwijderen en Alles selecteren beschikbaar.</p>
             <h3>Privéchat, snelteksten en emoji's</h3><p>Een nieuw privébericht toont eerst <b>⏳</b>; een herkende ACK van de ontvanger verandert dit in <b>✓✓</b>. Snelteksten worden alleen ingevoegd en niet automatisch verzonden. De emoji-kiezer voegt de emoji op de cursorpositie in.</p>
             <h3>📡 Monitor / 📋 MH / 🗺 Kaart</h3><p>Monitor toont MeshCom-UDP-pakketten op <b>poort 1799</b>. MH toont recent gehoorde stations. Positiegegevens worden via UDP 1799 verwerkt en op de OSM/Leaflet-kaart weergegeven.</p>
+            <h3>🌐 Wereldwijd</h3><p>Het tabblad <b>🌐 Wereldwijd</b> staat direct naast <b>Kaart</b> en opent de openbare MeshCom-activiteitspagina van ÖVSV. Bij het laden wordt automatisch <b>ACTIVITY</b> geselecteerd. De ingebedde website verzorgt de eigen updates; MeshCom-Guru voegt geen aparte verversing van 15 seconden toe.</p>
             <h3>🌤 Weer / 🔊 Geluid / Node-info</h3><p>WX kan temperatuur, luchtvochtigheid, QFE en QNH tonen wanneer de WebService deze levert. Geluid, volume en licht/donker-thema zijn instelbaar. <b>Node-info openen</b> toont de WebService-informatie.</p>
             <h3>Installatie</h3><p><b>Linux ZIP:</b> Pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>; persoonlijke instellingen blijven in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Help → Info</h3><p>Toont versie- en programma-informatie.</p>
@@ -2461,6 +2503,7 @@ class MainWindow(QMainWindow):
             <h3>Couleurs du chat et menu contextuel</h3><p>L'arrière-plan du chat et la couleur du texte de <b>Tous</b> peuvent être configurés. Les champs de saisie proposent Annuler, Rétablir, Couper, Copier, Coller, Supprimer et Tout sélectionner.</p>
             <h3>Chat privé, textes rapides et emojis</h3><p>Un nouveau message privé affiche d'abord <b>⏳</b> ; un ACK reconnu du destinataire le transforme en <b>✓✓</b>. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
             <h3>📡 Moniteur / 📋 MH / 🗺 Carte</h3><p>Le Moniteur affiche les paquets UDP MeshCom sur le <b>port 1799</b>. MH affiche les stations entendues récemment. Les positions sont traitées via UDP 1799 et affichées sur la carte OSM/Leaflet.</p>
+            <h3>🌐 Monde entier</h3><p>L’onglet <b>🌐 Monde entier</b> se trouve directement à côté de <b>Carte</b> et ouvre la page publique d’activité MeshCom de l’ÖVSV. <b>ACTIVITY</b> est sélectionné automatiquement au chargement. Le site intégré gère ses propres mises à jour ; MeshCom-Guru n’ajoute pas de rafraîchissement séparé de 15 secondes.</p>
             <h3>🌤 Météo / 🔊 Son / Informations du nœud</h3><p>WX peut afficher température, humidité, QFE et QNH lorsque le WebService les fournit. Le son, le volume et le thème clair/sombre sont configurables. <b>Ouvrir les infos du nœud</b> affiche les informations du WebService.</p>
             <h3>Installation</h3><p><b>ZIP Linux :</b> Extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code> ; les paramètres personnels restent dans <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Aide → Info</h3><p>Affiche la version et les informations du programme.</p>

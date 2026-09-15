@@ -215,5 +215,7 @@
   "Anklickbare Rufzeichen / Internetlinks:": "Indicatifs / liens Internet cliquables :",
   "Farbe für Rufzeichen und Internetlinks": "Couleur des indicatifs et liens Internet",
   "🔗 Farbe auswählen …": "🔗 Choisir une couleur …",
-  "Gemeinsame Farben für alle Räume und toutes les vues du chat :": "Couleurs communes pour tous les salons et toutes les vues du chat :"
+  "Gemeinsame Farben für alle Räume und toutes les vues du chat :": "Couleurs communes pour tous les salons et toutes les vues du chat :",
+  "🌐 Weltweit": "🌐 Monde entier",
+  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Monde entier nécessite PySide6-WebEngine.\nVeuillez réinstaller requirements.txt."
 }

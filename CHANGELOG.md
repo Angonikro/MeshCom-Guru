@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.77
+
+- **🌐 Weltweit-Tab integriert:** Der Weltweit-Tab ist direkt neben **Karte** verfügbar und öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV.
+- Beim Laden wird automatisch **ACTIVITY** ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.
+- **Mehrsprachigkeit erweitert:** Der neue Weltweit-Tab und die zugehörigen Hinweise sind in Deutsch, English, Italiano, Nederlands und Français berücksichtigt.
+- **Integrierte Anleitung aktualisiert:** Die neue Weltweit-Funktion ist in allen fünf Sprachen dokumentiert.
+- Alle bestehenden Funktionen aus **v0.3.76** – einschließlich **Chat exportieren** und der erweiterten **Farbauswahl** – bleiben erhalten.
+
 ## v0.3.76
 
 - **Mehrsprachige Oberfläche aktualisiert:** Die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind jetzt in Deutsch, English, Italiano, Nederlands und Français berücksichtigt.

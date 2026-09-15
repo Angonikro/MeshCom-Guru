@@ -214,5 +214,7 @@
   "Export fehlgeschlagen: ": "Export mislukt: ",
   "Anklickbare Rufzeichen / Internetlinks:": "Klikbare roepnamen / internetlinks:",
   "Farbe für Rufzeichen und Internetlinks": "Kleur voor roepnamen en internetlinks",
-  "🔗 Farbe auswählen …": "🔗 Kleur kiezen …"
+  "🔗 Farbe auswählen …": "🔗 Kleur kiezen …",
+  "🌐 Weltweit": "🌐 Wereldwijd",
+  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Wereldwijd vereist PySide6-WebEngine.\nInstalleer requirements.txt opnieuw."
 }

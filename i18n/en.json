@@ -21,5 +21,7 @@
   "✏️ Farbe auswählen …": "✏️ Choose color …",
   "🔗 Farbe auswählen …": "🔗 Choose color …",
   "🔄 Standard wiederherstellen": "🔄 Restore defaults",
-  "Gemeinsame Farben für alle Räume und Chat-Ansichten:": "Shared colors for all rooms and chat views:"
+  "Gemeinsame Farben für alle Räume und Chat-Ansichten:": "Shared colors for all rooms and chat views:",
+  "🌐 Weltweit": "🌐 Worldwide",
+  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Worldwide requires PySide6-WebEngine.\nPlease install requirements.txt again."
 }

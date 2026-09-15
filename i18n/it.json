@@ -214,5 +214,7 @@
   "Export fehlgeschlagen: ": "Esportazione non riuscita: ",
   "Anklickbare Rufzeichen / Internetlinks:": "Nominativi / link Internet cliccabili:",
   "Farbe für Rufzeichen und Internetlinks": "Colore per nominativi e link Internet",
-  "🔗 Farbe auswählen …": "🔗 Scegli colore …"
+  "🔗 Farbe auswählen …": "🔗 Scegli colore …",
+  "🌐 Weltweit": "🌐 Mondiale",
+  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Mondiale richiede PySide6-WebEngine.\nInstallare nuovamente requirements.txt."
 }
