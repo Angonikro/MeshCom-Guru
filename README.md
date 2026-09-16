@@ -1,8 +1,29 @@
 # MeshCom-Guru
 
+MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
+
+## Inhalt
+
+- Chat mit empfangenen MeshCom-Nachrichten
+- Räume und private Nachrichten
+- Node-Informationen
+- Kartenanzeige mit Positionsdaten
+- Anzeige eigener Positionsdaten
+- integriertes Menü **Hilfe**
+- integrierte **Anleitung**
+- **Info**-Fenster mit Programmversion
+- Linux- und Windows-Startdateien
+- Desktop-Launcher für Linux
+- Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
+- Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
+- **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
+- **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
+- **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
+- **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+
 **Version 0.3.78**
 
-MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
+
 
 ## Neu in v0.3.78 – Neues Dashboard
 
@@ -27,36 +48,6 @@ Das **neue Dashboard** steht in v0.3.78 ganz im Mittelpunkt. Unter **Einstellung
 - **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
 - **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und **GPS Eingabe** wurden in einer kompakten Dashboard-Zeile zusammengeführt.
 - **Mehrsprachigkeit:** Die neuen Dashboard-Bezeichnungen und Funktionen sind in Deutsch, English, Italiano, Nederlands und Français übersetzt.
-
-## Inhalt
-
-- Chat mit empfangenen MeshCom-Nachrichten
-- Räume und private Nachrichten
-- Node-Informationen
-- Kartenanzeige mit Positionsdaten
-- Anzeige eigener Positionsdaten
-- integriertes Menü **Hilfe**
-- integrierte **Anleitung**
-- **Info**-Fenster mit Programmversion
-- Linux- und Windows-Startdateien
-- Desktop-Launcher für Linux
-- Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
-- Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
-- **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
-- **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
-- **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
-- **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
-
-## Aktueller Funktionsumfang v0.3.78
-
-- **Mehrsprachige Oberfläche:** Deutsch, English, Italiano, Nederlands und Français. Auch die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind vollständig übersetzt.
-- **Chat-Export:** Der aktuell ausgewählte Chat kann als HTML-, TXT- oder CSV-Datei gespeichert werden.
-- **Erweiterte Chat-Farben:** Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe für anklickbare Rufzeichen und Internetlinks können unabhängig ausgewählt und gespeichert werden.
-
-- **Chat-Export (Testfunktion):** Über **Datei → Chat exportieren …** kann der aktuell ausgewählte Chat als HTML, TXT oder CSV gespeichert werden.
-- **Linkfarben:** Unter **Einstellungen → Chat-Farben** kann die Farbe für anklickbare Rufzeichen und Internetlinks unabhängig ausgewählt und gespeichert werden.
-- **Onlinezeit:** Bei unbeabsichtigtem Verbindungsverlust bleibt die bereits erreichte Onlinezeit beim automatischen Reconnect erhalten.
-- **Stabile Chat-Bubbles:** Eigene Nachrichten stehen rechts/grün, empfangene links/blau.
 
 ### Rufzeichenfarbe – Änderung in v0.3.72
 
