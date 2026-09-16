@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.79 – Emoji-Einfügen korrigiert
+
+- **Emoji-Popup korrigiert:** Das Emoji-Fenster öffnet sich wieder direkt über dem jeweils gedrückten Smiley-Symbol – sowohl in **Klassisch** als auch im **Dashboard**.
+- **Emoji-Fix:** Das ausgewählte Emoji wird jetzt zuverlässig in das Nachrichtenfeld eingefügt, das vor dem Öffnen des Emoji-Pickers aktiv war.
+- Verhindert, dass ein zuvor verwendetes Emoji aus dem anderen Nachrichtenfeld erneut übernommen wird.
+- Nach dem Einfügen bleibt der Fokus auf dem tatsächlich verwendeten Nachrichtenfeld.
+- Schnelltexte und die übrigen Funktionen aus **v0.3.78** bleiben erhalten.
+
 ## v0.3.78 – Neues Dashboard
 
 - Rufzeichen direkt im Dashboard in der ersten Reihe editierbar und speicherbar.

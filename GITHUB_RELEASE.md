@@ -1,36 +1,17 @@
-## Korrekturen in v0.3.78
+# MeshCom-Guru v0.3.79
 
-- Beim Wechsel zwischen Dashboard und Klassisch wird das aktuell ausgewählte Ziel korrekt in der `settings.ini` übernommen.
-- Beim Senden in der klassischen Ansicht wird das tatsächlich ausgewählte Chat-Ziel verwendet; `filter_room`-Werte werden nicht mehr versehentlich als Sendeziel verwendet.
+## Emoji-Einfügen korrigiert
 
-# MeshCom-Guru v0.3.78
+v0.3.79 behebt einen Fehler beim Einfügen von Emojis in der klassischen Ansicht und im Dashboard.
 
-## Neues Dashboard-Design
+- Das beim Öffnen des Emoji-Pickers aktive Nachrichtenfeld wird als Einfügeziel gespeichert.
+- Das Popup kann den Fokus übernehmen, ohne dass dadurch versehentlich das andere Nachrichtenfeld verwendet wird.
+- Bereits verwendete Smileys werden nicht mehr aus dem anderen Feld übernommen.
+- Nach dem Einfügen bleibt der Fokus im richtigen Nachrichtenfeld.
+- Schnelltexte, Dashboard, Weltweit, Karte, Monitor, Stations / MH und die übrigen Funktionen aus v0.3.78 bleiben erhalten.
 
-v0.3.78 ergänzt zur bisherigen klassischen Oberfläche ein neues Dashboard. Unter **Einstellungen → Darstellung** kann zwischen **Klassisch** und **Dashboard** gewechselt werden.
+## Dokumentation
 
-### Dashboard
-- Gespeicherte Räume direkt als anklickbare Raum-Chats
-- Eigene Ansicht **Alle**
-- Getrennte **Private Chats**
-- Karte und **Weltweit** direkt im Dashboard
-- Live-**Monitor**, **Stations / MH** und **Statistik**
-- Nachrichtenversand mit **Enter** statt zusätzlichem Senden-Button
-- Wetter, Node Info, Verbindung und Onlinezeit weiterhin verfügbar
-
-### Dokumentation
-- Integrierte **Hilfe → Anleitung** auf v0.3.78 aktualisiert
-- Anleitung in Deutsch, English, Italiano, Nederlands und Français
-- PDF-Anleitungen für alle fünf Sprachen enthalten
-- README und CHANGELOG aktualisiert
-
-### Hinweis
-Die Weltweit-Webseite übernimmt weiterhin ihre eigene Aktualisierung. MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.
-
-### Stabilität von Weltweit
-
-Die eingebettete Weltweit-Webseite besitzt einen kleinen Selbstheilungs-Watchdog. Bei einem unerwarteten Renderer-Abbruch oder einem länger anhaltenden Hänger wird die Ansicht automatisch neu geladen und **ACTIVITY** wieder ausgewählt. Es gibt weiterhin keinen zusätzlichen 15-Sekunden-Refresh.
-
-## Installation
-
-ZIP entpacken und den enthaltenen Ordner **MeshCom** verwenden. Unter Linux kann `./run_linux.sh` verwendet werden; unter Windows steht `run_windows.bat` zur Verfügung.
+- Version auf **0.3.79** aktualisiert.
+- CHANGELOG und README ergänzt.
+- Die vorhandenen fünfsprachigen Anleitungen bleiben Bestandteil des Projekts.

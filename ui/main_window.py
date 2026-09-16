@@ -1608,6 +1608,7 @@ class MainWindow(QMainWindow):
         self.emoji_button.setToolTip("Emoji einfügen")
         self.emoji_button.clicked.connect(self._toggle_emoji_picker)
         self._emoji_picker = None
+        self._emoji_target = None
 
         # Zeichenzähler für MeshCom-Nachrichten: maximal 149 Zeichen.
         self.message_counter = QLabel("0/149")
@@ -2669,7 +2670,11 @@ class MainWindow(QMainWindow):
         self.dashboard_message_input.clear()
 
     def _dashboard_insert_emoji(self):
-        self.message_input.setFocus()
+        # Im Dashboard immer das Dashboard-Feld als Ziel verwenden.
+        # Dadurch kann kein Inhalt aus dem klassischen Nachrichtenfeld
+        # (z. B. ein zuvor verwendetes Emoji) übernommen werden.
+        if hasattr(self, "dashboard_message_input"):
+            self.dashboard_message_input.setFocus()
         self._toggle_emoji_picker()
 
     def _use_dashboard_quick_text(self, text):
@@ -2962,9 +2967,20 @@ class MainWindow(QMainWindow):
         text = str(text or "").strip()[:149]
         if not text:
             return
+        # Das Dashboard und der normale Chat besitzen getrennte Eingabefelder.
+        # Beide müssen synchron gesetzt werden, damit Schnelltexte unabhängig
+        # davon funktionieren, auf welchem Chat-Tab sie geöffnet wurden.
         self.message_input.setText(text)
+        if hasattr(self.message_input, "clearUndo"):
+            self.message_input.clearUndo()
+        if hasattr(self, "dashboard_message_input"):
+            self.dashboard_message_input.setText(text)
+            if hasattr(self.dashboard_message_input, "clearUndo"):
+                self.dashboard_message_input.clearUndo()
         self.message_input.setFocus()
         self.message_input.setCursorPosition(len(text))
+        if hasattr(self, "dashboard_message_input"):
+            self.dashboard_message_input.setCursorPosition(len(text))
         if dialog is not None:
             dialog.accept()
 
@@ -2980,6 +2996,13 @@ class MainWindow(QMainWindow):
         if self._emoji_picker is not None and self._emoji_picker.isVisible():
             self._emoji_picker.close()
             return
+
+        # Fokus vor dem Öffnen des Popup-Fensters merken. Das Popup selbst
+        # erhält anschließend den Fokus, darf aber das Einfügeziel nicht ändern.
+        if hasattr(self, "dashboard_message_input") and self.dashboard_message_input.hasFocus():
+            self._emoji_target = self.dashboard_message_input
+        else:
+            self._emoji_target = self.message_input
 
         picker = QDialog(self, Qt.WindowType.Popup)
         picker.setWindowTitle("Emoji")
@@ -3012,25 +3035,52 @@ class MainWindow(QMainWindow):
         self._emoji_picker = picker
         picker.finished.connect(lambda _result: self._clear_emoji_picker())
 
-        # Das Fenster erscheint direkt über der Eingabezeile.
-        pos = self.emoji_button.mapToGlobal(self.emoji_button.rect().topLeft())
-        x = max(0, pos.x() - picker.width() + self.emoji_button.width())
-        y = max(0, pos.y() - picker.maximumHeight() - 6)
+        # Das Fenster erscheint direkt über dem Smiley-Symbol, das gedrückt wurde.
+        # Im Dashboard muss deshalb der Dashboard-Smiley verwendet werden;
+        # im klassischen Chat der klassische Smiley.
+        anchor_button = (
+            self.dashboard_emoji_button
+            if self._emoji_target is getattr(self, "dashboard_message_input", None)
+            else self.emoji_button
+        )
+        pos = anchor_button.mapToGlobal(anchor_button.rect().topLeft())
+        x = max(0, pos.x() - picker.width() + anchor_button.width())
+        y = max(0, pos.y() - picker.height() - 6)
         picker.move(x, y)
         picker.show()
 
     def _insert_emoji(self, emoji):
         """Insert an emoji at the current cursor position."""
-        if len(self.message_input.text()) + len(emoji) > 149:
+        # Das Popup übernimmt den Fokus. Deshalb darf hier nicht erneut über
+        # hasFocus() entschieden werden: sonst wird nach dem Öffnen des
+        # Pickers fälschlich das alte klassische Nachrichtenfeld verwendet.
+        target = self._emoji_target
+        if target is None:
+            target = self.dashboard_message_input if (
+                hasattr(self, "dashboard_message_input") and self.dashboard_message_input.hasFocus()
+            ) else self.message_input
+        current = target.text()
+        if len(current) + len(emoji) > 149:
             self.status.setText(ui_text("Emoji passt nicht mehr in die 149 Zeichen"))
             return
-        self.message_input.insert(emoji)
+        target.insert(emoji)
+        if hasattr(target, "clearUndo"):
+            target.clearUndo()
+        # Beide Felder bleiben synchron, ohne alten Inhalt zurückzuholen.
+        other = self.message_input if target is self.dashboard_message_input else getattr(self, "dashboard_message_input", None)
+        if other is not None:
+            other.setText(target.text())
+            if hasattr(other, "clearUndo"):
+                other.clearUndo()
+            other.setCursorPosition(target.cursorPosition())
         if self._emoji_picker is not None and self._emoji_picker.isVisible():
             self._emoji_picker.close()
-        self.message_input.setFocus()
+        target.setFocus()
+        self._emoji_target = None
 
     def _clear_emoji_picker(self):
         self._emoji_picker = None
+        self._emoji_target = None
 
     def _load_filter_fields(self, settings):
         for i, field in enumerate(self.filter_inputs, 1):
@@ -5961,6 +6011,15 @@ renderStations(initialStations);</script></body></html>"""
             self.send_log.setText(f"Letzter Sendeauftrag {timestamp}: → {target} | {text} | HTTP {method} 200")
             self.status.setText(ui_text("Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung"))
             self.message_input.clear()
+            # Auch den Undo-/Redo-Verlauf löschen, damit keine zuvor verwendeten
+            # Emojis oder Schnelltexte durch Eingabe-/IME-Wiederherstellung
+            # erneut auftauchen können.
+            if hasattr(self.message_input, "clearUndo"):
+                self.message_input.clearUndo()
+            if hasattr(self, "dashboard_message_input"):
+                self.dashboard_message_input.clear()
+                if hasattr(self.dashboard_message_input, "clearUndo"):
+                    self.dashboard_message_input.clearUndo()
 
             # Bei leerem Ziel bleibt der Tab „Alle“ aktiv.
             # Wichtig: Kein künstlicher Privat-Tab für ein leeres Ziel

@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -29,9 +21,18 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.78**
+**Version 0.3.79**
 
 
+
+## Neu in v0.3.79 – Emoji-Fix und Dashboard
+
+- **Emoji-Popup:** Das Fenster öffnet sich direkt über dem gedrückten Smiley-Symbol.
+
+### Emoji-Fix in v0.3.79
+- Der Emoji-Picker merkt sich jetzt das Nachrichtenfeld, das beim Öffnen aktiv war.
+- Dadurch werden keine alten Smileys aus dem anderen Nachrichtenfeld mehr eingefügt.
+- Nach der Auswahl bleibt der Cursor im richtigen Nachrichtenfeld.
 
 ## Neu in v0.3.78 – Neues Dashboard
 
