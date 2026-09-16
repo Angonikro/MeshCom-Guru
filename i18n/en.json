@@ -23,5 +23,10 @@
   "🔄 Standard wiederherstellen": "🔄 Restore defaults",
   "Gemeinsame Farben für alle Räume und Chat-Ansichten:": "Shared colors for all rooms and chat views:",
   "🌐 Weltweit": "🌐 Worldwide",
-  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Worldwide requires PySide6-WebEngine.\nPlease install requirements.txt again."
+  "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.": "Worldwide requires PySide6-WebEngine.\nPlease install requirements.txt again.",
+  "Darstellung": "Display",
+  "Klassisch": "Classic",
+  "Dashboard": "Dashboard",
+  "Dashboard aktiviert": "Dashboard enabled",
+  "Klassische Ansicht aktiviert": "Classic view enabled"
 }

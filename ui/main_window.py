@@ -9,6 +9,7 @@ import subprocess
 import json
 import socket
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -18,10 +19,14 @@ try:
 except Exception:
     QWebEngineView = None
 try:
+    from PySide6.QtWebEngineCore import QWebEnginePage
+except Exception:
+    QWebEnginePage = None
+try:
     from PySide6.QtMultimedia import QSoundEffect
 except Exception:
     QSoundEffect = None
-from PySide6.QtGui import QAction, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF
+from PySide6.QtGui import QAction, QActionGroup, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF, QPixmap, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -43,6 +48,8 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QScrollArea,
+    QSplitter,
+    QStackedWidget,
     QPushButton,
     QTabWidget,
     QTextBrowser,
@@ -384,16 +391,48 @@ class ChatView(QScrollArea):
         QTimer.singleShot(0, restore)
 
     def set_bubbles(self, items):
-        """Variant 4: individual QWidget bubbles."""
-        self._all_mode=False; self._bubble_mode=True
-        old=self.verticalScrollBar(); oldv=old.value(); oldm=old.maximum(); bottom=oldm<=0 or oldv>=max(0,oldm-8)
-        container=QWidget(); container.setStyleSheet(f"background:{self.chat_background};"); lay=QVBoxLayout(container); lay.setContentsMargins(10,8,10,8); lay.setSpacing(8)
-        for item in items:
-            row=QHBoxLayout(); row.setContentsMargins(0,0,0,0); bubble=BubbleWidget(str(item.get('html','')),bool(item.get('outgoing',False)), self.chat_link_color); bubble.set_content(str(item.get('html','')),max(260,int(self.viewport().width()*0.75)))
-            if item.get('outgoing',False): row.addStretch(1); row.addWidget(bubble,0,Qt.AlignmentFlag.AlignRight)
-            else: row.addWidget(bubble,0,Qt.AlignmentFlag.AlignLeft); row.addStretch(1)
+        """Display the same real bubble data used by room/private chats."""
+        self._all_mode = False
+        self._bubble_mode = True
+        self._bubble_items = [dict(item) for item in (items or [])]
+        old = self.verticalScrollBar()
+        oldv = old.value()
+        oldm = old.maximum()
+        bottom = oldm <= 0 or oldv >= max(0, oldm - 8)
+        container = QWidget()
+        container.setStyleSheet(f"background:{self.chat_background};")
+        lay = QVBoxLayout(container)
+        lay.setContentsMargins(10, 8, 10, 8)
+        lay.setSpacing(8)
+        self._bubble_rows = []
+        for item in self._bubble_items:
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            bubble = BubbleWidget(
+                str(item.get('html', '')),
+                bool(item.get('outgoing', False)),
+                self.chat_link_color,
+            )
+            bubble.set_content(
+                str(item.get('html', '')),
+                max(260, int(self.viewport().width() * 0.75)),
+            )
+            self._bubble_rows.append(bubble)
+            if item.get('outgoing', False):
+                row.addStretch(1)
+                row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignRight)
+            else:
+                row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
+                row.addStretch(1)
             lay.addLayout(row)
-        lay.addStretch(1); self.setWidget(container); container.adjustSize(); QTimer.singleShot(0, lambda: self.verticalScrollBar().setValue(self.verticalScrollBar().maximum() if bottom else min(oldv,self.verticalScrollBar().maximum())))
+        lay.addStretch(1)
+        self._bubble_container = container
+        self._bubble_layout = lay
+        self.setWidget(container)
+        container.adjustSize()
+        QTimer.singleShot(0, lambda: self.verticalScrollBar().setValue(
+            self.verticalScrollBar().maximum() if bottom else min(oldv, self.verticalScrollBar().maximum())
+        ))
 
     def _update_bubble_container_height(self):
         if not self._bubble_mode:
@@ -450,8 +489,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"MeshCom-Guru v{VERSION}")
-        self.resize(1100, 930)
-        self.setMinimumSize(900, 930)
+        # Etwas breiteres Hauptfenster, damit die Onlinezeit und die
+        # Dashboard-Kopfzeile vollständig sichtbar bleiben.
+        self.resize(1634, 950)
+        self.setMinimumSize(1434, 900)
 
         settings = load_settings()
         self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
@@ -467,6 +508,9 @@ class MainWindow(QMainWindow):
         self.chat_link_color = self._normalize_chat_color(settings.get("chat_link_color", "#062f6f"))
         self._all_chat_views = []
         self.current_theme = settings.get("theme", "dark").strip().lower()
+        self.layout_mode = settings.get("layout_mode", "classic").strip().lower()
+        if self.layout_mode not in {"classic", "dashboard"}:
+            self.layout_mode = "classic"
         if self.current_theme not in {"light", "dark"}:
             self.current_theme = "dark"
         self.sound_enabled = settings.get("sound_enabled", "1") == "1"
@@ -513,6 +557,7 @@ class MainWindow(QMainWindow):
         self.tab_keys = {}
         self.tab_hashes = {}
         self.unread = set()
+        self.dashboard_current_key = ("all", "all")
         # Privat-Tabs bleiben geöffnet, bis der Benutzer sie ausdrücklich schließt.
         # Geschlossene Tabs werden nicht bei jedem Nachrichten-Refresh erneut geöffnet.
         self.closed_private = {}
@@ -560,6 +605,12 @@ class MainWindow(QMainWindow):
         self._apply_language_ui()
         self._apply_theme(self.current_theme)
         self._load_filter_fields(settings)
+        # Dashboard is built before the saved filter fields are loaded.
+        # Rebuild its room-chat navigation now so the persistent five rooms
+        # are the source of truth from the first screen.
+        if hasattr(self, "dashboard_sidebar"):
+            sidebar_layout = self.dashboard_sidebar.layout()
+            self._dashboard_rebuild_room_buttons(sidebar_layout)
         self._set_weather_panel_visible(self.weather_enabled)
         self.weatherUpdated.connect(self._apply_weather_result)
         # Wenn Wetterdaten dauerhaft aktiviert sind, beim Start automatisch
@@ -572,6 +623,15 @@ class MainWindow(QMainWindow):
         # Eigenständiger MeshCom-Positions-/Status-Empfang direkt per UDP.
         self._start_udp_listener(1799)
 
+        # Watchdog: der UDP-Empfang darf nicht dauerhaft ausfallen, nur weil
+        # der Hintergrund-Thread oder der Socket unerwartet beendet wurde.
+        # Alle fünf Sekunden wird ausschließlich geprüft, ob der Listener
+        # noch lebt; nur bei einem tatsächlich beendeten Thread wird er neu
+        # gestartet. Die normale Monitor-/MH-Verarbeitung bleibt unverändert.
+        self.udp_watchdog_timer = QTimer(self)
+        self.udp_watchdog_timer.timeout.connect(self._ensure_udp_listener)
+        self.udp_watchdog_timer.start(5000)
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_messages)
         self.timer.start(5000)
@@ -581,10 +641,37 @@ class MainWindow(QMainWindow):
         self.clock_timer.timeout.connect(self._update_clock)
         self.clock_timer.start(1000)
         self._update_clock()
+
+        # Selbstheilungs-Watchdog für die eingebettete Weltweit-Webseite.
+        # Die Seite wird NICHT regelmäßig neu geladen: Es wird nur geprüft,
+        # ob der Chromium-Renderer noch antwortet. Erst wenn keine Antwort
+        # mehr kommt oder der Renderer beendet wurde, wird die Ansicht neu
+        # geladen und anschließend ACTIVITY wieder ausgewählt.
+        self._worldwide_health_last_ok = time.monotonic()
+        self._worldwide_health_pending = False
+        self._worldwide_reload_pending = False
+        self.worldwide_watchdog_timer = QTimer(self)
+        self.worldwide_watchdog_timer.timeout.connect(self._worldwide_watchdog_tick)
+        self.worldwide_watchdog_timer.start(15000)
+
         # Keine automatische Verbindung beim Programmstart.
         # Der Benutzer entscheidet mit "Verbinden", wann der WebService abgefragt wird.
 
     # ---------- MeshCom UDP-Schnittstelle ----------
+    def _ensure_udp_listener(self):
+        """Restart the UDP listener only if its worker thread really stopped."""
+        thread = getattr(self, "udp_thread", None)
+        if thread is not None and thread.is_alive():
+            return
+        # Ein alter Socket wird vom Worker in seinem finally-Block geschlossen.
+        # Ein kurzer Neustartversuch hält den Monitor auch nach einem
+        # vorübergehenden Socket-/Netzwerkfehler funktionsfähig.
+        self.udp_status = "UDP 1799: Neustart des Empfangs …"
+        try:
+            self._start_udp_listener(1799)
+        except Exception as exc:
+            self.udp_status = f"UDP 1799 Neustart fehlgeschlagen: {exc}"
+
     def _start_udp_listener(self, port=1799):
         def worker():
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -842,6 +929,8 @@ class MainWindow(QMainWindow):
         self.monitor_count_label.setText(ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert"))
         if self.monitor_autoscroll and rows:
             self.monitor_table.scrollToBottom()
+        # Keep the dashboard copy live whenever the classic monitor changes.
+        self._sync_dashboard_tables()
 
     def _set_monitor_filter(self, value):
         self.monitor_filter = value
@@ -1001,6 +1090,10 @@ class MainWindow(QMainWindow):
         else:
             self.statistics_room_label.setText("<b>" + ui_text("Nachrichten nach Raum:") + "</b> " + ui_text("noch keine Daten"))
 
+        # Dashboard statistics are a live view of the same session counters.
+        if hasattr(self, "dashboard_statistics_label"):
+            self._sync_dashboard_tables()
+
     def _render_mh(self):
         if not hasattr(self, "mh_table"):
             return
@@ -1023,6 +1116,8 @@ class MainWindow(QMainWindow):
                 self.mh_table.setItem(i, col, item)
         if hasattr(self, "mh_count_label"):
             self.mh_count_label.setText(ui_text(f"{len(rows)} Station(en)"))
+        # Keep the dashboard MH table live as stations are updated.
+        self._sync_dashboard_tables()
 
     def _clear_mh(self):
         self.mh_stations.clear()
@@ -1037,13 +1132,6 @@ class MainWindow(QMainWindow):
             return
         self._monitor_add_packet(packet)
         self._update_mh_from_packet(packet)
-        # Diagnose den direkten UDP-Empfang unabhängig von der Kartenanzeige.
-        try:
-            debug_file = Path(__file__).resolve().parent.parent / "data" / "udp_received.log"
-            with debug_file.open("a", encoding="utf-8") as fh:
-                fh.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " " + json.dumps(packet, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
         ptype = str(packet.get("type", packet.get("packet_type", ""))).lower().strip()
         callsign = self._udp_callsign(packet.get("src", ""))
 
@@ -1152,6 +1240,24 @@ class MainWindow(QMainWindow):
         self.weather_action.toggled.connect(self._toggle_weather_panel)
         settings_menu.addAction(self.weather_action)
 
+        # Darstellung: Zwischen der bisherigen klassischen Oberfläche und
+        # dem neuen Dashboard kann jederzeit umgeschaltet werden. Beide
+        # Ansichten verwenden dieselben vorhandenen Funktionen/Daten.
+        display_menu = settings_menu.addMenu("Darstellung")
+        self.classic_layout_action = QAction("Klassisch", self)
+        self.classic_layout_action.setCheckable(True)
+        self.dashboard_layout_action = QAction("Dashboard", self)
+        self.dashboard_layout_action.setCheckable(True)
+        layout_group = QActionGroup(self)
+        layout_group.setExclusive(True)
+        layout_group.addAction(self.classic_layout_action)
+        layout_group.addAction(self.dashboard_layout_action)
+        display_menu.addAction(self.classic_layout_action)
+        display_menu.addAction(self.dashboard_layout_action)
+        self.classic_layout_action.triggered.connect(lambda: self._set_layout_mode("classic"))
+        self.dashboard_layout_action.triggered.connect(lambda: self._set_layout_mode("dashboard"))
+        self.display_menu = display_menu
+
         theme_menu = menu_bar.addMenu("Theme")
         dark_action = QAction("Dunkel", self)
         dark_action.setCheckable(True)
@@ -1237,6 +1343,12 @@ class MainWindow(QMainWindow):
         self.node_info_button.setToolTip("Node Information des verbundenen MeshCom-WebService anzeigen")
         self.node_info_button.clicked.connect(self.open_node_info)
 
+        # Schaltflächenzeile der klassischen Ansicht. Diese wurde beim
+        # Dashboard-Umbau versehentlich nicht mehr angelegt.
+        settings_buttons = QHBoxLayout()
+        settings_buttons.addWidget(self.save_button, 1)
+        settings_buttons.addWidget(self.node_info_button, 1)
+
         self.filter_enabled = QCheckBox("Raumfilter aktiv")
         self.filter_enabled.setChecked(settings.get("filter_enabled", "0") == "1")
         self.filter_enabled.toggled.connect(self._filter_toggled)
@@ -1247,6 +1359,8 @@ class MainWindow(QMainWindow):
             field = QLineEdit()
             field.setPlaceholderText(ui_text("Raum") + f" {i + 1}")
             field.setMaxLength(10)
+            # Gespeicherte Räume beim Programmstart wiederherstellen.
+            field.setText(settings.get(f"filter_room{i + 1}", ""))
             self.filter_inputs.append(field)
             filter_row.addWidget(field)
         self.filter_save_button = QPushButton("Filter speichern")
@@ -1292,21 +1406,18 @@ class MainWindow(QMainWindow):
         self.tabs.tabCloseRequested.connect(self._close_tab)
         self.tabs.currentChanged.connect(self._tab_changed)
 
-        self.map_view = QWebEngineView() if QWebEngineView is not None else QLabel(
-            "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
-        )
-        # Die OSM-Karte soll deutlich höher sein: ca. 4 cm zusätzliche
-        # Kartenhöhe auf typischen 96-DPI-Desktops (rund 150 Pixel).
-        self.map_view.setMinimumHeight(300)
+        # Im Dashboard darf nur ein Map-WebEngine aktiv sein. Die klassische
+        # Ansicht bekommt deshalb im Dashboard-Modus zunächst nur einen
+        # leichten Platzhalter. Beim Umschalten wird die echte WebEngine
+        # dynamisch erzeugt. Das verhindert mehrere Chromium-Prozesse auf
+        # Raspberry Pi und reduziert die Absturzgefahr deutlich.
         self._map_ready = False
         self._map_pending_stations = []
-        if QWebEngineView is not None:
-            # setHtml() ist asynchron. Früher konnte _update_map() schon laufen,
-            # bevor window.updateStations existierte. Dann gingen die Marker
-            # stillschweigend verloren. Erst nach loadFinished darf JavaScript
-            # die aktuellen Stationsdaten übernehmen.
-            self.map_view.loadFinished.connect(self._map_load_finished)
-            self.map_view.setHtml(self._map_html([]), QUrl("https://meshcom-guru.local/"))
+        if self.layout_mode == "classic":
+            self._create_classic_map_view()
+        else:
+            self.map_view = QLabel("Karte ist im Dashboard aktiv.")
+            self.map_view.setMinimumHeight(300)
         self.map_tab_index = self.tabs.addTab(self.map_view, "Karte")
         # Die Karte ist ein fester Tab und darf nicht geschlossen werden.
         self.tabs.tabBar().setTabButton(
@@ -1362,18 +1473,25 @@ class MainWindow(QMainWindow):
         self.monitor_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.monitor_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.monitor_table.setAlternatingRowColors(False)
-        self.monitor_table.setWordWrap(False)
+        # Monitor-Nachrichten dürfen nicht abgeschnitten werden.  Die
+        # Information-Spalte bekommt den verfügbaren Rest der Breite; lange
+        # Nachrichten werden innerhalb der Zelle umgebrochen und die
+        # Zeilenhöhe automatisch angepasst.  Dadurch bleibt der komplette
+        # Nachrichtentext sichtbar, auch bei schmaleren Fenstern.
+        self.monitor_table.setWordWrap(True)
         self.monitor_table.verticalHeader().setVisible(False)
+        self.monitor_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.monitor_table.setShowGrid(True)
+        self.monitor_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         header = self.monitor_table.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        header.setStretchLastSection(False)
+        for col in range(6):
+            header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
+        for col, width in {0: 70, 1: 50, 2: 95, 3: 65, 4: 55, 5: 55}.items():
+            self.monitor_table.setColumnWidth(col, width)
+        self.monitor_table.setColumnWidth(6, 420)
+        self.monitor_table.setMinimumWidth(700)
         self.monitor_table.setMinimumHeight(170)
         monitor_layout.addWidget(self.monitor_table, 1)
 
@@ -1460,9 +1578,10 @@ class MainWindow(QMainWindow):
         # ---------- 🌐 Weltweit ----------
         # Zusätzlicher Tab direkt neben der Karte. Die vorhandene Logik
         # bleibt unverändert; die ÖVSV-Seite übernimmt ihre eigene Aktualisierung.
-        self.worldwide_view = QWebEngineView() if QWebEngineView is not None else QLabel(
-            "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
-        )
+        if self.layout_mode == "classic":
+            self._create_classic_worldwide_view()
+        else:
+            self.worldwide_view = QLabel("Weltweit ist im Dashboard aktiv.")
         self.worldwide_tab_index = self.tabs.insertTab(
             self.map_tab_index + 1, self.worldwide_view, ui_text("🌐 Weltweit")
         )
@@ -1471,13 +1590,6 @@ class MainWindow(QMainWindow):
             self.tabs.tabBar().ButtonPosition.RightSide,
             None,
         )
-        if QWebEngineView is not None:
-            self.worldwide_view.loadFinished.connect(self._worldwide_load_finished)
-            self.worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
-            # Die eingebettete Webansicht aktualisiert sich nicht zuverlässig
-            # in jeder WebEngine-Umgebung. Daher wird ausschließlich diese
-            # Ansicht regelmäßig neu geladen; die restliche Anwendung bleibt
-            # vollständig unberührt.
 
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Nachricht eingeben …")
@@ -1521,36 +1633,1219 @@ class MainWindow(QMainWindow):
         self.status = QLabel("Bereit")
         self.status.setWordWrap(True)
 
-        layout = QVBoxLayout()
-        layout.addLayout(top_row)
-        layout.addLayout(form)
-        settings_buttons = QHBoxLayout()
-        settings_buttons.addWidget(self.save_button)
-        settings_buttons.addWidget(self.node_info_button)
-        layout.addLayout(settings_buttons)
-        layout.addLayout(filter_box)
-        layout.addWidget(self.weather_panel)
-        layout.addWidget(self.tabs, 1)
-        layout.addWidget(QLabel("Nachricht:"))
+        self.message_label = QLabel("Nachricht:")
+        self.classic_message_panel = QWidget()
+        classic_message_layout = QVBoxLayout(self.classic_message_panel)
+        classic_message_layout.setContentsMargins(0, 0, 0, 0)
+        classic_message_layout.setSpacing(4)
+        classic_message_layout.addWidget(self.message_label)
 
         message_row = QHBoxLayout()
         message_row.addWidget(self.message_input, 1)
         message_row.addWidget(self.quick_text_button)
         message_row.addWidget(self.emoji_button)
         message_row.addWidget(self.message_counter)
-        layout.addLayout(message_row)
+        classic_message_layout.addLayout(message_row)
 
-        layout.addLayout(buttons)
-        layout.addWidget(self.send_log)
-        layout.addWidget(self.status)
+        classic_message_buttons = QWidget()
+        classic_buttons_layout = QHBoxLayout(classic_message_buttons)
+        classic_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        classic_buttons_layout.addWidget(self.send_button)
+        classic_buttons_layout.addWidget(self.update_button)
+        classic_message_layout.addWidget(classic_message_buttons)
+        classic_message_layout.addWidget(self.send_log)
+        classic_message_layout.addWidget(self.status)
+        self.classic_message_buttons = classic_message_buttons
+
+        # Die klassische Oberfläche ist ein kompletter Seiteninhalt.
+        # Dadurch wird beim Dashboard-Modus wirklich die gesamte klassische
+        # Oberfläche ausgeblendet und nicht nur der Tab-Bereich.
+        classic_view = QWidget()
+        classic_view.setObjectName("ClassicView")
+        classic_view_layout = QVBoxLayout(classic_view)
+        classic_view_layout.setContentsMargins(0, 0, 0, 0)
+        classic_view_layout.setSpacing(4)
+        classic_view_layout.addLayout(top_row)
+        classic_view_layout.addLayout(form)
+        classic_view_layout.addLayout(settings_buttons)
+        classic_view_layout.addLayout(filter_box)
+        classic_view_layout.addWidget(self.weather_panel)
+        classic_view_layout.addWidget(self.tabs, 1)
+        classic_view_layout.addWidget(self.classic_message_panel)
+        self.classic_view = classic_view
+
+        # Ein einziger Stack für die komplette Arbeitsfläche.
+        self.layout_stack = QStackedWidget()
+        self.layout_stack.addWidget(self.classic_view)
+
+        # Dashboard erst beim ersten Umschalten erzeugen. Das vermeidet beim
+        # normalen Start zusätzliche WebEngine-Instanzen.
+        self.dashboard_view = None
+
+        self._apply_layout_mode(self.layout_mode, save=False)
 
         central = QWidget()
-        central.setLayout(layout)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSpacing(0)
+        central_layout.addWidget(self.layout_stack, 1)
         self.setCentralWidget(central)
 
-    def _worldwide_load_finished(self, ok):
+    def _create_classic_map_view(self):
+        """Create the classic map WebEngine only when classic mode is active."""
+        if QWebEngineView is None:
+            self.map_view = QLabel(
+                "Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
+            )
+            self.map_view.setMinimumHeight(300)
+            return
+        self.map_view = QWebEngineView()
+        self.map_view.setMinimumHeight(300)
+        self.map_view.loadFinished.connect(self._map_load_finished)
+        self.map_view.setHtml(self._map_html([]), QUrl("https://meshcom-guru.local/"))
+
+    def _create_classic_worldwide_view(self):
+        """Create the classic Worldwide WebEngine only when classic mode is active."""
+        if QWebEngineView is None:
+            self.worldwide_view = QLabel(
+                "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
+            )
+            return
+        self.worldwide_view = QWebEngineView()
+        self.worldwide_view.loadFinished.connect(self._worldwide_load_finished)
+        self.worldwide_view.renderProcessTerminated.connect(self._worldwide_render_terminated)
+        self.worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+
+    def _set_webengine_lifecycle(self, view, active):
+        """Reduce Chromium RAM for inactive map/worldwide views without deleting widgets.
+
+        The connection, chat widgets and their signals are deliberately not touched.
+        If the installed Qt version does not expose lifecycle control, this is a no-op.
+        """
+        if QWebEngineView is None or QWebEnginePage is None:
+            return
+        if not isinstance(view, QWebEngineView):
+            return
+        try:
+            page = view.page()
+            state_enum = getattr(QWebEnginePage, "LifecycleState", None)
+            if state_enum is None:
+                return
+            state = getattr(state_enum, "Active" if active else "Discarded", None)
+            if state is not None:
+                page.setLifecycleState(state)
+        except (AttributeError, RuntimeError, TypeError):
+            # Older PySide6/Qt builds may not provide lifecycle control.
+            pass
+
+    def _release_classic_webviews(self):
+        """Release classic Chromium views before dashboard mode creates its pair."""
+        if not hasattr(self, "tabs"):
+            return
+        for attr, index, title in (("worldwide_view", self.worldwide_tab_index, ui_text("🌐 Weltweit")),
+                                   ("map_view", self.map_tab_index, "Karte")):
+            widget = getattr(self, attr, None)
+            if QWebEngineView is not None and isinstance(widget, QWebEngineView):
+                self.tabs.removeTab(index)
+                try:
+                    widget.stop()
+                except Exception:
+                    pass
+                widget.setParent(None)
+                widget.deleteLater()
+                placeholder = QLabel("Weltweit ist im Dashboard aktiv." if attr == "worldwide_view" else "Karte ist im Dashboard aktiv.")
+                if attr == "map_view":
+                    placeholder.setMinimumHeight(300)
+                new_index = self.tabs.insertTab(index, placeholder, title)
+                self.tabs.tabBar().setTabButton(new_index, self.tabs.tabBar().ButtonPosition.RightSide, None)
+                setattr(self, attr, placeholder)
+        QApplication.processEvents()
+
+    def _ensure_classic_webviews(self):
+        """Replace dashboard placeholders with the two classic WebEngines."""
+        if not hasattr(self, "tabs"):
+            return
+        for attr, index, title, creator in (("worldwide_view", self.worldwide_tab_index, ui_text("🌐 Weltweit"), self._create_classic_worldwide_view),
+                                             ("map_view", self.map_tab_index, "Karte", self._create_classic_map_view)):
+            widget = getattr(self, attr, None)
+            if QWebEngineView is not None and not isinstance(widget, QWebEngineView):
+                self.tabs.removeTab(index)
+                creator()
+                new_index = self.tabs.insertTab(index, getattr(self, attr), title)
+                self.tabs.tabBar().setTabButton(new_index, self.tabs.tabBar().ButtonPosition.RightSide, None)
+        QApplication.processEvents()
+
+    def _release_dashboard_view(self):
+        """Release dashboard Chromium views before returning to classic mode."""
+        if self.dashboard_view is None:
+            return
+        self.layout_stack.removeWidget(self.dashboard_view)
+        self.dashboard_view.setParent(None)
+        self.dashboard_view.deleteLater()
+        self.dashboard_view = None
+        QApplication.processEvents()
+
+    def _apply_layout_mode(self, mode, save=True):
+        """Switch between classic UI and dashboard without losing the active target.
+
+        Beim Ansichtswechsel wird die aktuell sichtbare Oberfläche zuerst als
+        Quelle verwendet und in ~/.MeshCom/settings.ini gespeichert. Erst danach
+        wird die andere Oberfläche aktiviert und die INI neu eingelesen.
+        Besonders wichtig: Das Dashboard-Ziel kommt aus dashboard_current_key und
+        niemals aus einem der filter_room-Felder.
+        """
+        mode = mode if mode in {"classic", "dashboard"} else "classic"
+        old_mode = getattr(self, "layout_mode", "classic")
+        if not hasattr(self, "dashboard_view") or not hasattr(self, "layout_stack"):
+            self.layout_mode = mode
+            return
+
+        switching = old_mode != mode
+
+        # VOR dem Umschalten die tatsächlich aktive Oberfläche speichern.
+        # Dashboard: dashboard_current_key ist die maßgebliche Auswahl.
+        # Dadurch kann ein filter_room5=26298 niemals als target übernommen werden.
+        if switching and save:
+            if old_mode == "dashboard":
+                current_key = getattr(self, "dashboard_current_key", None)
+                if current_key is not None:
+                    if current_key[0] in ("room", "private"):
+                        current_target = str(current_key[1]).strip()
+                    else:
+                        current_target = ""
+                    self.target_input.setText(current_target)
+                    if hasattr(self, "dashboard_room_input"):
+                        self.dashboard_room_input.setText(current_target)
+            # Klassisch benutzt bewusst den bereits synchronisierten
+            # target_input; dort funktioniert die Speicherung bereits korrekt.
+            self._write_settings()
+
+        self.layout_mode = mode
+
+        # Jetzt erst die gerade gespeicherten Werte aus ~/.MeshCom/settings.ini
+        # einlesen. Die neue Oberfläche startet damit mit dem zuvor aktiven Ziel.
+        fresh_settings = load_settings()
+        fresh_ip = fresh_settings.get("ip", "").strip().rstrip("/")
+        fresh_target = fresh_settings.get("target", "").strip()
+        fresh_callsign = self._normalize_callsign(fresh_settings.get("own_callsign", ""))
+        fresh_lat = fresh_settings.get("own_lat", "").strip()
+        fresh_lon = fresh_settings.get("own_lon", "").strip()
+        if hasattr(self, "ip_input"):
+            self.ip_input.setText(fresh_ip)
+        if hasattr(self, "target_input"):
+            self.target_input.setText(fresh_target)
+        if hasattr(self, "own_callsign_input"):
+            self.own_callsign_input.setText(fresh_callsign)
+        if hasattr(self, "own_lat_input"):
+            self.own_lat_input.setText(fresh_lat)
+        if hasattr(self, "own_lon_input"):
+            self.own_lon_input.setText(fresh_lon)
+        self.own_callsign = fresh_callsign
+        try:
+            self.own_lat = float(fresh_lat.replace(",", ".")) if fresh_lat else None
+            self.own_lon = float(fresh_lon.replace(",", ".")) if fresh_lon else None
+        except (TypeError, ValueError):
+            self.own_lat = self.own_lon = None
+
+        if mode == "dashboard":
+            # Beim Wechsel aus der klassischen Ansicht immer die aktuell
+            # sichtbaren klassischen Eingabefelder in das Dashboard spiegeln.
+            # Das Dashboard bleibt als Widget bestehen und kann daher sonst
+            # veraltete GPS-/Rufzeichen-/Raum-Werte anzeigen.
+            if self.dashboard_view is None:
+                self.dashboard_view = self._build_dashboard_view()
+                self.layout_stack.addWidget(self.dashboard_view)
+            else:
+                if hasattr(self, "dashboard_callsign_input"):
+                    self.dashboard_callsign_input.setText(self.own_callsign_input.text())
+                if hasattr(self, "dashboard_hotspot_input"):
+                    self.dashboard_hotspot_input.setText(self.ip_input.text())
+                if hasattr(self, "dashboard_room_input"):
+                    self.dashboard_room_input.setText(self.target_input.text())
+                if hasattr(self, "dashboard_lat_input"):
+                    self.dashboard_lat_input.setText(self.own_lat_input.text())
+                if hasattr(self, "dashboard_lon_input"):
+                    self.dashboard_lon_input.setText(self.own_lon_input.text())
+            self.layout_stack.setCurrentWidget(self.dashboard_view)
+        else:
+            if hasattr(self, "dashboard_callsign_input"):
+                self.dashboard_callsign_input.setText(self.own_callsign_input.text())
+            if hasattr(self, "dashboard_hotspot_input"):
+                self.dashboard_hotspot_input.setText(self.ip_input.text())
+            if hasattr(self, "dashboard_room_input"):
+                self.dashboard_room_input.setText(self.target_input.text())
+            if hasattr(self, "dashboard_lat_input"):
+                self.dashboard_lat_input.setText(self.own_lat_input.text())
+            if hasattr(self, "dashboard_lon_input"):
+                self.dashboard_lon_input.setText(self.own_lon_input.text())
+            # The classic page may have been initialized while Dashboard was
+            # the saved layout. In that case map/worldwide are placeholders.
+            # Materialize the real WebEngine views before showing the classic
+            # page so both tabs work after switching layouts.
+            self._ensure_classic_webviews()
+            self.layout_stack.setCurrentWidget(self.classic_view)
+            self._restore_classic_connection_controls()
+
+            # Dashboard-WebEngines bleiben als Widgets erhalten, werden aber
+            # im klassischen Modus aus dem Chromium-Lebenszyklus genommen.
+            # Dadurch sinkt der RAM-Verbrauch, ohne Chat oder Verbindung zu
+            # zerstören. Beim nächsten Dashboard-Wechsel werden sie reaktiviert.
+            self._set_webengine_lifecycle(getattr(self, "dashboard_map_view", None), False)
+            self._set_webengine_lifecycle(getattr(self, "dashboard_worldwide_view", None), False)
+
+        if mode == "dashboard":
+            # Die klassischen WebEngines sind im Dashboard unsichtbar und
+            # werden deshalb ebenfalls in den ressourcenschonenden Zustand
+            # versetzt. Die Tabs/Widgets selbst bleiben bestehen.
+            self._set_webengine_lifecycle(getattr(self, "map_view", None), False)
+            self._set_webengine_lifecycle(getattr(self, "worldwide_view", None), False)
+            self._set_webengine_lifecycle(getattr(self, "dashboard_map_view", None), True)
+            self._set_webengine_lifecycle(getattr(self, "dashboard_worldwide_view", None), True)
+
+        # Ein Ansichtswechsel darf niemals den laufenden Verbindungszustand
+        # verändern. self.connected ist die maßgebliche Quelle; die Labels
+        # werden nur synchronisiert.
+        if getattr(self, "connected", False):
+            self._set_connection_status(True)
+        else:
+            self._sync_classic_connection_controls()
+            self._dashboard_sync_header()
+
+        if hasattr(self, "classic_layout_action"):
+            self.classic_layout_action.setChecked(mode == "classic")
+        if hasattr(self, "dashboard_layout_action"):
+            self.dashboard_layout_action.setChecked(mode == "dashboard")
+        # Beim echten Ansichtswechsel wurde die Quelloberfläche bereits VOR
+        # dem Umschalten gespeichert. Ein zweites Speichern hier würde die frisch
+        # geladene Zielauswahl wieder mit einem alten Feld überschreiben.
+        if save and not switching:
+            self._write_settings()
+
+    def _restore_classic_connection_controls(self):
+        """Keep the classic connection buttons permanently bound to the handlers."""
+        if not hasattr(self, "connect_button"):
+            return
+
+        try:
+            self.connect_button.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        self.connect_button.clicked.connect(self.connect_mesh)
+
+        if hasattr(self, "disconnect_button"):
+            try:
+                self.disconnect_button.clicked.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self.disconnect_button.clicked.connect(self.disconnect_mesh)
+
+        online = bool(getattr(self, "connected", False))
+        self.connect_button.setEnabled(not online)
+        if hasattr(self, "disconnect_button"):
+            self.disconnect_button.setEnabled(online)
+
+    def _sync_classic_connection_controls(self):
+        if not hasattr(self, "connect_button"):
+            return
+        try:
+            online = bool(getattr(self, "connected", False))
+            self.connect_button.setEnabled(not online)
+            self.disconnect_button.setEnabled(online)
+        except RuntimeError:
+            pass
+
+    def _set_layout_mode(self, mode):
+        self._apply_layout_mode(mode, save=True)
+        label = "Dashboard aktiviert" if mode == "dashboard" else "Klassische Ansicht aktiviert"
+        self.status.setText(ui_text(label))
+
+    def _dashboard_sync_header(self):
+        if not hasattr(self, "dashboard_status_label"):
+            return
+        online = bool(getattr(self, "connection_online", False))
+        self.dashboard_status_label.setText("🟢 ONLINE | verbunden" if online else "🔴 OFFLINE | keine Verbindung")
+
+    def _dashboard_connect(self):
+        """Use the exact same Connect button/signal path as the classic UI."""
+        if hasattr(self, "dashboard_hotspot_input"):
+            ip = self.dashboard_hotspot_input.text().strip()
+            if ip:
+                self.ip_input.setText(ip)
+        # Do not alter the current room/private target here. Connecting only
+        # needs the hotspot IP. Call the established connection method directly.
+        self.connect_mesh()
+
+    def _dashboard_disconnect(self):
+        """Disconnect directly; do not depend on the hidden classic button."""
+        self.disconnect_mesh()
+        self._dashboard_sync_header()
+
+    def _build_dashboard_view(self):
+        """Build the dashboard as a real cockpit layout.
+
+        The dashboard is only a presentation layer. Existing classic tabs,
+        message handling, send logic, map data and the embedded Worldwide
+        HTML page remain the sources of truth.
+        """
+        root = QWidget()
+        root.setObjectName("DashboardRoot")
+        root.setMinimumSize(1100, 620)
+        root_layout = QVBoxLayout(root)
+        root_layout.setContentsMargins(6, 6, 6, 6)
+        root_layout.setSpacing(6)
+
+        # Dashboard-Kopf: bewusst komplett eigenständig. Die klassische
+        # Oberfläche ist außerhalb des Dashboard-Widgets und wird beim
+        # Umschalten ausgeblendet.
+        dash_header = QFrame()
+        dash_header.setObjectName("DashboardHeader")
+        dash_header_container = QVBoxLayout(dash_header)
+        dash_header_container.setContentsMargins(8, 6, 8, 6)
+        dash_header_container.setSpacing(5)
+
+        # Erste Reihe: Status, Rufzeichen, Verbindung und Hotspot-IP.
+        # Das Rufzeichen ist bewusst direkt sichtbar und editierbar.
+        dash_header_layout = QHBoxLayout()
+        dash_header_layout.setContentsMargins(0, 0, 0, 0)
+        dash_header_layout.setSpacing(5)
+        dash_header_container.addLayout(dash_header_layout)
+
+        antenna = QLabel()
+        antenna.setFixedSize(64, 64)
+        antenna_path = Path(__file__).resolve().parent.parent / "icons" / "antenna_blue.svg"
+        antenna_icon = QIcon(str(antenna_path))
+        if not antenna_icon.isNull():
+            antenna.setPixmap(antenna_icon.pixmap(58, 58))
+        antenna.setToolTip(ui_text("MeshCom-Guru"))
+        dash_header_layout.addWidget(antenna, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        title_box = QVBoxLayout()
+        title_label = QLabel(ui_text("MeshCom-Guru"))
+        title_label.setObjectName("DashboardTitle")
+        subtitle = QLabel(ui_text("Dashboard"))
+        subtitle.setObjectName("DashboardSubtitle")
+        title_box.addWidget(title_label)
+        title_box.addWidget(subtitle)
+        title_box.setContentsMargins(0, 0, 0, 0)
+        # Titelbereich kompakt halten, damit der Online-Status weiter links
+        # stehen kann. Die Uhr bekommt einen eigenen festen Bereich und
+        # wird dadurch beim Verschieben des Status nicht verdrängt.
+        title_container = QWidget()
+        title_container.setLayout(title_box)
+        title_container.setFixedWidth(110)
+        dash_header_layout.addWidget(title_container, 0)
+
+        self.dashboard_status_label = QLabel(ui_text("🔴 OFFLINE | keine Verbindung"))
+        self.dashboard_status_label.setObjectName("DashboardStatus")
+        self.dashboard_status_label.setMinimumWidth(190)
+        self.dashboard_status_label.setStyleSheet("font-size: 12pt; font-weight: 800;")
+        dash_header_layout.addWidget(self.dashboard_status_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self.dashboard_clock_label = QLabel()
+        self.dashboard_clock_label.setObjectName("DashboardClock")
+        self.dashboard_clock_label.setMinimumWidth(150)
+        self.dashboard_clock_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        self.dashboard_clock_label.setStyleSheet("font-size: 15pt; font-weight: 900;")
+        dash_header_layout.addWidget(self.dashboard_clock_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        # Rufzeichen direkt in der ersten Reihe.
+        dash_header_layout.addWidget(QLabel(ui_text("Rufzeichen:")))
+        self.dashboard_callsign_input = QLineEdit(self.own_callsign_input.text())
+        self.dashboard_callsign_input.setPlaceholderText(ui_text("eigenes Rufzeichen"))
+        self.dashboard_callsign_input.setClearButtonEnabled(True)
+        self.dashboard_callsign_input.setMaxLength(12)
+        self.dashboard_callsign_input.setMinimumWidth(150)
+        self.dashboard_callsign_input.setMaximumWidth(190)
+        dash_header_layout.addWidget(self.dashboard_callsign_input)
+
+        dashboard_connect = QPushButton(ui_text("🔗 Verbinden"))
+        dashboard_connect.clicked.connect(self._dashboard_connect)
+        self.dashboard_connect_button = dashboard_connect
+        dash_header_layout.addWidget(dashboard_connect)
+        dashboard_disconnect = QPushButton(ui_text("⚯ Trennen"))
+        dashboard_disconnect.clicked.connect(self._dashboard_disconnect)
+        self.dashboard_disconnect_button = dashboard_disconnect
+        dashboard_disconnect.setEnabled(False)
+        dash_header_layout.addWidget(dashboard_disconnect)
+
+        dash_header_layout.addWidget(QLabel(ui_text("Hotspot IP:")))
+        self.dashboard_hotspot_input = QLineEdit(self.ip_input.text())
+        self.dashboard_hotspot_input.setPlaceholderText("http://192.168.x.x")
+        self.dashboard_hotspot_input.setMinimumWidth(170)
+        dash_header_layout.addWidget(self.dashboard_hotspot_input)
+        dash_header_layout.addStretch(1)
+
+        # Zweite Reihe: Raum/Ziel, Node-Info, GPS und zentraler Speichern-Knopf.
+        dashboard_control_row = QHBoxLayout()
+        dashboard_control_row.setContentsMargins(0, 0, 0, 0)
+        dashboard_control_row.setSpacing(5)
+        dash_header_container.addLayout(dashboard_control_row)
+
+        dashboard_control_row.addWidget(QLabel(ui_text("Raum / Ziel:")))
+        self.dashboard_room_input = QLineEdit(self.target_input.text())
+        self.dashboard_room_input.setPlaceholderText(ui_text("Raum oder Ziel"))
+        self.dashboard_room_input.setMinimumWidth(150)
+        self.dashboard_room_input.setMaximumWidth(220)
+        self.dashboard_room_input.editingFinished.connect(
+            lambda: self.target_input.setText(self.dashboard_room_input.text().strip())
+        )
+        dashboard_control_row.addWidget(self.dashboard_room_input)
+
+        dashboard_node_info = QPushButton(ui_text("ℹ Node Info"))
+        dashboard_node_info.setToolTip(ui_text("Node Information des verbundenen MeshCom-WebService anzeigen"))
+        dashboard_node_info.clicked.connect(self.open_node_info)
+        dashboard_control_row.addWidget(dashboard_node_info)
+
+        dashboard_control_row.addWidget(QLabel(ui_text("GPS Eingabe:")))
+        self.dashboard_lat_input = QLineEdit(self.own_lat_input.text())
+        self.dashboard_lat_input.setPlaceholderText(ui_text("51.93"))
+        self.dashboard_lat_input.setMinimumWidth(82)
+        self.dashboard_lat_input.setMaximumWidth(100)
+        dashboard_control_row.addWidget(self.dashboard_lat_input)
+
+        self.dashboard_lon_input = QLineEdit(self.own_lon_input.text())
+        self.dashboard_lon_input.setPlaceholderText(ui_text("8.88"))
+        self.dashboard_lon_input.setMinimumWidth(82)
+        self.dashboard_lon_input.setMaximumWidth(100)
+        dashboard_control_row.addWidget(self.dashboard_lon_input)
+
+        dashboard_gps_save = QPushButton(ui_text("📍 GPS speichern"))
+        dashboard_gps_save.clicked.connect(self._dashboard_save_coordinates)
+        dashboard_control_row.addWidget(dashboard_gps_save)
+
+        dashboard_settings_save = QPushButton(ui_text("⚙ Einstellungen speichern"))
+        dashboard_settings_save.setToolTip(ui_text("Persönliche Einstellungen dauerhaft speichern"))
+        dashboard_settings_save.clicked.connect(self.save_all_settings)
+        self.dashboard_settings_save_button = dashboard_settings_save
+        dashboard_control_row.addWidget(dashboard_settings_save, 1)
+
+        # Wetter bleibt als eigene Zeile unter den beiden Kopfzeilen.
+        root_layout.addWidget(dash_header)
+
+        weather_box = QFrame()
+        weather_box.setObjectName("DashboardWeather")
+        weather_row = QHBoxLayout(weather_box)
+        weather_row.setContentsMargins(8, 3, 8, 3)
+        weather_row.setSpacing(5)
+
+        weather_row.addWidget(QLabel(ui_text("🌤 Wetter")))
+        self.dashboard_weather_city = QLineEdit(self.weather_city_input.text())
+        self.dashboard_weather_city.setPlaceholderText(ui_text("Stadt"))
+        self.dashboard_weather_city.setMinimumWidth(105)
+        self.dashboard_weather_city.setMaximumWidth(145)
+        self.dashboard_weather_city.editingFinished.connect(
+            lambda: self.weather_city_input.setText(self.dashboard_weather_city.text().strip())
+        )
+        weather_row.addWidget(self.dashboard_weather_city)
+
+        self.dashboard_weather_values = QLabel(ui_text("Warte auf WX-Information …"))
+        self.dashboard_weather_values.setWordWrap(False)
+        weather_row.addWidget(self.dashboard_weather_values, 1)
+
+        dash_weather_refresh = QPushButton(ui_text("⟳ Wetter aktualisieren"))
+        dash_weather_refresh.clicked.connect(self._dashboard_refresh_weather)
+        weather_row.addWidget(dash_weather_refresh)
+
+        dash_weather_send = QPushButton(ui_text("➤ Wetter senden"))
+        dash_weather_send.clicked.connect(self._dashboard_send_weather)
+        weather_row.addWidget(dash_weather_send)
+
+        root_layout.addWidget(weather_box)
+
+        # Keine zweite Tab-Leiste im Dashboard: Alle wichtigen Bereiche sind
+        # bereits gleichzeitig sichtbar (Räume/Private links, Chat Mitte,
+        # Karte/Weltweit rechts, Monitor/MH/Statistik unten).
+
+        # Main area: proportions close to the reference design:
+        # sidebar 15 %, chat 28 %, map/worldwide 57 %.
+        main_split = QSplitter(Qt.Orientation.Horizontal)
+        main_split.setChildrenCollapsible(False)
+        main_split.setHandleWidth(5)
+
+        sidebar = QFrame()
+        sidebar.setObjectName("DashboardSidebar")
+        self.dashboard_sidebar = sidebar
+        side_layout = QVBoxLayout(sidebar)
+        side_layout.setContentsMargins(8, 8, 8, 8)
+        side_layout.setSpacing(5)
+
+        # Räume stehen im Dashboard ganz oben und sind wirklich verwaltbar.
+        # Der Plus-Button öffnet die vorhandenen fünf Raumfilter-Felder der
+        # klassischen Ansicht; dadurch werden keine parallelen Raumdaten
+        # eingeführt und die bestehende Logik bleibt die einzige Datenquelle.
+        room_head = QHBoxLayout()
+        title = QLabel(ui_text("📻 Räume"))
+        title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        room_head.addWidget(title)
+        room_head.addStretch(1)
+        add_room = QPushButton(ui_text("＋ Raum hinzufügen"))
+        add_room.setMinimumHeight(30)
+        add_room.setToolTip(ui_text("Räume hinzufügen / bearbeiten"))
+        add_room.clicked.connect(self._dashboard_manage_rooms)
+        room_head.addWidget(add_room)
+        side_layout.addLayout(room_head)
+
+        # Raumfilter im Dashboard direkt sichtbar und bedienbar.
+        self.dashboard_filter_check = QCheckBox(ui_text("☑ Raumfilter aktiv"))
+        self.dashboard_filter_check.setChecked(self.filter_enabled.isChecked())
+        self.dashboard_filter_check.toggled.connect(self._dashboard_filter_toggled)
+        side_layout.addWidget(self.dashboard_filter_check)
+
+        self.dashboard_room_buttons = []
+        self._dashboard_rebuild_room_buttons(side_layout)
+
+        self.dashboard_room_chat_buttons = []
+        private_title = QLabel(ui_text("👤 Private Chats"))
+        private_title.setStyleSheet("font-size: 11pt; font-weight: 700;")
+        side_layout.addWidget(private_title)
+
+        # Private Chats bekommen einen eigenen Scrollbereich. So können viele
+        # private Unterhaltungen nicht mehr die Karte/Worldwide bzw. den
+        # unteren Monitor/MH/Statistik-Bereich nach unten drücken. Qt zeigt
+        # die vertikale Scrollleiste nur bei Bedarf an.
+        self.dashboard_private_scroll = QScrollArea()
+        self.dashboard_private_scroll.setWidgetResizable(True)
+        self.dashboard_private_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.dashboard_private_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.dashboard_private_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.dashboard_private_scroll_content = QWidget()
+        self.dashboard_private_scroll_layout = QVBoxLayout(
+            self.dashboard_private_scroll_content
+        )
+        self.dashboard_private_scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.dashboard_private_scroll_layout.setSpacing(5)
+        self.dashboard_private_scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.dashboard_private_scroll.setWidget(self.dashboard_private_scroll_content)
+        side_layout.addWidget(self.dashboard_private_scroll, 1)
+        self._dashboard_rebuild_private_buttons(side_layout)
+
+        # Kein zusätzlicher Stretch unterhalb der privaten Chats: Der
+        # Scrollbereich erhält den verfügbaren Platz und scrollt bei Bedarf.
+        main_split.addWidget(sidebar)
+
+        # Real chat renderer. It receives the same HTML/bubble data as the
+        # classic chat, so the existing bubble design is not redesigned here.
+        chat_frame = QFrame()
+        chat_frame.setObjectName("DashboardPanel")
+        chat_layout = QVBoxLayout(chat_frame)
+        chat_layout.setContentsMargins(8, 8, 8, 8)
+        chat_layout.setSpacing(5)
+        chat_title = QLabel(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
+        chat_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        self.dashboard_chat_title = chat_title
+        chat_layout.addWidget(chat_title)
+
+        self.dashboard_chat_view = ChatView()
+        self.dashboard_chat_view.set_chat_colors(
+            self.chat_background, self.chat_text_color, self.chat_link_color
+        )
+        self._all_chat_views.append(self.dashboard_chat_view)
+        chat_layout.addWidget(self.dashboard_chat_view, 1)
+
+        dash_message = QHBoxLayout()
+        dash_message.setSpacing(5)
+        self.dashboard_message_input = QLineEdit()
+        self.dashboard_message_input.setPlaceholderText(ui_text("Nachricht eingeben …"))
+        self.dashboard_message_input.setMaxLength(149)
+        self.dashboard_message_input.returnPressed.connect(self._dashboard_send)
+        dash_message.addWidget(self.dashboard_message_input, 1)
+        dashboard_quick = QPushButton(ui_text("⚡ Schnelltexte"))
+        dashboard_quick.setToolTip(ui_text("Schnelltext auswählen oder bearbeiten"))
+        dashboard_quick.clicked.connect(self._open_quick_texts)
+        dash_message.addWidget(dashboard_quick)
+        self.dashboard_emoji_button = QPushButton("😊")
+        self.dashboard_emoji_button.setFixedWidth(42)
+        self.dashboard_emoji_button.clicked.connect(self._dashboard_insert_emoji)
+        dash_message.addWidget(self.dashboard_emoji_button)
+        chat_layout.addLayout(dash_message)
+        main_split.addWidget(chat_frame)
+
+        # Right column: map and the real embedded Worldwide HTML page.
+        right_split = QSplitter(Qt.Orientation.Vertical)
+        right_split.setChildrenCollapsible(False)
+        right_split.setHandleWidth(5)
+
+        map_frame = QFrame()
+        map_frame.setObjectName("DashboardPanel")
+        map_layout = QVBoxLayout(map_frame)
+        map_layout.setContentsMargins(8, 8, 8, 8)
+        map_layout.setSpacing(4)
+        map_title = QLabel(ui_text("📍 Karte – Stationen in deiner Umgebung"))
+        map_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        map_layout.addWidget(map_title)
+        self.dashboard_map_view = QWebEngineView() if QWebEngineView is not None else QLabel("Karte benötigt PySide6-WebEngine.")
+        if QWebEngineView is not None:
+            self.dashboard_map_ready = False
+            self.dashboard_map_pending = []
+            self.dashboard_map_view.loadFinished.connect(self._dashboard_map_load_finished)
+            self.dashboard_map_view.setHtml(self._map_html([]), QUrl("https://meshcom-guru.local/dashboard/"))
+        map_layout.addWidget(self.dashboard_map_view, 1)
+        right_split.addWidget(map_frame)
+
+        ww_frame = QFrame()
+        ww_frame.setObjectName("DashboardPanel")
+        ww_layout = QVBoxLayout(ww_frame)
+        ww_layout.setContentsMargins(8, 8, 8, 8)
+        ww_layout.setSpacing(4)
+        ww_title = QLabel("🌐 Weltweit – MeshCom Activity (integrierte HTML-Seite)")
+        ww_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        ww_layout.addWidget(ww_title)
+        self.dashboard_worldwide_view = QWebEngineView() if QWebEngineView is not None else QLabel("Weltweit benötigt PySide6-WebEngine.")
+        if QWebEngineView is not None:
+            self.dashboard_worldwide_view.loadFinished.connect(self._dashboard_worldwide_load_finished)
+            self.dashboard_worldwide_view.renderProcessTerminated.connect(self._dashboard_worldwide_render_terminated)
+            self.dashboard_worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+        ww_layout.addWidget(self.dashboard_worldwide_view, 1)
+        right_split.addWidget(ww_frame)
+        right_split.setStretchFactor(0, 55)
+        right_split.setStretchFactor(1, 45)
+        main_split.addWidget(right_split)
+
+        # Give the splitter explicit initial sizes. Qt can still resize them
+        # interactively, but the dashboard starts in the intended proportions.
+        main_split.setStretchFactor(0, 15)
+        main_split.setStretchFactor(1, 28)
+        main_split.setStretchFactor(2, 57)
+        main_split.setSizes([205, 390, 625])
+        root_layout.addWidget(main_split, 1)
+
+        # Bottom information strip: Monitor 50 %, MH 30 %, Statistics 20 %.
+        bottom_split = QSplitter(Qt.Orientation.Horizontal)
+        bottom_split.setChildrenCollapsible(False)
+        bottom_split.setHandleWidth(5)
+
+        self.dashboard_monitor_table = QTableWidget(0, 7)
+        self.dashboard_monitor_table.setHorizontalHeaderLabels(["Zeit", "Typ", "Rufzeichen", "Ziel", "RSSI", "SNR", "Information"])
+        self.dashboard_monitor_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.dashboard_monitor_table.setWordWrap(True)
+        self.dashboard_monitor_table.verticalHeader().setVisible(False)
+        # Do not squeeze the Information column into a tiny sliver.  If the
+        # dashboard panel is narrower, the user can scroll horizontally.
+        self.dashboard_monitor_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        dashboard_monitor_header = self.dashboard_monitor_table.horizontalHeader()
+        dashboard_monitor_header.setStretchLastSection(False)
+        for col in range(7):
+            dashboard_monitor_header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+        for col, width in {0: 70, 1: 50, 2: 95, 3: 65, 4: 55, 5: 55, 6: 420}.items():
+            self.dashboard_monitor_table.setColumnWidth(col, width)
+        bottom_split.addWidget(self._dashboard_table_panel(ui_text("📡 Monitor – Live"), self.dashboard_monitor_table))
+
+        self.dashboard_mh_table = QTableWidget(0, 4)
+        self.dashboard_mh_table.setHorizontalHeaderLabels(["Rufzeichen", "Entfernung", "RSSI", "SNR"])
+        self.dashboard_mh_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.dashboard_mh_table.verticalHeader().setVisible(False)
+        # Four compact columns always fit into the MH panel. There is no useful
+        # horizontal overflow here, so do not show a second scroll bar.
+        self.dashboard_mh_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        mh_header = self.dashboard_mh_table.horizontalHeader()
+        mh_header.setStretchLastSection(True)
+        mh_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        mh_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        mh_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        mh_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self.dashboard_mh_table.setColumnWidth(1, 82)
+        self.dashboard_mh_table.setColumnWidth(2, 78)
+        self.dashboard_mh_table.setColumnWidth(3, 58)
+        bottom_split.addWidget(self._dashboard_table_panel(ui_text("📋 Stations / MH – Letzte Stationen"), self.dashboard_mh_table))
+
+        stats_panel = QFrame()
+        stats_panel.setObjectName("DashboardPanel")
+        stats_layout = QVBoxLayout(stats_panel)
+        stats_layout.setContentsMargins(8, 8, 8, 8)
+        stats_title = QLabel(ui_text("📊 Statistik"))
+        stats_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        stats_layout.addWidget(stats_title)
+        self.dashboard_statistics_label = QLabel(ui_text("Noch keine Sitzungsdaten"))
+        self.dashboard_statistics_label.setWordWrap(True)
+        stats_layout.addWidget(self.dashboard_statistics_label)
+        stats_layout.addStretch(1)
+        bottom_split.addWidget(stats_panel)
+        bottom_split.setMinimumHeight(155)
+        bottom_split.setFixedHeight(185)
+        # The Monitor gets more room so its Information column can be read.
+        # Stations / MH is intentionally a little narrower.
+        bottom_split.setStretchFactor(0, 50)
+        bottom_split.setStretchFactor(1, 30)
+        bottom_split.setStretchFactor(2, 20)
+        bottom_split.setSizes([620, 320, 250])
+        root_layout.addWidget(bottom_split, 0)
+        return root
+
+    def _dashboard_update_chat_button(self, key, button=None):
+        """Update unread/active appearance of one dashboard room/private entry."""
+        if button is None:
+            # Die sichtbaren Dashboard-Räume liegen in dashboard_room_buttons.
+            # Private Chats liegen in dashboard_private_buttons.
+            # "Alle" ist ein eigener Button und keine Raum-Zeile.
+            for collection_name in (
+                "dashboard_room_buttons",
+                "dashboard_room_chat_buttons",
+                "dashboard_private_buttons",
+            ):
+                for name, candidate in getattr(self, collection_name, []):
+                    candidate_key = (
+                        "private", str(name)
+                    ) if collection_name == "dashboard_private_buttons" else (
+                        "room", str(name)
+                    )
+                    if candidate_key == key:
+                        button = candidate
+                        break
+                if button is not None:
+                    break
+
+            # "Alle" hat keine Liste mit (name, button), sondern eine
+            # einzelne Referenz. Genau wie in der klassischen Ansicht soll
+            # dieser Eintrag ebenfalls rot werden, wenn er ungelesen ist.
+            if button is None and key == ("all", "all"):
+                button = getattr(self, "dashboard_all_button", None)
+
+        if button is None:
+            return
+        active = getattr(self, "dashboard_current_key", None) == key
+        unread = key in getattr(self, "unread", set())
+        if active:
+            button.setStyleSheet("font-weight: 700; border: 1px solid #4aa3ff;")
+        elif unread:
+            button.setStyleSheet("font-weight: 700; color: #ff4d4d; border: 1px solid #ff4d4d;")
+        else:
+            button.setStyleSheet("")
+
+    def _dashboard_rebuild_private_buttons(self, side_layout):
+        """Keep the dashboard private-chat list synchronized with real private tabs.
+
+        The private list lives in its own QScrollArea so an increasing number
+        of private chats cannot change the height of the lower dashboard
+        panels.
+        """
+        private_layout = getattr(
+            self, "dashboard_private_scroll_layout", side_layout
+        )
+
+        for _, widget in getattr(self, "dashboard_private_buttons", []):
+            try:
+                private_layout.removeWidget(widget)
+            except Exception:
+                pass
+            widget.setParent(None)
+            widget.deleteLater()
+        self.dashboard_private_buttons = []
+
+        old_empty = getattr(self, "dashboard_private_empty_label", None)
+        if old_empty is not None:
+            try:
+                private_layout.removeWidget(old_empty)
+            except Exception:
+                pass
+            old_empty.setParent(None)
+            old_empty.deleteLater()
+        self.dashboard_private_empty_label = None
+
+        private_keys = [key for key in self.tab_keys if key[0] == "private"]
+        private_keys.sort(key=lambda key: str(key[1]).upper())
+
+        if private_keys:
+            for key in private_keys:
+                b = QPushButton(str(key[1]))
+                b.setMinimumHeight(30)
+                b.setProperty("dashboardNav", True)
+                b.clicked.connect(lambda _=False, k=key: self._dashboard_select_chat(k))
+                private_layout.addWidget(b)
+                self.dashboard_private_buttons.append((str(key[1]), b))
+                self._dashboard_update_chat_button(key, b)
+        else:
+            empty = QLabel(ui_text("Noch keine privaten Chats"))
+            empty.setObjectName("DashboardNoPrivateChats")
+            private_layout.addWidget(empty)
+            self.dashboard_private_empty_label = empty
+
+
+    def _dashboard_rebuild_room_buttons(self, side_layout):
+        """Build one clean dashboard room list from the saved room settings."""
+        # Remove every widget created by the old room-list implementations.
+        # This is deliberately done from both collections so a rebuild cannot
+        # leave a second copy of the same rooms behind.
+        for collection_name in ("dashboard_room_buttons", "dashboard_room_chat_buttons"):
+            for _, widget in getattr(self, collection_name, []):
+                try:
+                    side_layout.removeWidget(widget)
+                except Exception:
+                    pass
+                widget.setParent(None)
+                widget.deleteLater()
+            setattr(self, collection_name, [])
+
+        old_all = getattr(self, "dashboard_all_button", None)
+        if old_all is not None:
+            try:
+                side_layout.removeWidget(old_all)
+            except Exception:
+                pass
+            old_all.setParent(None)
+            old_all.deleteLater()
+            self.dashboard_all_button = None
+
+        rooms = []
+        for room in self._rooms():
+            room = str(room).strip()
+            if room and room not in rooms:
+                rooms.append(room)
+        rooms = rooms[:5]
+
+        # The filter checkbox stays above the room list.  Room selection and
+        # filter activation are intentionally independent.
+        if hasattr(self, "dashboard_filter_check"):
+            insert_at = side_layout.indexOf(self.dashboard_filter_check) + 1
+        else:
+            insert_at = 0
+
+        # "Alle" steht bewusst direkt unter dem Raumfilter und damit vor
+        # den einzelnen Räumen. Es bleibt ein eigener Chat-Eintrag und ist
+        # niemals Teil der gespeicherten Raumliste.
+        all_key = ("all", "all")
+        all_button = QPushButton("💬 Alle")
+        all_button.setMinimumHeight(30)
+        all_button.setProperty("dashboardNav", True)
+        all_button.setProperty("chatKey", all_key)
+        all_button.clicked.connect(
+            lambda _=False, k=all_key: self._dashboard_select_chat(k)
+        )
+        side_layout.insertWidget(insert_at, all_button)
+        self.dashboard_all_button = all_button
+        self._dashboard_update_chat_button(all_key, all_button)
+        insert_at += 1
+
+        self.dashboard_room_buttons = []
+        for room in rooms:
+            key = ("room", room)
+            button = QPushButton(f"#  {room}")
+            button.setMinimumHeight(30)
+            button.setProperty("dashboardNav", True)
+            button.setProperty("chatKey", key)
+            button.clicked.connect(
+                lambda _=False, k=key: self._dashboard_select_chat(k)
+            )
+            side_layout.insertWidget(insert_at, button)
+            insert_at += 1
+            self.dashboard_room_buttons.append((room, button))
+            self._dashboard_update_chat_button(key, button)
+
+        if hasattr(self, "dashboard_filter_check"):
+            self.dashboard_filter_check.blockSignals(True)
+            self.dashboard_filter_check.setChecked(self.filter_enabled.isChecked())
+            self.dashboard_filter_check.blockSignals(False)
+
+    def _dashboard_filter_toggled(self, enabled):
+        self.filter_enabled.blockSignals(True)
+        self.filter_enabled.setChecked(bool(enabled))
+        self.filter_enabled.blockSignals(False)
+        self._filter_toggled(bool(enabled))
+
+    def _dashboard_manage_rooms(self):
+        """Edit the same five room filters used by the classic UI."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(ui_text("Räume verwalten"))
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(ui_text("Bis zu 5 Räume eingeben. Die Räume werden auch im klassischen Filter verwendet.")))
+        fields = []
+        for i in range(5):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(ui_text(f"Raum {i + 1}:")))
+            field = QLineEdit(self.filter_inputs[i].text().strip())
+            field.setMaxLength(10)
+            row.addWidget(field, 1)
+            layout.addLayout(row)
+            fields.append(field)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        # Erst die Felder übernehmen, dann die bestehende Speicherfunktion
+        # verwenden. Anschließend wird die Dashboard-Auswahl unmittelbar aus
+        # den tatsächlich sichtbaren Feldern neu aufgebaut.
+        for i, field in enumerate(fields):
+            self.filter_inputs[i].setText(field.text().strip())
+        # Beim Speichern von Räumen den bisherigen Filterzustand beibehalten.
+        self.save_filter_settings()
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_rebuild_room_buttons(self.dashboard_sidebar.layout())
+
+    def _dashboard_refresh_weather(self):
+        if hasattr(self, "dashboard_weather_city"):
+            self.weather_city_input.setText(self.dashboard_weather_city.text().strip())
+        self._refresh_weather()
+
+    def _dashboard_send_weather(self):
+        if hasattr(self, "dashboard_weather_city"):
+            self.weather_city_input.setText(self.dashboard_weather_city.text().strip())
+        self._send_weather()
+
+    def _dashboard_table_panel(self, title, table):
+        frame = QFrame()
+        frame.setObjectName("DashboardPanel")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(6, 6, 6, 6)
+        label = QLabel(title)
+        label.setStyleSheet("font-size: 11pt; font-weight: 700;")
+        layout.addWidget(label)
+        layout.addWidget(table, 1)
+        return frame
+
+    def _dashboard_focus(self, widget):
+        if widget is not None:
+            widget.setFocus()
+
+    def _dashboard_select_chat(self, key):
+        index = self.tab_keys.get(key)
+        if index is None:
+            if key[0] == "room":
+                self._ensure_tab(key, self._room_tab_title(key[1]))
+                index = self.tab_keys.get(key)
+            elif key[0] == "all":
+                self._ensure_tab(key, "Alle")
+                index = self.tab_keys.get(key)
+            else:
+                return
+        self.tabs.setCurrentIndex(index)
+
+        # Die Auswahl im Dashboard muss dieselbe Zielauswahl wie in der
+        # klassischen Ansicht benutzen. Dadurch sendet der vorhandene
+        # send()-Code weiterhin exakt an den ausgewählten Raum.
+        if key[0] == "room":
+            # Raum auswählen und Filter aktivieren bleiben getrennt.
+            self.target_input.setText(str(key[1]))
+            if hasattr(self, "dashboard_room_input"):
+                self.dashboard_room_input.setText(str(key[1]))
+        elif key[0] == "private":
+            self.target_input.setText(str(key[1]))
+            if hasattr(self, "dashboard_room_input"):
+                self.dashboard_room_input.setText(str(key[1]))
+
+        self.dashboard_current_key = key
+        self.unread.discard(key)
+        self._set_tab_normal(key)
+        self._dashboard_update_chat_button(key)
+        self._dashboard_set_chat_from_key(key)
+
+    def _dashboard_set_chat_from_key(self, key):
+        index = self.tab_keys.get(key)
+        if index is None or not hasattr(self, "dashboard_chat_view"):
+            return
+        view = self.tabs.widget(index)
+        if not isinstance(view, ChatView):
+            return
+        if key[0] in ("room", "private"):
+            # Room/private tabs use the real bubble widgets.  Reuse their exact
+            # bubble data instead of copying the hidden QTextBrowser, which is
+            # empty while a tab is in bubble mode.
+            self.dashboard_chat_view.set_bubbles(getattr(view, "_bubble_items", []))
+            if key[0] == "room":
+                title = ui_text("💬 Raum #{key[1]}").replace("{key[1]}", str(key[1]))
+            else:
+                title = ui_text("👤 Privat – {key[1]}").replace("{key[1]}", str(key[1]))
+            if hasattr(self, "dashboard_chat_title"):
+                self.dashboard_chat_title.setText(title)
+        else:
+            self.dashboard_chat_view.set_all_html(
+                self._render_blocks(self._filter_blocks(list(self.message_cache.values())))
+            )
+            if hasattr(self, "dashboard_chat_title"):
+                self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
+
+    def _dashboard_send(self):
+        text = self.dashboard_message_input.text().strip()
+        if not text:
+            return
+        self.message_input.setText(text)
+        self.send()
+        self.dashboard_message_input.clear()
+
+    def _dashboard_insert_emoji(self):
+        self.message_input.setFocus()
+        self._toggle_emoji_picker()
+
+    def _use_dashboard_quick_text(self, text):
+        self.message_input.setText(str(text))
+        self.dashboard_message_input.setText(str(text))
+
+    def _dashboard_save_coordinates(self):
+        """Save the own station coordinates entered directly in the dashboard."""
+        try:
+            lat_text = self.dashboard_lat_input.text().strip().replace(",", ".")
+            lon_text = self.dashboard_lon_input.text().strip().replace(",", ".")
+            if lat_text or lon_text:
+                lat = float(lat_text)
+                lon = float(lon_text)
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    raise ValueError
+            else:
+                lat = lon = None
+        except ValueError:
+            self.status.setText(ui_text("Fehler: Ungültige eigene Koordinaten"))
+            return
+
+        self.own_lat, self.own_lon = lat, lon
+        self.own_lat_input.setText("" if lat is None else str(lat))
+        self.own_lon_input.setText("" if lon is None else str(lon))
+        self._write_settings()
+        self._update_map()
+        self.status.setText(ui_text("Eigene GPS-Koordinaten gespeichert"))
+
+    def _dashboard_map_load_finished(self, ok):
+        self.dashboard_map_ready = bool(ok)
+        if self.dashboard_map_ready:
+            self._push_dashboard_map_stations(self.dashboard_map_pending)
+
+    def _push_dashboard_map_stations(self, stations):
+        if QWebEngineView is None or not hasattr(self, "dashboard_map_view"):
+            return
+        self.dashboard_map_pending = list(stations or [])
+        if not self.dashboard_map_ready:
+            return
+        station_json = json.dumps(self.dashboard_map_pending, ensure_ascii=False)
+        self.dashboard_map_view.page().runJavaScript(
+            f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+        )
+
+    def _dashboard_worldwide_load_finished(self, ok):
+        self._worldwide_health_pending = False
         if not ok or QWebEngineView is None:
             return
+        self._worldwide_health_last_ok = time.monotonic()
+        self.dashboard_worldwide_view.page().runJavaScript(
+            """(function(){const els=Array.from(document.querySelectorAll('a,button,[role=button],input'));const el=els.find(e=>((e.innerText||e.textContent||e.value||e.title||'')+'').trim().toUpperCase()==='ACTIVITY');if(el){el.click();return true;}const loose=els.find(e=>((e.innerText||e.textContent||e.value||e.title||'')+'').trim().toUpperCase().includes('ACTIVITY'));if(loose){loose.click();return true;}return false;})();"""
+        )
+
+    def _dashboard_worldwide_render_terminated(self, termination_status, exit_code):
+        """Recover automatically if Chromium's Worldwide renderer dies."""
+        self._worldwide_health_pending = False
+        self._worldwide_reload_pending = True
+        QTimer.singleShot(1000, self._reload_dashboard_worldwide)
+
+    def _worldwide_render_terminated(self, termination_status, exit_code):
+        """Recover automatically if the classic Worldwide renderer dies."""
+        self._worldwide_health_pending = False
+        self._worldwide_reload_pending = True
+        QTimer.singleShot(1000, self._reload_classic_worldwide)
+
+    def _reload_dashboard_worldwide(self):
+        if QWebEngineView is None or not hasattr(self, "dashboard_worldwide_view"):
+            return
+        if not isinstance(self.dashboard_worldwide_view, QWebEngineView):
+            return
+        self._worldwide_reload_pending = False
+        self._worldwide_health_last_ok = time.monotonic()
+        self.dashboard_worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+
+    def _reload_classic_worldwide(self):
+        if QWebEngineView is None or not hasattr(self, "worldwide_view"):
+            return
+        if not isinstance(self.worldwide_view, QWebEngineView):
+            return
+        self._worldwide_reload_pending = False
+        self._worldwide_health_last_ok = time.monotonic()
+        self.worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+
+    def _worldwide_watchdog_tick(self):
+        """Ping the visible Worldwide page and reload only after a real hang."""
+        if QWebEngineView is None or self._worldwide_reload_pending:
+            return
+
+        view = None
+        if hasattr(self, "dashboard_worldwide_view") and isinstance(self.dashboard_worldwide_view, QWebEngineView):
+            view = self.dashboard_worldwide_view
+        elif hasattr(self, "worldwide_view") and isinstance(self.worldwide_view, QWebEngineView):
+            view = self.worldwide_view
+        if view is None:
+            return
+
+        now = time.monotonic()
+        # If the previous JavaScript health check never returned, the renderer
+        # is most likely stuck even if Qt has not emitted renderProcessTerminated.
+        if self._worldwide_health_pending:
+            if now - self._worldwide_health_last_ok >= 20:
+                self._worldwide_reload_pending = True
+                if view is self.dashboard_worldwide_view:
+                    self._reload_dashboard_worldwide()
+                else:
+                    self._reload_classic_worldwide()
+            return
+
+        self._worldwide_health_pending = True
+
+        def _health_result(result):
+            self._worldwide_health_pending = False
+            self._worldwide_health_last_ok = time.monotonic()
+
+        try:
+            view.page().runJavaScript(
+                "document.readyState + '|' + (document.documentElement ? document.documentElement.innerHTML.length : 0)",
+                _health_result,
+            )
+        except Exception:
+            self._worldwide_health_pending = False
+
+    def _sync_dashboard_tables(self):
+        if not hasattr(self, "dashboard_monitor_table"):
+            return
+        src = self.monitor_table
+        dst = self.dashboard_monitor_table
+        # Der Dashboard-Monitor muss den kompletten Live-Strom übernehmen.
+        # Die frühere Begrenzung auf 8 Zeilen führte dazu, dass ab dem ersten
+        # sichtbaren Scrollbereich zwar weiter aufgezeichnet wurde, aber neue
+        # Einträge im Dashboard nicht mehr sichtbar wurden.
+        rows = src.rowCount()
+        dst.setRowCount(rows)
+        for r in range(rows):
+            vals = [src.item(r, c).text() if src.item(r, c) else "" for c in (0,1,2,3,4,5,6)]
+            for c, v in enumerate(vals):
+                dst.setItem(r, c, QTableWidgetItem(v))
+            # The classic monitor naturally gives the information enough
+            # vertical space to wrap long packets.  Keep that behavior in
+            # the dashboard instead of cutting the text off in one line.
+            dst.setRowHeight(r, 38)
+        # Bei aktivem Autoscroll immer den neuesten Monitor-Eintrag zeigen.
+        # QTableWidget kann scrollToBottom() innerhalb eines laufenden
+        # Layout-/Resize-Zyklus zu früh ausführen. Deshalb nach dem Layout
+        # nochmals explizit auf das Ende der vertikalen Scrollbar setzen.
+        if getattr(self, "monitor_autoscroll", True) and rows:
+            def _dashboard_monitor_to_bottom():
+                if not self.dashboard_monitor_table.rowCount():
+                    return
+                last_item = self.dashboard_monitor_table.item(self.dashboard_monitor_table.rowCount() - 1, 0)
+                if last_item is not None:
+                    self.dashboard_monitor_table.scrollToItem(
+                        last_item, QAbstractItemView.ScrollHint.PositionAtBottom
+                    )
+                bar = self.dashboard_monitor_table.verticalScrollBar()
+                bar.setValue(bar.maximum())
+
+            self.dashboard_monitor_table.scrollToBottom()
+            QTimer.singleShot(0, _dashboard_monitor_to_bottom)
+        src = self.mh_table
+        dst = self.dashboard_mh_table
+        rows = min(src.rowCount(), 8)
+        dst.setRowCount(rows)
+        for r in range(rows):
+            vals = [src.item(r, c).text() if src.item(r, c) else "" for c in (0,1,2,3)]
+            for c, v in enumerate(vals):
+                dst.setItem(r, c, QTableWidgetItem(v))
+        if hasattr(self, "statistics_summary"):
+            self.dashboard_statistics_label.setText(self.statistics_summary.text() + "\n" + self.statistics_room_label.text())
+
+    def _worldwide_load_finished(self, ok):
+        self._worldwide_health_pending = False
+        if not ok or QWebEngineView is None:
+            return
+        self._worldwide_health_last_ok = time.monotonic()
         # Die eingebettete ÖVSV-Seite übernimmt ihre eigene Aktualisierung.
         # Es gibt keinen zusätzlichen 15-Sekunden-Refresh durch den Guru.
         self.worldwide_view.page().runJavaScript(
@@ -1741,6 +3036,12 @@ class MainWindow(QMainWindow):
         for i, field in enumerate(self.filter_inputs, 1):
             field.setText(settings.get(f"filter_room{i}", ""))
         self._ensure_room_tabs()
+        # The dashboard is built before the persistent filter fields are loaded.
+        # Rebuild its room-chat list afterwards so all five saved rooms are
+        # immediately available there as clickable chats.
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_rebuild_room_buttons(self.dashboard_sidebar.layout())
+            self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
 
     def _set_connection_status(self, online):
         """Update connection status and preserve online time across auto-reconnects."""
@@ -1760,6 +3061,10 @@ class MainWindow(QMainWindow):
 
         self.connection_online = online
         self._update_connection_label(now)
+        if hasattr(self, "dashboard_connect_button"):
+            self.dashboard_connect_button.setEnabled(not online)
+        if hasattr(self, "dashboard_disconnect_button"):
+            self.dashboard_disconnect_button.setEnabled(online)
 
     def _reset_connection_duration(self):
         """Reset online duration after an explicit manual disconnect."""
@@ -1780,14 +3085,22 @@ class MainWindow(QMainWindow):
             duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
             self.connection_label.setText(f"🟢 {ui_text('ONLINE  |  seit')} {duration}")
             self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #20e060;")
+            if hasattr(self, "dashboard_status_label"):
+                self.dashboard_status_label.setText(f"🟢 {ui_text('ONLINE  |  seit')} {duration}")
+                self.dashboard_status_label.setStyleSheet("font-size: 11pt; font-weight: 700; color: #20e060;")
         else:
             self.connection_label.setText("🔴 " + ui_text("OFFLINE  |  keine Verbindung"))
             self.connection_label.setStyleSheet("font-size: 12pt; font-weight: 700; color: #ff3b30;")
+            if hasattr(self, "dashboard_status_label"):
+                self.dashboard_status_label.setText("🔴 " + ui_text("OFFLINE  |  keine Verbindung"))
+                self.dashboard_status_label.setStyleSheet("font-size: 11pt; font-weight: 700; color: #ff3b30;")
 
     def _update_clock(self):
         now = datetime.now()
         self.datetime_label.setText(now.strftime("%d.%m.%Y  |  %H:%M:%S"))
         self.datetime_label.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        if hasattr(self, "dashboard_clock_label"):
+            self.dashboard_clock_label.setText(self.datetime_label.text())
         self._update_connection_label(now)
 
     # ---------- Theme ----------
@@ -2053,10 +3366,33 @@ class MainWindow(QMainWindow):
         if "MeshCom" not in config:
             config["MeshCom"] = {}
         section = config["MeshCom"]
+
+        # Dashboard und klassische Ansicht benutzen dieselben Einstellungen.
+        # Die Dashboard-Felder sind eigene QLineEdit-Widgets. Sie dürfen aber
+        # NUR dann zurück in die zentralen Felder synchronisiert werden, wenn
+        # das Dashboard tatsächlich aktiv ist. In der klassischen Ansicht
+        # sind diese Widgets unsichtbar und können noch alte Werte enthalten.
+        # Das führte dazu, dass "Einstellungen speichern" in der klassischen
+        # Ansicht die gerade eingegebenen Werte wieder überschrieben hat.
+        if getattr(self, "layout_mode", "classic") == "dashboard":
+            if hasattr(self, "dashboard_hotspot_input"):
+                dashboard_ip = self.dashboard_hotspot_input.text().strip().rstrip("/")
+                if dashboard_ip:
+                    self.ip_input.setText(dashboard_ip)
+            if hasattr(self, "dashboard_room_input"):
+                self.target_input.setText(self.dashboard_room_input.text().strip())
+            if hasattr(self, "dashboard_callsign_input"):
+                self.own_callsign_input.setText(self.dashboard_callsign_input.text().strip())
+            if hasattr(self, "dashboard_lat_input"):
+                self.own_lat_input.setText(self.dashboard_lat_input.text().strip())
+            if hasattr(self, "dashboard_lon_input"):
+                self.own_lon_input.setText(self.dashboard_lon_input.text().strip())
+
         section["ip"] = self.ip_input.text().strip().rstrip("/")
         section["target"] = self.target_input.text().strip()
         section["filter_enabled"] = "1" if self.filter_enabled.isChecked() else "0"
         section["theme"] = self.current_theme
+        section["layout_mode"] = getattr(self, "layout_mode", "classic")
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
         section["chat_link_color"] = self.chat_link_color
@@ -2074,7 +3410,10 @@ class MainWindow(QMainWindow):
             section[f"quick_text{i}"] = text[:149]
         section["weather_enabled"] = "1" if getattr(self, "weather_enabled", False) else "0"
         section["weather_city"] = self.weather_city_input.text().strip() if hasattr(self, "weather_city_input") else ""
-        section["own_callsign"] = self.own_callsign_input.text().strip().upper()
+        section["own_callsign"] = self._normalize_callsign(self.own_callsign_input.text())
+        self.own_callsign_input.setText(section["own_callsign"])
+        if hasattr(self, "dashboard_callsign_input"):
+            self.dashboard_callsign_input.setText(section["own_callsign"])
         section["own_lat"] = self.own_lat_input.text().strip()
         section["own_lon"] = self.own_lon_input.text().strip()
         for i, field in enumerate(self.filter_inputs, 1):
@@ -2207,10 +3546,25 @@ class MainWindow(QMainWindow):
             self.mh_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Rufzeichen", "Entfernung", "RSSI", "SNR", "Batterie", "Zuletzt gehört"]])
 
     def save_all_settings(self):
+        # Nur im Dashboard werden die sichtbaren Dashboard-Felder als
+        # Eingabequelle verwendet. In der klassischen Ansicht sind diese
+        # Felder nur Spiegelwerte und dürfen die klassischen Eingaben nicht
+        # mit alten, unsichtbaren Werten überschreiben.
+        if getattr(self, "layout_mode", "classic") == "dashboard":
+            if hasattr(self, "dashboard_hotspot_input"):
+                dashboard_ip = self.dashboard_hotspot_input.text().strip().rstrip("/")
+                if dashboard_ip:
+                    self.ip_input.setText(dashboard_ip)
+            if hasattr(self, "dashboard_room_input"):
+                self.target_input.setText(self.dashboard_room_input.text().strip())
+            if hasattr(self, "dashboard_callsign_input"):
+                self.own_callsign_input.setText(self.dashboard_callsign_input.text().strip())
+            if hasattr(self, "dashboard_lat_input"):
+                self.own_lat_input.setText(self.dashboard_lat_input.text().strip())
+            if hasattr(self, "dashboard_lon_input"):
+                self.own_lon_input.setText(self.dashboard_lon_input.text().strip())
+
         ip = self.ip_input.text().strip().rstrip("/")
-        if not ip:
-            self.status.setText(ui_text("Fehler: Keine Hotspot-IP eingetragen"))
-            return
         try:
             lat_text = self.own_lat_input.text().strip().replace(",", ".")
             lon_text = self.own_lon_input.text().strip().replace(",", ".")
@@ -2225,18 +3579,29 @@ class MainWindow(QMainWindow):
             self.status.setText(ui_text("Fehler: Ungültige eigene Koordinaten"))
             return
         self.own_callsign = self._normalize_callsign(self.own_callsign_input.text())
+        self.own_callsign_input.setText(self.own_callsign)
         self.own_lat, self.own_lon = lat, lon
         self._write_settings()
-        self.mesh = MeshCom(ip)
-        self._set_connection_status(False)
+
+        # Eine fehlende IP darf das Speichern der übrigen persönlichen
+        # Einstellungen nicht verhindern. Nur die MeshCom-Verbindung wird in
+        # diesem Fall unverändert gelassen.
+        if ip:
+            self.mesh = MeshCom(ip)
+            self._set_connection_status(False)
         self._ensure_room_tabs()
         self._update_map()
-        self.status.setText(ui_text("Einstellungen gespeichert"))
+        if ip:
+            self.status.setText(ui_text("Einstellungen gespeichert"))
+        else:
+            self.status.setText(ui_text("Einstellungen gespeichert – Hotspot-IP fehlt noch"))
 
     def save_filter_settings(self):
         self._write_settings()
         self._ensure_room_tabs()
         self.update_messages()
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_rebuild_room_buttons(self.dashboard_sidebar.layout())
         rooms = self._rooms()
         self.status.setText(ui_text("Filter gespeichert: " + (", ".join(rooms) if rooms else "keine Räume")))
 
@@ -2332,12 +3697,17 @@ class MainWindow(QMainWindow):
             self.weather_status_label.setText(str(data["error"]))
             return
         self.weather_data = data
-        self.weather_values_label.setText(
+        weather_text = (
             f"{ui_text('Temperatur:')} {data.get('temperature', '–')} | "
             f"{ui_text('Luftfeuchte:')} {data.get('humidity', '–')} | "
             f"{ui_text('QFE:')} {data.get('qfe', '–')} | "
             f"{ui_text('QNH:')} {data.get('qnh', '–')}"
         )
+        self.weather_values_label.setText(weather_text)
+        if hasattr(self, "dashboard_weather_values"):
+            self.dashboard_weather_values.setText(weather_text)
+        if hasattr(self, "dashboard_weather_city") and self.dashboard_weather_city.text().strip() != self.weather_city_input.text().strip():
+            self.dashboard_weather_city.setText(self.weather_city_input.text().strip())
         self.weather_status_label.setText(ui_text("WX-Information erfolgreich aus dem MeshCom-WebService gelesen"))
 
     def _send_weather(self):
@@ -2405,7 +3775,7 @@ class MainWindow(QMainWindow):
             "fr": "MeshCom-Guru – Guide utilisateur",
         }
         dialog.setWindowTitle(titles.get(lang, titles["de"]))
-        dialog.resize(820, 700)
+        dialog.resize(860, 720)
         layout = QVBoxLayout(dialog)
         view = QTextBrowser(dialog)
         view.setOpenExternalLinks(True)
@@ -2413,100 +3783,98 @@ class MainWindow(QMainWindow):
         guides = {
             "de": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Kurzanleitung</h3>
+            <h3>🎛 Darstellung: Klassisch oder Dashboard</h3>
+            <p>Unter <b>Einstellungen → Darstellung</b> kann zwischen <b>Klassisch</b> und dem neuen <b>Dashboard</b> gewechselt werden. Beide Ansichten verwenden dieselben MeshCom-Daten und Funktionen. Die Auswahl wird gespeichert und beim nächsten Start wieder verwendet.</p>
+            <p>Das Dashboard bündelt Verbindung, Räume, Chat, Karte, Weltweit, Monitor, MH und Statistik in einer Ansicht. Die klassische Oberfläche bleibt vollständig verfügbar.</p>
+            <h3>💬 Raum-Chats und 👤 Private Chats</h3>
+            <p>Die bis zu <b>fünf gespeicherten Räume</b> werden im Dashboard links direkt als anklickbare <b>Raum-Chats</b> angezeigt. Ein Klick auf einen Raum öffnet ausschließlich diesen Raum. <b>Alle</b> ist eine eigene Ansicht und kann jederzeit wieder angeklickt werden.</p>
+            <p><b>Private Chats</b> stehen getrennt darunter. Ein Klick auf einen privaten Chat öffnet die private Unterhaltung und wechselt nicht ungewollt zurück zu „Alle“. Neue private Nachrichten werden in der privaten Unterhaltung und im Bereich „Alle“ berücksichtigt.</p>
             <h3>Verbindung und Einstellungen</h3>
             <p><b>Hotspot-IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
-            <p><b>Raum / Ziel:</b> Eine Raumnummer wie 262 oder ein Rufzeichen für eine private Nachricht eintragen.</p>
             <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
             <p><b>Einstellungen speichern:</b> Speichert persönliche Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Verbinden und Trennen / Auto-Reconnect</h3>
             <p>Mit <b>Verbinden</b> wird die Verbindung zum MeshCom-WebService hergestellt. Nach einer manuellen Verbindung ist die automatische Wiederverbindung aktiv.</p>
-            <p>Wenn die Verbindung durch einen vorübergehenden Netzwerk-, Hotspot- oder WebService-Fehler verloren geht, versucht MeshCom-Guru automatisch erneut zu verbinden.</p>
-            <p><b>Wichtig:</b> Mit <b>Trennen</b> wird die automatische Wiederverbindung bewusst abgeschaltet. Danach verbindet sich das Programm nicht selbstständig wieder. Ein erneuter Druck auf <b>Verbinden</b> aktiviert sie wieder.</p>
-            <p>Beim Programmstart wird <b>nicht automatisch</b> verbunden.</p>
-            <h3>Statistik</h3>
-            <p>Der Tab <b>Statistik</b> zeigt Sitzungszähler für Nachrichten, Nodes, Positionen, Privatnachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
-            <h3>Sprache</h3>
-            <p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert und nach dem Neustart wieder geladen. Raum-Tabs werden passend zur gewählten Sprache angezeigt; Raum- und Zielnummern selbst bleiben unverändert.</p>
-            <h3>Nachrichten und Räume</h3>
-            <p>Der Nachrichtenfilter unterstützt bis zu <b>fünf Räume</b>. Mit <b>Aktualisieren</b> werden Nachrichten vom MeshCom-WebService abgerufen. Mit <b>Senden</b> wird eine Nachricht an den ausgewählten Raum oder das private Ziel übertragen.</p>
+            <p>Wenn die Verbindung durch einen vorübergehenden Netzwerk-, Hotspot- oder WebService-Fehler verloren geht, versucht MeshCom-Guru automatisch erneut zu verbinden. Mit <b>Trennen</b> wird die automatische Wiederverbindung bewusst abgeschaltet.</p>
+            <h3>Nachrichten senden</h3>
+            <p>Im Dashboard genügt <b>Enter</b> zum Senden. Ein zusätzlicher Senden-Button wird dort nicht benötigt und schafft mehr Platz für das Nachrichtenfeld.</p>
             <p>Nachrichten sind auf <b>149 Zeichen</b> begrenzt. Der Live-Zähler zeigt die aktuelle Länge.</p>
-            <p>Normale Raum-Chats verwenden Nachrichten-Bubbles. Der Tab <b>Alle</b> behält seine eigene Darstellung.</p>
-            <p><b>Position der Bubbles:</b> Bei wenigen Nachrichten beginnen die Bubbles unten. Bei längeren Chats steht normales Scrollen zur Verfügung; beim manuellen Hochscrollen wird die Position nicht durch neue Nachrichten überschrieben.</p>
-            <h3>Chat-Farben</h3><p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund und die Schriftfarbe für „Alle“ eingestellt werden. Zusätzlich lässt sich die Farbe für <b>anklickbare Rufzeichen und Internetlinks</b> unabhängig auswählen. Die gewählte Linkfarbe wird gespeichert und auch in den Chat-Bubbles verwendet. <b>Standard wiederherstellen</b> setzt die Standardfarben einschließlich der Linkfarbe zurück.</p>
-            <h3>Chat exportieren</h3><p>Über <b>Datei → Chat exportieren …</b> kann der aktuell ausgewählte Chat als <b>HTML, TXT oder CSV</b> gespeichert werden. Der HTML-Export übernimmt die Darstellung der Nachrichten sowie anklickbare Rufzeichen und Internetlinks.</p>
-            <h3>Kontextmenü</h3><p>Mit der rechten Maustaste stehen in Eingabefeldern Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Löschen und Alles auswählen zur Verfügung.</p>
-            <h3>Privat-Chat und Sendestatus</h3><p>Eine frisch gesendete private Nachricht zeigt zunächst <b>⏳</b>. Erst ein erkannter Empfänger-ACK setzt den Status auf <b>✓✓</b>.</p>
-            <h3>⚡ Schnelltexte und 😊 Emojis</h3><p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
-            <h3>📡 Monitor und 📋 MH</h3><p>Der Monitor zeigt MeshCom-UDP-Pakete auf <b>Port 1799</b> mit Filtern, Suche, Pause, Auto-Scroll und Leeren. MH zeigt zuletzt gehörte Stationen mit verfügbaren Informationen wie Rufzeichen, Entfernung, RSSI, SNR, Batterie und Empfangszeit.</p>
-            <h3>🗺 Karte und Positionsdaten</h3><p>Positionsdaten werden über UDP 1799 verarbeitet und auf der OSM-/Leaflet-Karte dargestellt.</p>
-            <h3>🌐 Weltweit</h3><p>Der Tab <b>🌐 Weltweit</b> befindet sich direkt neben <b>Karte</b> und öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru startet keinen zusätzlichen 15-Sekunden-Refresh.</p>
-            <h3>🌤 Wetterdaten</h3><p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Geeignete Wetterhardware kann z. B. BME280/BMP280 sein.</p>
-            <h3>🔊 Sound und Theme</h3><p>Benachrichtigungston, Soundtreiber, Lautstärke und Hell-/Dunkel-Theme können in den Einstellungen konfiguriert werden.</p>
+            <h3>📡 Monitor, 📋 Stations / MH und 📊 Statistik</h3>
+            <p>Der <b>Monitor</b> zeigt MeshCom-UDP-Pakete auf <b>Port 1799</b> mit Typ, Rufzeichen, Ziel, RSSI, SNR und Information. Die Informationsspalte bleibt lesbar und kann bei Bedarf gescrollt werden.</p>
+            <p><b>Stations / MH</b> zeigt zuletzt gehörte Stationen mit Rufzeichen, Entfernung, RSSI und SNR. Die Spalten sind so angeordnet, dass keine unnötige horizontale Scrollleiste benötigt wird.</p>
+            <p><b>Statistik</b> zeigt die laufenden Sitzungszähler für Nachrichten, Nodes, Positionen, private Nachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
+            <h3>🗺 Karte und 🌐 Weltweit</h3>
+            <p>Die OSM-/Leaflet-Karte zeigt Positionsdaten und Stationen. Der Tab <b>🌐 Weltweit</b> bzw. die Weltweit-Ansicht im Dashboard öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.</p>
+            <h3>🌤 Wetterdaten</h3>
+            <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Wetter kann aktualisiert und an das aktuell ausgewählte Ziel gesendet werden.</p>
+            <h3>⚡ Schnelltexte und 😊 Emojis</h3>
+            <p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
+            <h3>🎨 Chat-Farben und 🔊 Sound</h3>
+            <p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe anklickbarer Rufzeichen und Internetlinks eingestellt werden. Sound, Lautstärke und Hell-/Dunkel-Theme können ebenfalls konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
+            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
             <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Hilfe → Info</h3><p>Zeigt Versions- und Programminformationen.</p>
             """,
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
-            <h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Room / Target:</b> Enter a room number such as 262 or a callsign for a private message.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed.</p><p>If the connection is lost because of a temporary network, hotspot or WebService error, MeshCom-Guru automatically tries to reconnect.</p><p><b>Important:</b> Pressing <b>Disconnect</b> deliberately disables automatic reconnection. The program will not reconnect by itself until you press <b>Connect</b> again.</p><p>The program does <b>not</b> connect automatically at startup.</p>
-            <h3>Statistics</h3><p>The <b>Statistics</b> tab shows session counts for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
-            <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The selection is saved and restored after restart. Room tabs are translated while room and target numbers remain unchanged.</p>
-            <h3>Messages and rooms</h3><p>The message filter supports up to <b>five rooms</b>. <b>Refresh</b> retrieves messages; <b>Send</b> transmits to the selected room or private target. Messages are limited to <b>149 characters</b>.</p><p>Normal room chats use message bubbles. The <b>All</b> tab keeps its separate display. Manual scrolling is respected.</p>
-            <h3>Chat colors and link colors</h3><p>Chat background and the text color for <b>All</b> can be configured. The color of <b>clickable callsigns and Internet links</b> can also be selected independently and is saved for future sessions.</p>
-            <h3>Chat export</h3><p>Use <b>File → Export chat …</b> to save the currently selected chat as <b>HTML, TXT or CSV</b>. HTML keeps clickable callsigns and Internet links.</p><p>Input fields provide standard Undo, Redo, Cut, Copy, Paste, Delete and Select All commands.</p>
-            <h3>Private chat, quick texts and emojis</h3><p>A new private message first shows <b>⏳</b>; a recognized recipient ACK changes it to <b>✓✓</b>. Quick texts are inserted only and are not sent automatically. The emoji picker inserts the selected emoji at the cursor.</p>
-            <h3>📡 Monitor / 📋 MH / 🗺 Map</h3><p>Monitor displays MeshCom UDP packets on <b>port 1799</b>. MH lists recently heard stations. Position data is processed through UDP 1799 and shown on the OSM/Leaflet map.</p>
-            <h3>🌐 Worldwide</h3><p>The <b>🌐 Worldwide</b> tab is located directly next to <b>Map</b> and opens the public MeshCom activity page of ÖVSV. <b>ACTIVITY</b> is selected automatically when the page loads. The embedded website handles its own updates; MeshCom-Guru does not add a separate 15-second refresh.</p>
-            <h3>🌤 Weather / 🔊 Sound / Node Info</h3><p>WX can show temperature, humidity, QFE and QNH when supplied by the WebService. Sound, volume and light/dark theme are configurable. <b>Open Node Info</b> opens WebService information.</p>
-            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> Run <code>run_windows.bat</code>. <b>Debian:</b> Installed to <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Help → About</h3><p>Shows version and program information.</p>
+            <h3>🎛 Display: Classic or Dashboard</h3><p>Under <b>Settings → Display</b>, choose between <b>Classic</b> and the new <b>Dashboard</b>. Both views use the same MeshCom data and functions. The selection is saved and restored at the next start.</p><p>The Dashboard combines connection, rooms, chat, map, worldwide activity, monitor, MH and statistics in one view. The classic interface remains fully available.</p>
+            <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>five saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p>
+            <h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed. If a temporary network, hotspot or WebService error occurs, MeshCom-Guru tries to reconnect automatically. <b>Disconnect</b> deliberately disables automatic reconnection.</p>
+            <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
+            <h3>📡 Monitor, 📋 Stations / MH and 📊 Statistics</h3><p><b>Monitor</b> shows MeshCom UDP packets on <b>port 1799</b> with type, callsign, target, RSSI, SNR and information. The information column remains readable and can be scrolled when necessary.</p><p><b>Stations / MH</b> shows recently heard stations with callsign, distance, RSSI and SNR without an unnecessary horizontal scrollbar.</p><p><b>Statistics</b> shows live session counters for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
+            <h3>🗺 Map and 🌐 Worldwide</h3><p>The OSM/Leaflet map displays positions and stations. The <b>Worldwide</b> view opens the public MeshCom activity page of ÖVSV and automatically selects <b>ACTIVITY</b>. The embedded website handles its own updates; MeshCom-Guru does not add a 15-second refresh.</p>
+            <h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
+            <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
+            <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
+            <h3>Node Info</h3><p><b>Open Node Info</b> displays information from the connected MeshCom WebService.</p>
+            <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The choice is saved, and the built-in guide follows the selected language.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
-            <h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> Inserire l'indirizzo IP del WebService MeshCom.</p><p><b>Stanza / Destinazione:</b> Inserire un numero di stanza, ad esempio 262, oppure un nominativo per un messaggio privato.</p><p><b>Stazione propria / GPS:</b> Inserire il proprio nominativo e, facoltativamente, latitudine e longitudine.</p><p><b>Salva impostazioni:</b> Le impostazioni personali vengono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p>Con <b>Connetti</b> viene stabilita la connessione al WebService MeshCom. Dopo una connessione manuale la riconnessione automatica viene attivata.</p><p>Se la connessione viene persa per un problema temporaneo di rete, hotspot o WebService, MeshCom-Guru prova automaticamente a riconnettersi.</p><p><b>Importante:</b> premendo <b>Disconnetti</b> la riconnessione automatica viene disattivata. Il programma non si riconnetterà da solo finché non verrà premuto nuovamente <b>Connetti</b>.</p><p>All'avvio il programma <b>non</b> si connette automaticamente.</p>
-            <h3>Statistiche</h3><p>La scheda <b>Statistiche</b> mostra i contatori della sessione per messaggi, nodi, posizioni, messaggi privati, monitor e messaggi per stanza.</p>
-            <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. La scelta viene salvata e ripristinata dopo il riavvio. Le schede delle stanze vengono tradotte, mentre numeri di stanza e destinazioni restano invariati.</p>
-            <h3>Messaggi e stanze</h3><p>Il filtro messaggi supporta fino a <b>cinque stanze</b>. <b>Aggiorna</b> recupera i messaggi; <b>Invia</b> trasmette alla stanza o destinazione privata selezionata. Il limite è di <b>149 caratteri</b>.</p><p>Le chat normali usano fumetti di messaggio. La scheda <b>Tutti</b> mantiene la propria visualizzazione; lo scorrimento manuale viene rispettato.</p>
-            <h3>Colori chat e link</h3><p>È possibile configurare lo sfondo delle chat e il colore del testo per <b>Tutti</b>. È inoltre possibile scegliere separatamente il colore dei <b>nominativi e dei link Internet cliccabili</b>.</p><h3>Esportazione chat</h3><p>Con <b>File → Esporta chat …</b> la chat selezionata può essere salvata come <b>HTML, TXT o CSV</b>. L'HTML mantiene i nominativi e i link Internet cliccabili.</p><h3>Menu contestuale</h3><p>Nei campi di testo sono disponibili Annulla, Ripeti, Taglia, Copia, Incolla, Elimina e Seleziona tutto.</p>
-            <h3>Chat privata, testi rapidi ed emoji</h3><p>Un nuovo messaggio privato mostra inizialmente <b>⏳</b>; un ACK riconosciuto del destinatario lo cambia in <b>✓✓</b>. I testi rapidi vengono inseriti senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
-            <h3>📡 Monitor / 📋 MH / 🗺 Mappa</h3><p>Monitor mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b>. MH mostra le stazioni ascoltate di recente. I dati di posizione vengono elaborati tramite UDP 1799 e visualizzati sulla mappa OSM/Leaflet.</p>
-            <h3>🌐 Mondiale</h3><p>La scheda <b>🌐 Mondiale</b> si trova direttamente accanto a <b>Mappa</b> e apre la pagina pubblica delle attività MeshCom dell’ÖVSV. Al caricamento viene selezionato automaticamente <b>ACTIVITY</b>. La pagina integrata gestisce i propri aggiornamenti; MeshCom-Guru non aggiunge un aggiornamento separato ogni 15 secondi.</p>
-            <h3>🌤 Meteo / 🔊 Suono / Info nodo</h3><p>WX può mostrare temperatura, umidità, QFE e QNH quando forniti dal WebService. Suono, volume e tema chiaro/scuro sono configurabili. <b>Apri info nodo</b> apre le informazioni del WebService.</p>
-            <h3>Installazione</h3><p><b>ZIP Linux:</b> Estrarre <code>MeshCom</code> ed eseguire <code>./run_linux.sh</code>. <b>Windows:</b> eseguire <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>; le impostazioni personali restano in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Aiuto → Info</h3><p>Mostra versione e informazioni del programma.</p>
+            <h3>🎛 Visualizzazione: Classica o Dashboard</h3><p>In <b>Impostazioni → Visualizzazione</b> è possibile scegliere tra <b>Classica</b> e la nuova <b>Dashboard</b>. Entrambe usano gli stessi dati e le stesse funzioni MeshCom. La scelta viene salvata.</p><p>La Dashboard riunisce connessione, stanze, chat, mappa, attività mondiale, monitor, MH e statistiche in un'unica vista.</p>
+            <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>cinque stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p>
+            <h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> inserire l'indirizzo IP del WebService MeshCom. <b>Stazione/GPS:</b> inserire il proprio nominativo e, se necessario, latitudine e longitudine. Le impostazioni personali sono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p><b>Connetti</b> stabilisce la connessione. Dopo una connessione manuale la riconnessione automatica è attiva. <b>Disconnetti</b> la disattiva intenzionalmente.</p>
+            <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
+            <h3>📡 Monitor, 📋 Stations / MH e 📊 Statistiche</h3><p>Il <b>Monitor</b> mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b> con tipo, nominativo, destinazione, RSSI, SNR e informazioni. La colonna informazioni può essere fatta scorrere.</p><p><b>Stations / MH</b> mostra le stazioni ascoltate recentemente con nominativo, distanza, RSSI e SNR senza una barra orizzontale inutile. Le <b>Statistiche</b> mostrano i contatori della sessione.</p>
+            <h3>🗺 Mappa e 🌐 Mondiale</h3><p>La mappa OSM/Leaflet mostra posizioni e stazioni. La vista <b>Mondiale</b> apre l'attività pubblica MeshCom e seleziona automaticamente <b>ACTIVITY</b>. Il sito integrato gestisce i propri aggiornamenti; non viene aggiunto un refresh di 15 secondi.</p>
+            <h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
+            <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
+            <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
+            <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. Anche questa guida segue la lingua selezionata.</p>
+            <h3>Installazione</h3><p><b>Linux:</b> estrarre <code>MeshCom</code> e avviare <code>./run_linux.sh</code>. <b>Windows:</b> avviare <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>.</p>
             """,
             "nl": f"""
-            <h2>MeshCom-Guru v{VERSION}</h2><h3>Beknopte handleiding</h3>
-            <h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> Vul het IP-adres van de MeshCom-WebService in.</p><p><b>Ruimte / Doel:</b> Vul een ruimtenummer, bijvoorbeeld 262, of een roepnaam voor een privébericht in.</p><p><b>Eigen station / GPS:</b> Vul uw eigen roepnaam en eventueel breedte- en lengtegraad in.</p><p><b>Instellingen opslaan:</b> Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Verbinden / Verbinding verbreken / Automatisch opnieuw verbinden</h3><p>Met <b>Verbinden</b> wordt verbinding gemaakt met de MeshCom-WebService. Na een handmatige verbinding wordt automatisch opnieuw verbinden ingeschakeld.</p><p>Als de verbinding door een tijdelijke netwerk-, hotspot- of WebService-fout wegvalt, probeert MeshCom-Guru automatisch opnieuw verbinding te maken.</p><p><b>Belangrijk:</b> Met <b>Verbinding verbreken</b> wordt automatisch opnieuw verbinden bewust uitgeschakeld. Het programma maakt pas weer automatisch verbinding nadat u opnieuw op <b>Verbinden</b> hebt gedrukt.</p><p>Bij het starten maakt het programma <b>niet automatisch</b> verbinding.</p>
-            <h3>Statistieken</h3><p>Het tabblad <b>Statistieken</b> toont sessietellers voor berichten, nodes, posities, privéberichten, monitorregels en berichten per ruimte.</p>
-            <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De keuze wordt opgeslagen en na opnieuw starten hersteld. Ruimtetabs worden vertaald; ruimte- en doel­nummers blijven ongewijzigd.</p>
-            <h3>Berichten en ruimtes</h3><p>Het berichtenfilter ondersteunt maximaal <b>vijf ruimtes</b>. <b>Vernieuwen</b> haalt berichten op; <b>Verzenden</b> stuurt naar de gekozen ruimte of het privédoel. Het maximum is <b>149 tekens</b>.</p><p>Normale ruimtechats gebruiken berichtbubbels. Het tabblad <b>Alles</b> behoudt zijn eigen weergave; handmatig scrollen wordt gerespecteerd.</p>
-            <h3>Chatkleuren en linkkleur</h3><p>De chatachtergrond en tekstkleur voor <b>Alles</b> kunnen worden ingesteld. Ook de kleur van <b>klikbare roepnamen en internetlinks</b> kan afzonderlijk worden gekozen en opgeslagen.</p><h3>Chat exporteren</h3><p>Via <b>Bestand → Chat exporteren …</b> kan de geselecteerde chat als <b>HTML, TXT of CSV</b> worden opgeslagen. HTML behoudt klikbare roepnamen en internetlinks.</p><h3>Contextmenu</h3><p>In invoervelden zijn Ongedaan maken, Opnieuw, Knippen, Kopiëren, Plakken, Verwijderen en Alles selecteren beschikbaar.</p>
-            <h3>Privéchat, snelteksten en emoji's</h3><p>Een nieuw privébericht toont eerst <b>⏳</b>; een herkende ACK van de ontvanger verandert dit in <b>✓✓</b>. Snelteksten worden alleen ingevoegd en niet automatisch verzonden. De emoji-kiezer voegt de emoji op de cursorpositie in.</p>
-            <h3>📡 Monitor / 📋 MH / 🗺 Kaart</h3><p>Monitor toont MeshCom-UDP-pakketten op <b>poort 1799</b>. MH toont recent gehoorde stations. Positiegegevens worden via UDP 1799 verwerkt en op de OSM/Leaflet-kaart weergegeven.</p>
-            <h3>🌐 Wereldwijd</h3><p>Het tabblad <b>🌐 Wereldwijd</b> staat direct naast <b>Kaart</b> en opent de openbare MeshCom-activiteitspagina van ÖVSV. Bij het laden wordt automatisch <b>ACTIVITY</b> geselecteerd. De ingebedde website verzorgt de eigen updates; MeshCom-Guru voegt geen aparte verversing van 15 seconden toe.</p>
-            <h3>🌤 Weer / 🔊 Geluid / Node-info</h3><p>WX kan temperatuur, luchtvochtigheid, QFE en QNH tonen wanneer de WebService deze levert. Geluid, volume en licht/donker-thema zijn instelbaar. <b>Node-info openen</b> toont de WebService-informatie.</p>
-            <h3>Installatie</h3><p><b>Linux ZIP:</b> Pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>; persoonlijke instellingen blijven in <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Help → Info</h3><p>Toont versie- en programma-informatie.</p>
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Korte handleiding</h3>
+            <h3>🎛 Weergave: Klassiek of Dashboard</h3><p>Onder <b>Instellingen → Weergave</b> kun je kiezen tussen <b>Klassiek</b> en het nieuwe <b>Dashboard</b>. Beide weergaven gebruiken dezelfde MeshCom-gegevens en functies. De keuze wordt opgeslagen.</p><p>Het Dashboard combineert verbinding, ruimtes, chat, kaart, wereldwijde activiteit, monitor, MH en statistieken.</p>
+            <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>vijf opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p>
+            <h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> voer het IP-adres van de MeshCom-WebService in. <b>Eigen station/GPS:</b> voer je roepnaam en eventueel breedte- en lengtegraad in. Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Verbinden / Verbinding verbreken / Automatische herverbinding</h3><p>Met <b>Verbinden</b> maak je verbinding met de MeshCom-WebService. Na een handmatige verbinding is automatische herverbinding actief. <b>Verbinding verbreken</b> schakelt dit bewust uit.</p>
+            <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
+            <h3>📡 Monitor, 📋 Stations / MH en 📊 Statistieken</h3><p>De <b>Monitor</b> toont MeshCom-UDP-pakketten op <b>poort 1799</b> met type, roepnaam, doel, RSSI, SNR en informatie. De informatiekolom kan worden gescrold.</p><p><b>Stations / MH</b> toont recent gehoorde stations met roepnaam, afstand, RSSI en SNR zonder onnodige horizontale scrollbar. <b>Statistieken</b> tonen de actuele sessietellers.</p>
+            <h3>🗺 Kaart en 🌐 Wereldwijd</h3><p>De OSM/Leaflet-kaart toont posities en stations. <b>Wereldwijd</b> opent de openbare MeshCom Activity-pagina en selecteert automatisch <b>ACTIVITY</b>. De website beheert zijn eigen updates; MeshCom-Guru voegt geen refresh van 15 seconden toe.</p>
+            <h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
+            <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
+            <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
+            <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De ingebouwde handleiding volgt de gekozen taal.</p>
+            <h3>Installatie</h3><p><b>Linux:</b> pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>.</p>
             """,
             "fr": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guide rapide</h3>
-            <h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> Saisir l'adresse IP du WebService MeshCom.</p><p><b>Salon / Destination :</b> Saisir un numéro de salon, par exemple 262, ou un indicatif pour un message privé.</p><p><b>Station personnelle / GPS :</b> Saisir votre indicatif et, si nécessaire, la latitude et la longitude.</p><p><b>Enregistrer les paramètres :</b> Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p>Avec <b>Connecter</b>, la connexion au WebService MeshCom est établie. Après une connexion manuelle, la reconnexion automatique est activée.</p><p>Si la connexion est perdue à cause d'une erreur temporaire du réseau, du hotspot ou du WebService, MeshCom-Guru tente automatiquement de se reconnecter.</p><p><b>Important :</b> Le bouton <b>Déconnecter</b> désactive volontairement la reconnexion automatique. Le programme ne se reconnectera pas seul tant que vous n'aurez pas appuyé de nouveau sur <b>Connecter</b>.</p><p>Au démarrage, le programme ne se connecte <b>pas automatiquement</b>.</p>
-            <h3>Statistiques</h3><p>L'onglet <b>Statistiques</b> affiche les compteurs de session pour les messages, nœuds, positions, messages privés, entrées du moniteur et messages par salon.</p>
-            <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le choix est enregistré et restauré après redémarrage. Les onglets des salons sont traduits, tandis que les numéros de salon et de destination restent inchangés.</p>
-            <h3>Messages et salons</h3><p>Le filtre de messages prend en charge jusqu'à <b>cinq salons</b>. <b>Actualiser</b> récupère les messages ; <b>Envoyer</b> transmet au salon ou à la destination privée sélectionnée. La limite est de <b>149 caractères</b>.</p><p>Les salons utilisent des bulles de messages. L'onglet <b>Tous</b> conserve son affichage propre et le défilement manuel est respecté.</p>
-            <h3>Couleur des liens et export du chat</h3><p>Dans <b>Paramètres → Couleurs du chat …</b>, la couleur des <b>indicatifs et liens Internet cliquables</b> peut être choisie séparément. Avec <b>Fichier → Exporter le chat …</b>, le chat sélectionné peut être enregistré en <b>HTML, TXT ou CSV</b>.</p>
-            <h3>Couleurs du chat et menu contextuel</h3><p>L'arrière-plan du chat et la couleur du texte de <b>Tous</b> peuvent être configurés. Les champs de saisie proposent Annuler, Rétablir, Couper, Copier, Coller, Supprimer et Tout sélectionner.</p>
-            <h3>Chat privé, textes rapides et emojis</h3><p>Un nouveau message privé affiche d'abord <b>⏳</b> ; un ACK reconnu du destinataire le transforme en <b>✓✓</b>. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
-            <h3>📡 Moniteur / 📋 MH / 🗺 Carte</h3><p>Le Moniteur affiche les paquets UDP MeshCom sur le <b>port 1799</b>. MH affiche les stations entendues récemment. Les positions sont traitées via UDP 1799 et affichées sur la carte OSM/Leaflet.</p>
-            <h3>🌐 Monde entier</h3><p>L’onglet <b>🌐 Monde entier</b> se trouve directement à côté de <b>Carte</b> et ouvre la page publique d’activité MeshCom de l’ÖVSV. <b>ACTIVITY</b> est sélectionné automatiquement au chargement. Le site intégré gère ses propres mises à jour ; MeshCom-Guru n’ajoute pas de rafraîchissement séparé de 15 secondes.</p>
-            <h3>🌤 Météo / 🔊 Son / Informations du nœud</h3><p>WX peut afficher température, humidité, QFE et QNH lorsque le WebService les fournit. Le son, le volume et le thème clair/sombre sont configurables. <b>Ouvrir les infos du nœud</b> affiche les informations du WebService.</p>
-            <h3>Installation</h3><p><b>ZIP Linux :</b> Extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code> ; les paramètres personnels restent dans <code>~/.MeshCom/settings.ini</code>.</p>
-            <h3>Aide → Info</h3><p>Affiche la version et les informations du programme.</p>
+            <h3>🎛 Affichage : Classique ou Tableau de bord</h3><p>Dans <b>Paramètres → Affichage</b>, choisissez entre <b>Classique</b> et le nouveau <b>Tableau de bord</b>. Les deux vues utilisent les mêmes données et fonctions MeshCom. Le choix est enregistré.</p><p>Le Tableau de bord réunit connexion, salons, chat, carte, activité mondiale, moniteur, MH et statistiques dans une seule vue.</p>
+            <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>cinq salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p>
+            <h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> saisir l'adresse IP du WebService MeshCom. <b>Station/GPS :</b> saisir votre indicatif et, si nécessaire, latitude et longitude. Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p><b>Connecter</b> établit la connexion au WebService MeshCom. Après une connexion manuelle, la reconnexion automatique est activée. <b>Déconnecter</b> la désactive volontairement.</p>
+            <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
+            <h3>📡 Moniteur, 📋 Stations / MH et 📊 Statistiques</h3><p>Le <b>Moniteur</b> affiche les paquets UDP MeshCom sur le <b>port 1799</b> avec type, indicatif, destination, RSSI, SNR et informations. La colonne d'informations peut être parcourue.</p><p><b>Stations / MH</b> affiche les stations entendues récemment avec indicatif, distance, RSSI et SNR sans barre de défilement horizontale inutile. Les <b>Statistiques</b> affichent les compteurs de session.</p>
+            <h3>🗺 Carte et 🌐 Monde entier</h3><p>La carte OSM/Leaflet affiche les positions et stations. <b>Monde entier</b> ouvre la page publique d'activité MeshCom et sélectionne automatiquement <b>ACTIVITY</b>. Le site intégré gère ses propres mises à jour ; MeshCom-Guru n'ajoute pas de rafraîchissement de 15 secondes.</p>
+            <h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
+            <h3>🎨 Couleurs du chat et 🔊 Son</h3><p>Les couleurs du chat, des indicatifs/liens cliquables, le son, le volume et le thème clair/sombre sont configurables dans les paramètres.</p>
+            <h3>Infos du nœud</h3><p><b>Infos du nœud</b> affiche les informations du WebService MeshCom connecté.</p>
+            <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le guide intégré suit également la langue sélectionnée.</p>
+            <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
             """,
         }
         view.setHtml(guides.get(lang, guides["de"]))
@@ -2879,7 +4247,17 @@ class MainWindow(QMainWindow):
         idx = self.tab_keys[key]
         self.unread.add(key)
         self.tabs.tabBar().setTabTextColor(idx, Qt.GlobalColor.red)
-        if not was_unread and self.tabs.currentIndex() != idx:
+
+        # Dashboard: die sichtbaren Raum-/Privat-/Alle-Schaltflächen müssen
+        # exakt dieselbe Ungelesen-Logik wie die klassische Tab-Leiste benutzen.
+        # Entscheidend ist dabei die aktuell im Dashboard angezeigte Auswahl,
+        # nicht der (unsichtbare) aktuelle Index der klassischen Tab-Leiste.
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_update_chat_button(key)
+
+        dashboard_current = getattr(self, "dashboard_current_key", None)
+        classic_current = self.tabs.currentIndex() == idx
+        if not was_unread and dashboard_current != key and not classic_current:
             self._play_notification_sound()
 
     def _set_tab_normal(self, key):
@@ -2887,6 +4265,8 @@ class MainWindow(QMainWindow):
             return
         idx = self.tab_keys[key]
         self.tabs.tabBar().setTabTextColor(idx, Qt.GlobalColor.black if self.current_theme == "light" else Qt.GlobalColor.white)
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_update_chat_button(key)
 
     def open_private_chat(self, callsign):
         callsign = self._normalize_callsign(callsign)
@@ -2898,6 +4278,8 @@ class MainWindow(QMainWindow):
         self.closed_private.pop(callsign.upper(), None)
         index = self._ensure_tab(key, callsign)
         self.tabs.setCurrentIndex(index)
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
         self.target_input.setText(callsign)
         self.status.setText(ui_text(f"Privatchat geöffnet: {callsign}"))
 
@@ -3434,7 +4816,9 @@ class MainWindow(QMainWindow):
         # (>* bzw. >ALL) gerichtet sind, weiterhin im Tab „Alle“ erscheinen.
         return [
             b for b in blocks
-            if self._room_from_block(b) in rooms or self._is_all_target(b)
+            if self._room_from_block(b) in rooms
+            or self._is_all_target(b)
+            or self._private_participants(b) is not None
         ]
 
     @classmethod
@@ -3622,19 +5006,39 @@ renderStations(initialStations);</script></body></html>"""
             self._push_map_stations(self._map_pending_stations)
 
     def _push_map_stations(self, stations):
-        if QWebEngineView is None or not hasattr(self, "map_view"):
-            return
+        # Die Karten sind im Dashboard und in der klassischen Ansicht getrennt.
+        # Deshalb darf ein fehlendes klassisches map_view niemals verhindern,
+        # dass das Dashboard seine Marker bekommt.
         self._map_pending_stations = list(stations or [])
-        if not self._map_ready:
-            return
-        import json
-        station_json = json.dumps(self._map_pending_stations, ensure_ascii=False)
-        self.map_view.page().runJavaScript(
-            f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+
+        classic_available = (
+            QWebEngineView is not None
+            and isinstance(getattr(self, "map_view", None), QWebEngineView)
         )
+        if classic_available and self._map_ready:
+            import json
+            station_json = json.dumps(self._map_pending_stations, ensure_ascii=False)
+            self.map_view.page().runJavaScript(
+                f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+            )
+
+        if hasattr(self, "dashboard_map_view"):
+            self._push_dashboard_map_stations(self._map_pending_stations)
 
     def _update_map(self):
-        if QWebEngineView is None or not hasattr(self, "map_view"):
+        # Classic and Dashboard use separate WebEngine map views.  In Dashboard
+        # mode the classic map view may not exist, so do not abort just because
+        # map_view is absent; the dashboard map must receive the same station
+        # data as the classic map.
+        classic_map_available = (
+            QWebEngineView is not None
+            and isinstance(getattr(self, "map_view", None), QWebEngineView)
+        )
+        dashboard_map_available = (
+            QWebEngineView is not None
+            and isinstance(getattr(self, "dashboard_map_view", None), QWebEngineView)
+        )
+        if not classic_map_available and not dashboard_map_available:
             return
 
         def distance_km(lat1, lon1, lat2, lon2):
@@ -3666,7 +5070,12 @@ renderStations(initialStations);</script></body></html>"""
 
     # ---------- Verbindung ----------
     def connect_mesh(self, automatic=False):
-        """Connect to the WebService; after a user connection, auto-reconnect is armed."""
+        """Connect to the WebService; after a user connection, auto-reconnect is armed.
+
+        The connection handler is shared by both layouts.  Rebuilding the
+        Dashboard/classic widgets must never leave the classic Connect button
+        in a stale disabled state.
+        """
         # A manual click explicitly enables automatic recovery.  Automatic
         # retries do not change this flag, so a transient network/node failure
         # cannot permanently disable the connection.
@@ -3727,6 +5136,7 @@ renderStations(initialStations);</script></body></html>"""
         self.connect_button.setEnabled(True)
         self.disconnect_button.setEnabled(False)
         self.status.setText(ui_text("Vom MeshCom-WebService getrennt"))
+        self._dashboard_sync_header()
 
     # ---------- Refresh ----------
     def update_messages(self):
@@ -3858,6 +5268,9 @@ renderStations(initialStations);</script></body></html>"""
                 if is_new and private_blocks and self.tabs.currentIndex() != idx:
                     self._set_tab_unread(key)
 
+            if hasattr(self, "dashboard_sidebar"):
+                self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
+
             # Tab „Alle“ basiert ebenfalls auf dem lokalen Nachrichtenpuffer.
             # Dadurch verschwinden Nachrichten nicht mehr nur deshalb, weil der
             # WebService sie bei einer späteren Abfrage nicht mehr zurückliefert.
@@ -3870,27 +5283,21 @@ renderStations(initialStations);</script></body></html>"""
             #   bleiben davon unberührt.
             all_blocks = self._filter_blocks(cached_blocks)
 
-            # Zusätzlich bekannte UDP-Positionskarten übernehmen, aber ebenfalls
-            # nur einmal. Die Positionsdaten selbst werden unabhängig davon in
-            # station_positions für die Karte gepflegt.
+            # Zusätzlich bekannte UDP-Positionsdaten werden nur bei
+            # deaktiviertem Raumfilter als Nachrichtenblock in „Alle“ angezeigt.
+            # Die Positionsdaten selbst bleiben unabhängig davon in
+            # station_positions für die Karte erhalten. Dadurch verschwinden
+            # beim aktiven Raumfilter die Koordinaten aus dem Chat, während die
+            # Kartenmarker weiterhin sichtbar bleiben.
             seen_all = {self._message_identity(b) for b in all_blocks if self._message_identity(b)}
-            for block in self.udp_position_blocks:
-                # Bei aktivem Raumfilter dürfen auch diese Zusatzblöcke nur in
-                # „Alle“ erscheinen, wenn sie einem gespeicherten Raum zugeordnet
-                # werden können. Bei deaktiviertem Filter bleibt das bisherige
-                # Verhalten vollständig erhalten.
-                if (
-                    self.filter_enabled.isChecked()
-                    and self._room_from_block(block) not in self._rooms()
-                    and not self._is_all_target(block)
-                ):
-                    continue
-                key = self._message_identity(block)
-                if key and key in seen_all:
-                    continue
-                if key:
-                    seen_all.add(key)
-                all_blocks.append(block)
+            if not self.filter_enabled.isChecked():
+                for block in self.udp_position_blocks:
+                    key = self._message_identity(block)
+                    if key and key in seen_all:
+                        continue
+                    if key:
+                        seen_all.add(key)
+                    all_blocks.append(block)
 
             # Eine eigene lokale Kopie wird NICHT zusätzlich erzeugt. Eigene
             # Nachrichten kommen weiterhin über den normalen WebService zurück.
@@ -3968,6 +5375,11 @@ renderStations(initialStations);</script></body></html>"""
             all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             self._update_tab_content(all_key, all_index, all_blocks)
+
+            # Kartenmarker sind unabhängig vom Raumfilter. Die bereits
+            # gespeicherten station_positions werden nach jeder Chat-/Filter-
+            # Aktualisierung erneut an Classic und Dashboard gepusht.
+            self._update_map()
 
             if self.filter_enabled.isChecked():
                 rooms = self._rooms()
@@ -4325,6 +5737,19 @@ renderStations(initialStations);</script></body></html>"""
             # exactly the same visual content.  This is the flicker fix.
             if old_digest != digest:
                 view.set_bubbles(unique)
+            # Dashboard exakt wie die klassische Ansicht behandeln:
+            # Die Bubble-Widgets werden nur neu aufgebaut, wenn sich der
+            # sichtbare Inhalt tatsächlich geändert hat. Ein regelmäßiger
+            # Refresh mit identischen Nachrichten darf die Blasen und damit
+            # auch die Scrollposition nicht neu erzeugen.
+            if (old_digest != digest and
+                    getattr(self, "dashboard_current_key", None) == key and
+                    hasattr(self, "dashboard_chat_view")):
+                self.dashboard_chat_view.set_bubbles(getattr(view, "_bubble_items", unique))
+                if hasattr(self, "dashboard_chat_title"):
+                    self.dashboard_chat_title.setText(
+                        f"💬 Raum #{key[1]}" if key[0] == "room" else f"👤 Privat – {key[1]}"
+                    )
         else:
             rendered = self._render_blocks(blocks)
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
@@ -4332,12 +5757,32 @@ renderStations(initialStations);</script></body></html>"""
             self.tab_hashes[key] = digest
             if key[0] == "all":
                 view.set_all_html(rendered)
+                # Dashboard shows the exact same rendered Alle chat.  This
+                # deliberately reuses the established renderer instead of
+                # creating a second, simplified message parser.
+                # Nur wenn im Dashboard tatsächlich „Alle“ ausgewählt ist,
+                # darf der regelmäßige Nachrichten-Refresh dessen Inhalt setzen.
+                # Bei Raum/Privat darf ein Hintergrund-Refresh den aktuell
+                # ausgewählten Chat nicht wieder auf „Alle“ zurücksetzen.
+                if (hasattr(self, "dashboard_chat_view") and
+                        getattr(self, "dashboard_current_key", ("all", "all")) == ("all", "all")):
+
+                    self.dashboard_chat_view.set_all_html(rendered)
             else:
                 view.setHtml(rendered)
         # ChatView keeps the current scroll position during refreshes and only
         # follows the newest message when the user was already at the bottom.
-        if changed and self.tabs.currentIndex() != index:
+        # Die klassische Ansicht färbt einen Tab bei geändertem Inhalt rot,
+        # wenn er nicht aktiv ist. Im Dashboard gilt dasselbe Prinzip für die
+        # sichtbare Auswahl. Dadurch färben sich Raum-Tabs und „Alle“ auch dann
+        # korrekt, wenn der klassische Tab im Hintergrund auf „Alle“ steht.
+        dashboard_current = getattr(self, "dashboard_current_key", None)
+        dashboard_inactive = dashboard_current is not None and dashboard_current != key
+        classic_inactive = self.tabs.currentIndex() != index
+        if changed and (classic_inactive or dashboard_inactive):
             self._set_tab_unread(key)
+        if hasattr(self, "dashboard_sidebar"):
+            self._dashboard_update_chat_button(key)
 
     def _export_current_chat(self):
         """Experimental export of the currently selected chat tab.
@@ -4461,7 +5906,23 @@ renderStations(initialStations);</script></body></html>"""
             self.status.setText(ui_text("Bitte zuerst mit dem MeshCom-WebService verbinden"))
             return
         text = self.message_input.text().strip()
+
+        # In der klassischen Ansicht ist der aktuell sichtbare Tab die
+        # maßgebliche Zielauswahl. Nach einem Dashboard -> Klassisch Wechsel
+        # kann target_input noch einen alten Wert enthalten (z. B. einen
+        # Filterraum). Deshalb beim Senden immer den tatsächlich ausgewählten
+        # Chat-Tab verwenden.
         target = self.target_input.text().strip()
+        if getattr(self, "layout_mode", "classic") == "classic":
+            try:
+                current_index = self.tabs.currentIndex()
+                current_key = self._key_for_index(current_index)
+                if current_key and current_key[0] in {"room", "private"}:
+                    target = str(current_key[1]).strip()
+                    self.target_input.setText(target)
+            except Exception:
+                pass
+
         if not text:
             self.status.setText(ui_text("Keine Nachricht eingegeben"))
             return
@@ -4517,6 +5978,8 @@ renderStations(initialStations);</script></body></html>"""
                     # darf den erneuten Versand nicht blockieren.
                     self.closed_private.pop(target.upper(), None)
                     idx = self._ensure_tab(key, target.upper())
+                    if hasattr(self, "dashboard_sidebar"):
+                        self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
                 self.tabs.setCurrentIndex(idx)
                 QTimer.singleShot(1500, self.update_messages)
         except Exception as exc:

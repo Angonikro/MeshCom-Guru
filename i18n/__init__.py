@@ -228,7 +228,36 @@ _UI = {
 }
 
 # Complete multilingual coverage for UI labels and runtime status text.
-EXTRA_UI_TRANSLATIONS = {'Node Information des verbundenen MeshCom-WebService anzeigen': 'Show Node Information of the connected MeshCom WebService', 'Raum {i + 1}': 'Room {i + 1}', '0 angezeigt · 0 gespeichert': '0 displayed · 0 stored', 'Verbindung verloren – verbinde erneut …': 'Connection lost – reconnecting …', 'Verbindung verloren – neuer Versuch: ': 'Connection lost – retry: ', 'Verbindung verloren – verbinde erneut … (': 'Connection lost – reconnecting … (', 'Theme gespeichert: ': 'Theme saved: ', 'Letzter Wetter-Sendeauftrag ': 'Last weather send request ', 'Letzter Sendeauftrag ': 'Last send request ', 'Node Info konnte nicht geöffnet werden: ': 'Node Info could not be opened: ', 'Privatchat geöffnet: ': 'Private chat opened: ', 'Privatchat geschlossen: ': 'Private chat closed: ', 'Nachrichten aktualisiert – Filter: ': 'Messages refreshed – Filter: ', 'Senden fehlgeschlagen: ': 'Sending failed: ', 'Abruf fehlgeschlagen: ': 'Request failed: ', 'Position empfangen: ': 'Position received: ', 'Filter gespeichert: ': 'Filter saved: ', 'Einstellungen gespeichert': 'Settings saved', 'Sound-Einstellungen gespeichert': 'Sound settings saved', 'Emoji passt nicht mehr in die 149 Zeichen': 'Emoji no longer fits within the 149-character limit', 'Nachricht eingeben …': 'Enter message …', 'Nachricht eingeben ...': 'Enter message ...', 'Suchen …': 'Search …', 'Schnelltexte bearbeiten': 'Edit quick texts', 'Schnelltext eingeben …': 'Enter quick text …', 'leer = mitgelieferten Signalton verwenden': 'empty = use the bundled notification sound', 'Chat-Farben': 'Chat colors', 'Über MeshCom-Guru': 'About MeshCom-Guru', 'Sound-Einstellungen': 'Sound settings', 'Node Information': 'Node Information', 'Wetterdaten': 'Weather data', 'Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.': 'Map view requires PySide6-WebEngine.\nPlease install requirements.txt again.', 'Breitengrad, z. B. 51.93': 'Latitude, e.g. 51.93', 'Längengrad, z. B. 8.88': 'Longitude, e.g. 8.88', 'eigenes Rufzeichen, z. B. DL9ABC-1': 'own callsign, e.g. DL9ABC-1', 'Raum oder Ziel, z. B. 262 oder DL9ABC-1': 'room or target, e.g. 262 or DL9ABC-1'}
+EXTRA_UI_TRANSLATIONS = {
+'MeshCom-Guru': 'MeshCom-Guru',
+'🔴 OFFLINE | keine Verbindung': '🔴 OFFLINE | no connection',
+'💬 Raum-Chats': '💬 Room Chats',
+'👤 Private Chats': '👤 Private Chats',
+'💬 Alle – Nachrichten aus deinen Räumen': '💬 All – Messages from your rooms',
+'💬 Raum #{key[1]}': '💬 Room #{key[1]}',
+'👤 Privat – {key[1]}': '👤 Private – {key[1]}',
+'📻 Räume': '📻 Rooms',
+'＋ Raum hinzufügen': '＋ Add room',
+'Räume hinzufügen / bearbeiten': 'Add / edit rooms',
+'☑ Raumfilter aktiv': '☑ Room filter active',
+'Stadt': 'City',
+'🌤 Wetter': '🌤 Weather',
+'⟳ Wetter aktualisieren': '⟳ Refresh weather',
+'➤ Wetter senden': '➤ Send weather',
+'📍 Karte – Stationen in deiner Umgebung': '📍 Map – Stations near you',
+'🌐 Weltweit – MeshCom Activity (integrierte HTML-Seite)': '🌐 Worldwide – MeshCom Activity (integrated HTML page)',
+'📡 Monitor – Live': '📡 Monitor – Live',
+'📋 Stations / MH – Letzte Stationen': '📋 Stations / MH – Latest Stations',
+'Noch keine Sitzungsdaten': 'No session data yet',
+'Noch keine privaten Chats': 'No private chats yet',
+'Räume verwalten': 'Manage rooms',
+'Bis zu 5 Räume eingeben. Die Räume werden auch im klassischen Filter verwendet.': 'Enter up to 5 rooms. The rooms are also used by the classic filter.',
+'🔗 Verbinden': '🔗 Connect',
+'⚯ Trennen': '⚯ Disconnect',
+'ℹ Node Info': 'ℹ Node Info',
+'Karte benötigt PySide6-WebEngine.': 'Map requires PySide6-WebEngine.',
+'Weltweit benötigt PySide6-WebEngine.': 'Worldwide requires PySide6-WebEngine.',
+'Node Information des verbundenen MeshCom-WebService anzeigen': 'Show Node Information of the connected MeshCom WebService', 'Raum {i + 1}': 'Room {i + 1}', '0 angezeigt · 0 gespeichert': '0 displayed · 0 stored', 'Verbindung verloren – verbinde erneut …': 'Connection lost – reconnecting …', 'Verbindung verloren – neuer Versuch: ': 'Connection lost – retry: ', 'Verbindung verloren – verbinde erneut … (': 'Connection lost – reconnecting … (', 'Theme gespeichert: ': 'Theme saved: ', 'Letzter Wetter-Sendeauftrag ': 'Last weather send request ', 'Letzter Sendeauftrag ': 'Last send request ', 'Node Info konnte nicht geöffnet werden: ': 'Node Info could not be opened: ', 'Privatchat geöffnet: ': 'Private chat opened: ', 'Privatchat geschlossen: ': 'Private chat closed: ', 'Nachrichten aktualisiert – Filter: ': 'Messages refreshed – Filter: ', 'Senden fehlgeschlagen: ': 'Sending failed: ', 'Abruf fehlgeschlagen: ': 'Request failed: ', 'Position empfangen: ': 'Position received: ', 'Filter gespeichert: ': 'Filter saved: ', 'Einstellungen gespeichert': 'Settings saved', 'Sound-Einstellungen gespeichert': 'Sound settings saved', 'Emoji passt nicht mehr in die 149 Zeichen': 'Emoji no longer fits within the 149-character limit', 'Nachricht eingeben …': 'Enter message …', 'Nachricht eingeben ...': 'Enter message ...', 'Suchen …': 'Search …', 'Schnelltexte bearbeiten': 'Edit quick texts', 'Schnelltext eingeben …': 'Enter quick text …', 'leer = mitgelieferten Signalton verwenden': 'empty = use the bundled notification sound', 'Chat-Farben': 'Chat colors', 'Über MeshCom-Guru': 'About MeshCom-Guru', 'Sound-Einstellungen': 'Sound settings', 'Node Information': 'Node Information', 'Wetterdaten': 'Weather data', 'Kartenansicht benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren.': 'Map view requires PySide6-WebEngine.\nPlease install requirements.txt again.', 'Breitengrad, z. B. 51.93': 'Latitude, e.g. 51.93', 'Längengrad, z. B. 8.88': 'Longitude, e.g. 8.88', 'eigenes Rufzeichen, z. B. DL9ABC-1': 'own callsign, e.g. DL9ABC-1', 'Raum oder Ziel, z. B. 262 oder DL9ABC-1': 'room or target, e.g. 262 or DL9ABC-1'}
 _UI.update(EXTRA_UI_TRANSLATIONS)
 
 _REVERSE = {v: k for k, v in _UI.items()}

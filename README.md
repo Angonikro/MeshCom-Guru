@@ -1,14 +1,32 @@
 # MeshCom-Guru
 
-**Version 0.3.77**
+**Version 0.3.78**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru1.png)
+## Neu in v0.3.78 – Neues Dashboard
 
-![MeshCom-Guru](meshcom-guru.png)
+Das **neue Dashboard** steht in v0.3.78 ganz im Mittelpunkt. Unter **Einstellungen → Darstellung** kann jederzeit zwischen **Dashboard** und **Klassisch** gewechselt werden. Beide Ansichten verwenden dieselben MeshCom-Daten und Funktionen.
 
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
+### Dashboard in v0.3.78
+- **Rufzeichen direkt im Dashboard:** Das eigene Rufzeichen kann jetzt oben in der ersten Reihe direkt eingegeben und gespeichert werden.
+- **Kompakte Kopfzeilen:** Raum/Ziel, Node Info, GPS und „Einstellungen speichern“ sind übersichtlich in der zweiten Reihe angeordnet.
+- **GPS-Schaltfläche nur einmal:** „GPS speichern“ erscheint im Dashboard nur noch an einer Stelle.
+- **GPS-Synchronisation:** Beim Wechsel von **Klassisch** zu **Dashboard** werden die aktuell eingegebenen GPS-Daten der klassischen Ansicht sofort ins Dashboard übernommen.
+
+- **Neues Dashboard-Design:** Übersichtliche Gesamtansicht mit Räumen, Alle, Privaten Chats, Karte, Weltweit, Monitor, Stations / MH und Statistik.
+- **Alle oben:** Die Ansicht **Alle** steht im Dashboard direkt unter dem Raumfilter.
+- **Stabile Chat-Bubbles:** Die Nachrichtenblasen bleiben beim Aktualisieren stabil und springen nicht unnötig.
+- **Ungelesene Chats:** Neue Nachrichten markieren Räume, **Alle** und Private Chats sichtbar.
+- **Private Chats:** Die Liste besitzt einen eigenen Scrollbereich, damit viele private Chats Karte, Weltweit und die unteren Bereiche nicht verdrängen.
+- **Karte:** Stations-/Positionsmarker bleiben auch im Dashboard erhalten.
+- **🌐 Weltweit:** Die MeshCom-Activity-Seite ist direkt im Dashboard eingebettet. Die Webseite übernimmt ihre eigene Aktualisierung; es gibt keinen zusätzlichen 15-Sekunden-Refresh.
+- **Weltweit-Selbstheilung:** Bei einem Renderer-Absturz oder einem länger anhaltenden Hänger wird die eingebettete Weltweit-Webseite automatisch wiederhergestellt.
+- **Klassisch-Fix:** Beim Wechsel zurück zur klassischen Ansicht werden Karte und Weltweit wieder als echte WebEngine-Ansichten angezeigt und nicht durch Platzhalter ersetzt.
+- **Monitor:** Lange Informationen und Nachrichten werden vollständig dargestellt und bei Bedarf umgebrochen; die Informationsspalte bleibt lesbar.
+- **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
+- **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und **GPS Eingabe** wurden in einer kompakten Dashboard-Zeile zusammengeführt.
+- **Mehrsprachigkeit:** Die neuen Dashboard-Bezeichnungen und Funktionen sind in Deutsch, English, Italiano, Nederlands und Français übersetzt.
 
 ## Inhalt
 
@@ -29,9 +47,8 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Aktueller Funktionsumfang v0.3.77
+## Aktueller Funktionsumfang v0.3.78
 
-- Weltweit Tab hinzugefügt, er öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV.
 - **Mehrsprachige Oberfläche:** Deutsch, English, Italiano, Nederlands und Français. Auch die neuen Funktionen **Chat exportieren** und die **erweiterte Farbauswahl** sind vollständig übersetzt.
 - **Chat-Export:** Der aktuell ausgewählte Chat kann als HTML-, TXT- oder CSV-Datei gespeichert werden.
 - **Erweiterte Chat-Farben:** Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe für anklickbare Rufzeichen und Internetlinks können unabhängig ausgewählt und gespeichert werden.
@@ -485,5 +502,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas QRV Raum 20

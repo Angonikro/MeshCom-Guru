@@ -27,6 +27,7 @@ def load_settings():
         "target": "",
         "filter_enabled": "0",
         "theme": "dark",
+        "layout_mode": "classic",
         "sound_enabled": "1",
         "sound_driver": "auto",
         "sound_volume": "70",

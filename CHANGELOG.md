@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.3.78 – Neues Dashboard
+
+- Rufzeichen direkt im Dashboard in der ersten Reihe editierbar und speicherbar.
+- Raum/Ziel, Node Info, GPS und „Einstellungen speichern“ kompakt in der zweiten Reihe angeordnet.
+- Doppelte GPS-Speicher-Schaltfläche im Dashboard entfernt.
+- **GPS-Synchronisation korrigiert:** Beim Wechsel von **Klassisch** zu **Dashboard** werden die aktuell eingegebenen GPS-Daten aus der klassischen Ansicht übernommen, sodass keine alten Dashboard-Werte angezeigt werden.
+- **Ansichtswechsel korrigiert:** Beim Wechsel zwischen **Dashboard** und **Klassisch** wird das aktuell ausgewählte Chat-Ziel korrekt über die `settings.ini` übernommen.
+- **Senden korrigiert:** In der klassischen Ansicht wird beim Senden das tatsächlich ausgewählte Chat-Ziel verwendet; gespeicherte `filter_room`-Werte überschreiben das Sendeziel nicht mehr.
+- **Neues Dashboard-Design:** Unter **Einstellungen → Darstellung** kann zwischen **Dashboard** und **Klassisch** gewechselt werden. Beide Ansichten verwenden dieselben vorhandenen MeshCom-Daten und Funktionen.
+- **Dashboard als vollständige Ansicht:** Räume, **Alle**, Private Chats, Karte, Weltweit, Monitor, Stations / MH und Statistik sind direkt im Dashboard erreichbar.
+- **Alle oben:** Die Ansicht **Alle** befindet sich direkt unter dem Raumfilter.
+- **Raum-Chats:** Die gespeicherten Räume werden direkt als anklickbare Raum-Chats angezeigt und bleiben auch für den klassischen Nachrichtenfilter erhalten.
+- **Private Chats:** Private Unterhaltungen sind getrennt erreichbar und besitzen einen eigenen Scrollbereich.
+- **Karte:** Stations- und Positionsdaten bleiben direkt im Dashboard verfügbar.
+- **🌐 Weltweit:** Die MeshCom-Activity-Seite ist direkt eingebettet. Die Webseite übernimmt ihre eigene Aktualisierung; ein zusätzlicher 15-Sekunden-Refresh wird nicht verwendet.
+- **Weltweit-Watchdog:** Ein Renderer-Absturz oder ein länger anhaltender Hänger der eingebetteten Weltweit-Ansicht wird erkannt und die Ansicht automatisch wiederhergestellt. Danach wird **ACTIVITY** wieder ausgewählt.
+- **Klassisch-Ansicht korrigiert:** Beim Wechsel vom Dashboard zurück auf Klassisch werden Karte und Weltweit wieder als echte Qt-WebEngine-Ansichten aufgebaut. Die bisherigen Platzhalter werden nicht mehr angezeigt.
+- **Monitor verbessert:** Lange Informationen und Nachrichten werden vollständig dargestellt, automatisch umgebrochen und bei Bedarf über die vorhandene Scrollmöglichkeit lesbar gehalten.
+- **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
+- **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und GPS-Eingabe sind kompakt im Dashboard zusammengeführt.
+- **Mehrsprachige Dashboard-Oberfläche:** Die neuen Bereiche und Bezeichnungen sind für Deutsch, English, Italiano, Nederlands und Français vorbereitet.
+- **Anleitungen:** Die integrierte Anleitung und die mitgelieferten PDF-Anleitungen bleiben Teil des v0.3.78-Stands.
+- Bestehende Funktionen aus **v0.3.77** bleiben erhalten.
+
 ## v0.3.77
 
 - **🌐 Weltweit-Tab integriert:** Der Weltweit-Tab ist direkt neben **Karte** verfügbar und öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV.
