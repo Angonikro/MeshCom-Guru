@@ -1,3 +1,11 @@
+# CHANGELOG
+
+## v0.3.81
+- 🌐 Weltweit: Externe Internetlinks öffnen im Systembrowser.
+- ✕ Dashboard: Sichtbarer X-Button zum Schließen privater Chats.
+- 🔢 Dashboard: Zeichenzähler `0/149` bis `149/149`.
+- Bewusst keine Übernahme der nicht funktionierenden Chat-Link-/Rufzeichen-Teständerungen.
+
 # Changelog
 
 ## v0.3.80 – Weltweit mit WebKitGTK und Übersetzungs-/Wetterkorrekturen

@@ -1,8 +1,8 @@
-# MeshCom-Guru v0.3.80
+# MeshCom-Guru v0.3.81
 
 ## Weltweit mit WebKitGTK
 
-v0.3.80 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitGTK** ein. Der Weltweit-Bereich verwendet damit keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
+v0.3.81 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitGTK** ein. Der Weltweit-Bereich verwendet damit keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
 
 - ACTIVITY wird beim Laden weiterhin automatisch geöffnet.
 - Die OSM-/Leaflet-Karte bleibt als vorhandene QtWebEngine-Ansicht erhalten.
@@ -14,6 +14,6 @@ v0.3.80 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitG
 
 ## Dokumentation
 
-- Version auf **0.3.80** aktualisiert.
+- Version auf **0.3.81** aktualisiert.
 - CHANGELOG und README ergänzt.
 - Die vorhandenen Funktionen und die fünf unterstützten Sprachen bleiben erhalten.

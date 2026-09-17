@@ -13,8 +13,8 @@ for _p in ("/usr/lib/python3/dist-packages", "/usr/lib/aarch64-linux-gnu/python3
     if os.path.isdir(_p) and _p not in sys.path:
         sys.path.append(_p)
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QWindow
+from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtGui import QWindow, QDesktopServices
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
@@ -26,10 +26,10 @@ try:
     except ValueError:
         gi.require_version("WebKit2", "4.0")
     gi.require_version("GdkX11", "3.0")
-    from gi.repository import Gtk, WebKit2, GdkX11
+    from gi.repository import Gtk, WebKit2, GdkX11, Gio
     GTK_WEBKIT_AVAILABLE = True
 except Exception:
-    Gtk = WebKit2 = GdkX11 = None
+    Gtk = WebKit2 = GdkX11 = Gio = None
     GTK_WEBKIT_AVAILABLE = False
 
 
@@ -77,6 +77,10 @@ class GtkWebKitWorldwide(QWidget):
             self._webview.set_hexpand(True)
             self._webview.set_vexpand(True)
             self._webview.connect("load-changed", self._on_load_changed)
+            # External Internet links from the embedded ÖVSV page must open
+            # in the normal system browser instead of navigating the embedded
+            # WebKit view away from the Worldwide page.
+            self._webview.connect("decide-policy", self._on_decide_policy)
             self._gtk_window.add(self._webview)
             self._gtk_window.show_all()
 
@@ -146,6 +150,58 @@ class GtkWebKitWorldwide(QWidget):
                 Gtk.main_iteration_do(False)
         except Exception:
             pass
+
+
+    def _on_decide_policy(self, webview, decision, decision_type):
+        """Open user-clicked external HTTP(S) links in the system browser."""
+        try:
+            if decision_type not in (
+                WebKit2.PolicyDecisionType.NAVIGATION_ACTION,
+                WebKit2.PolicyDecisionType.NEW_WINDOW_ACTION,
+            ):
+                return False
+
+            navigation_action = decision.get_navigation_action()
+            if navigation_action is None:
+                return False
+
+            # Only intercept an actual user click/gesture. Internal redirects
+            # and the page's own navigation are left inside WebKit.
+            if hasattr(navigation_action, "is_user_gesture") and not navigation_action.is_user_gesture():
+                return False
+
+            request = navigation_action.get_request()
+            uri = request.get_uri() if request is not None else ""
+            if not uri:
+                return False
+
+            lower_uri = uri.lower()
+            if not lower_uri.startswith(("http://", "https://")):
+                return False
+
+            # Links belonging to the embedded ÖVSV page stay embedded.
+            try:
+                from urllib.parse import urlparse
+                host = (urlparse(uri).hostname or "").lower()
+                if host in ("meshcom.oevsv.at", "www.meshcom.oevsv.at"):
+                    return False
+            except Exception:
+                pass
+
+            # Prevent the embedded page from following the external URL and
+            # hand it to the user's configured desktop browser instead.
+            decision.ignore()
+            try:
+                QDesktopServices.openUrl(QUrl(uri))
+            except Exception:
+                if Gio is not None:
+                    try:
+                        Gio.AppInfo.launch_default_for_uri(uri, None)
+                    except Exception:
+                        pass
+            return True
+        except Exception:
+            return False
 
     def _on_load_changed(self, webview, load_event):
         if not GTK_WEBKIT_AVAILABLE or WebKit2 is None:

@@ -2259,6 +2259,11 @@ class MainWindow(QMainWindow):
         self.dashboard_chat_view.set_chat_colors(
             self.chat_background, self.chat_text_color, self.chat_link_color
         )
+        # Dashboard verwendet exakt dieselbe ChatView-Linkverarbeitung wie
+        # die klassische Ansicht. Rufzeichen-Links werden dadurch intern an
+        # open_private_chat weitergereicht; http/https-Links bleiben bei der
+        # gemeinsamen ChatView-Verarbeitung und öffnen den Systembrowser.
+        self.dashboard_chat_view.callsignClicked.connect(self.open_private_chat)
         self._all_chat_views.append(self.dashboard_chat_view)
         chat_layout.addWidget(self.dashboard_chat_view, 1)
 
@@ -2277,6 +2282,19 @@ class MainWindow(QMainWindow):
         self.dashboard_emoji_button.setFixedWidth(42)
         self.dashboard_emoji_button.clicked.connect(self._dashboard_insert_emoji)
         dash_message.addWidget(self.dashboard_emoji_button)
+
+        # Dashboard-Zeichenzähler für das Nachrichtenfeld.
+        self.dashboard_message_counter = QLabel("0/149")
+        self.dashboard_message_counter.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.dashboard_message_counter.setMinimumWidth(48)
+        self.dashboard_message_counter.setToolTip(ui_text("Maximal 149 Zeichen"))
+        self.dashboard_message_input.textChanged.connect(
+            self._update_dashboard_message_counter
+        )
+        dash_message.addWidget(self.dashboard_message_counter)
+
         chat_layout.addLayout(dash_message)
         main_split.addWidget(chat_frame)
 
@@ -2469,33 +2487,28 @@ class MainWindow(QMainWindow):
             button.setStyleSheet("")
 
     def _dashboard_rebuild_private_buttons(self, side_layout):
-        """Keep the dashboard private-chat list synchronized with real private tabs.
-
-        The private list lives in its own QScrollArea so an increasing number
-        of private chats cannot change the height of the lower dashboard
-        panels.
-        """
+        """Keep the dashboard private-chat list synchronized with real private tabs."""
         private_layout = getattr(
             self, "dashboard_private_scroll_layout", side_layout
         )
 
-        for _, widget in getattr(self, "dashboard_private_buttons", []):
-            try:
-                private_layout.removeWidget(widget)
-            except Exception:
-                pass
-            widget.setParent(None)
-            widget.deleteLater()
-        self.dashboard_private_buttons = []
+        # Remove complete private-chat rows so the X buttons cannot accumulate.
+        while private_layout.count():
+            item = private_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+            child_layout = item.layout()
+            if child_layout is not None:
+                while child_layout.count():
+                    child_item = child_layout.takeAt(0)
+                    child_widget = child_item.widget()
+                    if child_widget is not None:
+                        child_widget.setParent(None)
+                        child_widget.deleteLater()
 
-        old_empty = getattr(self, "dashboard_private_empty_label", None)
-        if old_empty is not None:
-            try:
-                private_layout.removeWidget(old_empty)
-            except Exception:
-                pass
-            old_empty.setParent(None)
-            old_empty.deleteLater()
+        self.dashboard_private_buttons = []
         self.dashboard_private_empty_label = None
 
         private_keys = [key for key in self.tab_keys if key[0] == "private"]
@@ -2503,11 +2516,35 @@ class MainWindow(QMainWindow):
 
         if private_keys:
             for key in private_keys:
+                row = QWidget()
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.setSpacing(3)
+
                 b = QPushButton(str(key[1]))
                 b.setMinimumHeight(30)
                 b.setProperty("dashboardNav", True)
-                b.clicked.connect(lambda _=False, k=key: self._dashboard_select_chat(k))
-                private_layout.addWidget(b)
+                b.clicked.connect(
+                    lambda _=False, k=key: self._dashboard_select_chat(k)
+                )
+
+                close_btn = QPushButton("✕")
+                close_btn.setFixedSize(30, 30)
+                close_btn.setToolTip(ui_text("Privatchat schließen"))
+                close_btn.setStyleSheet(
+                    "QPushButton { color: #ff4d4d; font-size: 17px; font-weight: 900; "
+                    "border: 1px solid #6b7280; border-radius: 5px; padding: 0; "
+                    "background: #202938; } "
+                    "QPushButton:hover { color: #ffffff; border-color: #ff4d4d; "
+                    "background: #3a2630; }"
+                )
+                close_btn.clicked.connect(
+                    lambda _=False, k=key: self._dashboard_close_private_chat(k)
+                )
+
+                row_layout.addWidget(b, 1)
+                row_layout.addWidget(close_btn)
+                private_layout.addWidget(row)
                 self.dashboard_private_buttons.append((str(key[1]), b))
                 self._dashboard_update_chat_button(key, b)
         else:
@@ -2516,6 +2553,20 @@ class MainWindow(QMainWindow):
             private_layout.addWidget(empty)
             self.dashboard_private_empty_label = empty
 
+    def _dashboard_close_private_chat(self, key):
+        """Close a private chat from the Dashboard X button."""
+        index = self.tab_keys.get(key)
+        if index is not None:
+            self._close_tab(index)
+            if (
+                hasattr(self, "dashboard_current_key")
+                and self.dashboard_current_key == key
+            ):
+                self.dashboard_current_key = ("all", "all")
+                all_index = self.tab_keys.get(("all", "all"))
+                if all_index is not None:
+                    self.tabs.setCurrentIndex(all_index)
+        self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
 
     def _dashboard_rebuild_room_buttons(self, side_layout):
         """Build one clean dashboard room list from the saved room settings."""
@@ -2923,6 +2974,19 @@ class MainWindow(QMainWindow):
             self.message_counter.setToolTip("Maximale Länge erreicht: 149 Zeichen")
         else:
             self.message_counter.setToolTip(f"Noch {149 - len(text)} Zeichen frei")
+
+    def _update_dashboard_message_counter(self, text):
+        """Update the Dashboard character counter for the 149-character limit."""
+        count = len(str(text or ""))
+        self.dashboard_message_counter.setText(f"{count}/149")
+        if count >= 149:
+            self.dashboard_message_counter.setToolTip(
+                ui_text("Maximale Länge erreicht: 149 Zeichen")
+            )
+        else:
+            self.dashboard_message_counter.setToolTip(
+                ui_text(f"Noch {149 - count} Zeichen frei")
+            )
 
     def _load_quick_texts(self, settings):
         """Load persistent quick texts, with useful defaults on first start."""
@@ -4817,6 +4881,18 @@ class MainWindow(QMainWindow):
                 msg["ack"] = True
                 return msg
         return None
+
+    def _bubble_link_activated(self, url):
+        """Handle links clicked inside room/private message bubbles.
+
+        This mirrors ChatView's existing link handling: MeshCom callsign links
+        open a private chat, while normal HTTP(S) links open in the system browser.
+        """
+        value = str(url or "").strip()
+        if value.startswith("meshcom://call/"):
+            self.open_private_chat(value.rsplit("/", 1)[-1])
+        elif value.startswith(("http://", "https://")):
+            QDesktopServices.openUrl(QUrl(value))
 
     def _refresh_visible_ack_states(self):
         # Den bestehenden Nachrichten-Refresh verwenden, damit auch der
