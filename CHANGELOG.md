@@ -2,9 +2,11 @@
 
 ## v0.3.81
 - 🌐 Weltweit: Externe Internetlinks öffnen im Systembrowser.
+- 🔗 Raum-Chats: Internetlinks in Nachrichten sind wieder anklickbar und öffnen im Systembrowser.
+- 📡 Raum-Chats: Anklickbare Rufzeichen öffnen direkt den passenden privaten Chat.
 - ✕ Dashboard: Sichtbarer X-Button zum Schließen privater Chats.
 - 🔢 Dashboard: Zeichenzähler `0/149` bis `149/149`.
-- Bewusst keine Übernahme der nicht funktionierenden Chat-Link-/Rufzeichen-Teständerungen.
+- Die Link- und Rufzeichenfunktionen wurden für die Raum-Chats wieder funktionsfähig integriert.
 
 # Changelog
 

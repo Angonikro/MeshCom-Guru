@@ -29,10 +29,11 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 ## Neu in v0.3.81 – Funktionsbasis
 
 - **🌐 Weltweit:** Externe Internetlinks in der eingebetteten ÖVSV-Seite öffnen im normalen Systembrowser; die Weltweit-Seite bleibt eingebettet.
+- **🔗 Raum-Chats – Internetlinks:** Internetlinks in den Nachrichten der Räume sind wieder anklickbar und öffnen im normalen Systembrowser.
+- **📡 Raum-Chats – Rufzeichen:** Anklickbare Rufzeichen in den Räumen öffnen direkt den passenden privaten Chat.
 - **✕ Privatchats:** Private Chats im Dashboard besitzen einen sichtbaren X-Button zum Schließen.
 - **🔢 Zeichenzähler:** Das Dashboard-Nachrichtenfeld zeigt live `0/149` bis `149/149`.
-
-Die noch nicht bestätigten Chat-Link- und Rufzeichen-Änderungen wurden bewusst **nicht** aus früheren Testversionen übernommen.
+- Die Link- und Rufzeichenfunktionen in den Raum-Chats wurden in v0.3.81 wieder funktionsfähig hergestellt.
 
 ## Neu in v0.3.80 – WebKitGTK für Weltweit
 
