@@ -63,6 +63,18 @@ from core.meshcom import MeshCom
 from core.settings import SETTINGS_FILE, load_settings
 from version import VERSION
 
+# WebKitGTK is used only on Linux. Windows keeps the proven QtWebEngine
+# implementation for the Worldwide tab.
+if platform.system().lower() == "linux":
+    try:
+        from ui.gtk_webkit_worldwide import GtkWebKitWorldwide, GTK_WEBKIT_AVAILABLE
+    except Exception:
+        GtkWebKitWorldwide = None
+        GTK_WEBKIT_AVAILABLE = False
+else:
+    GtkWebKitWorldwide = None
+    GTK_WEBKIT_AVAILABLE = False
+
 
 CALLSIGN_RE = re.compile(r"\b[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\b", re.IGNORECASE)
 ROOM_RE = re.compile(r"(?:>|&gt;)\s*(\d{1,8})\b")
@@ -846,8 +858,8 @@ class MainWindow(QMainWindow):
             temp2 = val("temp2")
             batt = val("batt", "battery")
             volt = val("volt", "voltage")
-            if temp != "": parts.append(f"Temperatur {self._monitor_num(temp, 1)} °C")
-            if hum != "": parts.append(f"Luftfeuchte {self._monitor_num(hum, 1)} %")
+            if temp != "": parts.append(f"{ui_text('Temperatur')} {self._monitor_num(temp, 1)} °C")
+            if hum != "": parts.append(f"{ui_text('Luftfeuchte')} {self._monitor_num(hum, 1)} %")
             if qfe != "": parts.append(f"QFE {self._monitor_num(qfe, 1)} hPa")
             if qnh != "": parts.append(f"QNH {self._monitor_num(qnh, 1)} hPa")
             if co2 != "": parts.append(f"CO₂ {self._monitor_num(co2, 0)} ppm")
@@ -856,7 +868,7 @@ class MainWindow(QMainWindow):
             if temp2 != "": parts.append(f"Temp2 {self._monitor_num(temp2, 1)} °C")
             if batt != "": parts.append(f"Batt {self._monitor_num(batt, 0)} %")
             if volt != "": parts.append(f"Volt {self._monitor_num(volt, 2)} V")
-            detail = "  ·  ".join(parts) or "Telemetry"
+            detail = "  ·  ".join(parts) or ui_text("Telemetry")
         else:
             detail = msg or json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
 
@@ -1706,10 +1718,13 @@ class MainWindow(QMainWindow):
         self.map_view.setHtml(self._map_html([]), QUrl("https://meshcom-guru.local/"))
 
     def _create_classic_worldwide_view(self):
-        """Create the classic Worldwide WebEngine only when classic mode is active."""
+        """Use WebKitGTK on Linux; keep QtWebEngine on Windows."""
+        if platform.system().lower() == "linux" and GtkWebKitWorldwide is not None and GTK_WEBKIT_AVAILABLE:
+            self.worldwide_view = GtkWebKitWorldwide("https://meshcom.oevsv.at/#")
+            return
         if QWebEngineView is None:
             self.worldwide_view = QLabel(
-                "Weltweit benötigt PySide6-WebEngine.\nBitte requirements.txt erneut installieren."
+                "Weltweit benötigt QtWebEngine.\nBitte requirements.txt erneut installieren."
             )
             return
         self.worldwide_view = QWebEngineView()
@@ -2272,6 +2287,7 @@ class MainWindow(QMainWindow):
 
         map_frame = QFrame()
         map_frame.setObjectName("DashboardPanel")
+        map_frame.setMinimumHeight(260)
         map_layout = QVBoxLayout(map_frame)
         map_layout.setContentsMargins(8, 8, 8, 8)
         map_layout.setSpacing(4)
@@ -2289,21 +2305,52 @@ class MainWindow(QMainWindow):
 
         ww_frame = QFrame()
         ww_frame.setObjectName("DashboardPanel")
+        # Keep enough space for the real WebKit page immediately after startup.
+        # Without a minimum size the native GTK/X11 child can collapse until
+        # the user moves the splitter manually.
+        ww_frame.setMinimumHeight(230)
         ww_layout = QVBoxLayout(ww_frame)
         ww_layout.setContentsMargins(8, 8, 8, 8)
         ww_layout.setSpacing(4)
         ww_title = QLabel("🌐 Weltweit – MeshCom Activity (integrierte HTML-Seite)")
         ww_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
         ww_layout.addWidget(ww_title)
-        self.dashboard_worldwide_view = QWebEngineView() if QWebEngineView is not None else QLabel("Weltweit benötigt PySide6-WebEngine.")
-        if QWebEngineView is not None:
+        # Worldwide deliberately uses WebKitGTK. The OSM map above remains
+        # the existing QtWebEngine map and is not changed.
+        if platform.system().lower() == "linux" and GtkWebKitWorldwide is not None and GTK_WEBKIT_AVAILABLE:
+            self.dashboard_worldwide_view = GtkWebKitWorldwide("https://meshcom.oevsv.at/#")
+        elif QWebEngineView is not None:
+            self.dashboard_worldwide_view = QWebEngineView()
             self.dashboard_worldwide_view.loadFinished.connect(self._dashboard_worldwide_load_finished)
-            self.dashboard_worldwide_view.renderProcessTerminated.connect(self._dashboard_worldwide_render_terminated)
+            self.dashboard_worldwide_view.renderProcessTerminated.connect(self._worldwide_render_terminated)
             self.dashboard_worldwide_view.setUrl(QUrl("https://meshcom.oevsv.at/#"))
+        else:
+            self.dashboard_worldwide_view = QLabel(
+                "Weltweit benötigt QtWebEngine.\nBitte requirements.txt erneut installieren."
+            )
+        self.dashboard_worldwide_view.setMinimumSize(100, 190)
+        self.dashboard_worldwide_view.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         ww_layout.addWidget(self.dashboard_worldwide_view, 1)
         right_split.addWidget(ww_frame)
         right_split.setStretchFactor(0, 55)
         right_split.setStretchFactor(1, 45)
+        # Explicit initial sizes are applied after the dashboard has received
+        # its real height; this prevents Worldwide from starting almost flat.
+        def _initial_right_split_sizes(rs=right_split):
+            h = rs.height()
+            if h > 0:
+                handle = rs.handleWidth()
+                available = max(1, h - handle)
+                ww_h = max(230, int(available * 0.42))
+                map_h = max(260, available - ww_h)
+                if map_h + ww_h > available:
+                    map_h = max(1, available - ww_h)
+                rs.setSizes([map_h, ww_h])
+        QTimer.singleShot(0, _initial_right_split_sizes)
+        QTimer.singleShot(250, _initial_right_split_sizes)
+        QTimer.singleShot(750, _initial_right_split_sizes)
         main_split.addWidget(right_split)
 
         # Give the splitter explicit initial sizes. Qt can still resize them
@@ -2320,7 +2367,10 @@ class MainWindow(QMainWindow):
         bottom_split.setHandleWidth(5)
 
         self.dashboard_monitor_table = QTableWidget(0, 7)
-        self.dashboard_monitor_table.setHorizontalHeaderLabels(["Zeit", "Typ", "Rufzeichen", "Ziel", "RSSI", "SNR", "Information"])
+        self.dashboard_monitor_table.setHorizontalHeaderLabels([
+            ui_text("Zeit"), ui_text("Typ"), ui_text("Rufzeichen"), ui_text("Ziel"),
+            "RSSI", "SNR", ui_text("Information")
+        ])
         self.dashboard_monitor_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.dashboard_monitor_table.setWordWrap(True)
         self.dashboard_monitor_table.verticalHeader().setVisible(False)
@@ -2336,7 +2386,9 @@ class MainWindow(QMainWindow):
         bottom_split.addWidget(self._dashboard_table_panel(ui_text("📡 Monitor – Live"), self.dashboard_monitor_table))
 
         self.dashboard_mh_table = QTableWidget(0, 4)
-        self.dashboard_mh_table.setHorizontalHeaderLabels(["Rufzeichen", "Entfernung", "RSSI", "SNR"])
+        self.dashboard_mh_table.setHorizontalHeaderLabels([
+            ui_text("Rufzeichen"), ui_text("Entfernung"), "RSSI", "SNR"
+        ])
         self.dashboard_mh_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.dashboard_mh_table.verticalHeader().setVisible(False)
         # Four compact columns always fit into the MH panel. There is no useful
@@ -3589,11 +3641,26 @@ class MainWindow(QMainWindow):
                 if stats_idx >= 0:
                     self.tabs.setTabText(stats_idx, ui_text("📊 Statistik"))
 
+        # Wetteranzeige immer aus den unveränderten Rohwerten neu aufbauen.
+        # Wichtig: Niemals den bereits übersetzten Anzeigetext erneut durch
+        # ui_text() schicken. Sonst können bei einem Sprachwechsel aus
+        # "Temperatur"/"Temperatuur"/"Temperature" Buchstaben angehängt werden.
+        self._update_weather_display()
+
         # Table headers
         if hasattr(self, "monitor_table"):
             self.monitor_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Zeit", "Typ", "Von", "Nach", "RSSI", "SNR", "Information"]])
         if hasattr(self, "mh_table"):
             self.mh_table.setHorizontalHeaderLabels([ui_text(x) for x in ["Rufzeichen", "Entfernung", "RSSI", "SNR", "Batterie", "Zuletzt gehört"]])
+        if hasattr(self, "dashboard_monitor_table"):
+            self.dashboard_monitor_table.setHorizontalHeaderLabels([
+                ui_text("Zeit"), ui_text("Typ"), ui_text("Rufzeichen"), ui_text("Ziel"),
+                "RSSI", "SNR", ui_text("Information")
+            ])
+        if hasattr(self, "dashboard_mh_table"):
+            self.dashboard_mh_table.setHorizontalHeaderLabels([
+                ui_text("Rufzeichen"), ui_text("Entfernung"), "RSSI", "SNR"
+            ])
 
     def save_all_settings(self):
         # Nur im Dashboard werden die sichtbaren Dashboard-Felder als
@@ -3739,6 +3806,27 @@ class MainWindow(QMainWindow):
 
         threading.Thread(target=worker, name="MeshCom-Wetter", daemon=True).start()
 
+    def _update_weather_display(self):
+        """Render the weather line from raw values for the current language.
+
+        The raw values in self.weather_data are language-independent. Rebuilding
+        the complete line on every language change prevents translations from
+        being applied repeatedly to an already translated string.
+        """
+        data = getattr(self, "weather_data", None) or {}
+        if not data or not all(data.get(k) not in (None, "") for k in ("temperature", "humidity", "qfe", "qnh")):
+            return
+        weather_text = (
+            f"{tr('Temperatur:')} {data.get('temperature', '–')} | "
+            f"{tr('Luftfeuchte:')} {data.get('humidity', '–')} | "
+            f"{tr('QFE:')} {data.get('qfe', '–')} | "
+            f"{tr('QNH:')} {data.get('qnh', '–')}"
+        )
+        if hasattr(self, "weather_values_label"):
+            self.weather_values_label.setText(weather_text)
+        if hasattr(self, "dashboard_weather_values"):
+            self.dashboard_weather_values.setText(weather_text)
+
     def _apply_weather_result(self, data):
         self._weather_fetch_in_progress = False
         self.weather_refresh_button.setEnabled(True)
@@ -3747,15 +3835,7 @@ class MainWindow(QMainWindow):
             self.weather_status_label.setText(str(data["error"]))
             return
         self.weather_data = data
-        weather_text = (
-            f"{ui_text('Temperatur:')} {data.get('temperature', '–')} | "
-            f"{ui_text('Luftfeuchte:')} {data.get('humidity', '–')} | "
-            f"{ui_text('QFE:')} {data.get('qfe', '–')} | "
-            f"{ui_text('QNH:')} {data.get('qnh', '–')}"
-        )
-        self.weather_values_label.setText(weather_text)
-        if hasattr(self, "dashboard_weather_values"):
-            self.dashboard_weather_values.setText(weather_text)
+        self._update_weather_display()
         if hasattr(self, "dashboard_weather_city") and self.dashboard_weather_city.text().strip() != self.weather_city_input.text().strip():
             self.dashboard_weather_city.setText(self.weather_city_input.text().strip())
         self.weather_status_label.setText(ui_text("WX-Information erfolgreich aus dem MeshCom-WebService gelesen"))

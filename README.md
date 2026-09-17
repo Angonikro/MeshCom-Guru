@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -29,9 +21,33 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.79**
+**Version 0.3.80**
 
 
+
+## Neu in v0.3.80 – WebKitGTK für Weltweit
+
+- **🌐 Weltweit direkt im Fenster:** Die echte ÖVSV-MeshCom-Webseite wird im Weltweit-Bereich über **WebKitGTK** eingebettet.
+- **Automatische Plattform-Erkennung:** MeshCom-Guru erkennt selbst, ob es unter **Linux** oder **Windows** läuft, und verwendet für **Weltweit** automatisch die passende Web-Technik: **WebKitGTK unter Linux/Raspberry Pi** und **QtWebEngine unter Windows**. Die OSM-Karte bleibt auf beiden Plattformen unverändert über QtWebEngine.
+- **ACTIVITY automatisch:** Beim Laden wird weiterhin automatisch die **ACTIVITY**-Ansicht ausgewählt.
+- **RAM-schonender Weltweit-Bereich:** Weltweit verwendet keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
+- **OSM-Karte bleibt erhalten:** Die vorhandene OSM-/Leaflet-Karte läuft weiterhin über die bisherige QtWebEngine-Implementierung.
+- **Startgröße korrigiert:** Die Weltweit-Webseite wird direkt mit der verfügbaren Höhe angezeigt; der Splitter muss nicht mehr zuerst bewegt werden.
+- Für WebKitGTK ist unter Debian/Raspberry Pi einmal `./install_webkitgtk.sh` auszuführen.
+- **Übersetzungen aktualisiert:** Dashboard-, Monitor-, MH- und Wettertexte wurden in Deutsch, English, Italiano, Nederlands und Français ergänzt bzw. korrigiert.
+- **Temperaturanzeige:** Die Bezeichnung wird ohne den fehlerhaften zusätzlichen Buchstaben dargestellt. Beim Sprachwechsel werden die Wetterwerte aus den Rohdaten neu aufgebaut.
+
+## Automatische Web-Engine-Auswahl
+
+MeshCom-Guru erkennt die verwendete Plattform automatisch. Für den Tab **🌐 Weltweit** wird dadurch ohne manuelle Auswahl die passende Web-Engine verwendet:
+
+- **Linux / Raspberry Pi:** **WebKitGTK** – dadurch wird für Weltweit kein eigener QtWebEngine-/Chromium-Renderer verwendet.
+- **Windows:** **QtWebEngine** – die bisher bewährte Windows-Integration bleibt erhalten.
+- **Karte / OSM:** Die Kartenansicht verwendet weiterhin **QtWebEngine**.
+
+Der Benutzer muss die Plattform nicht selbst einstellen.
+
+---
 
 ## Neu in v0.3.79 – Emoji-Fix und Dashboard
 
@@ -60,7 +76,7 @@ Das **neue Dashboard** steht in v0.3.78 ganz im Mittelpunkt. Unter **Einstellung
 - **Karte:** Stations-/Positionsmarker bleiben auch im Dashboard erhalten.
 - **🌐 Weltweit:** Die MeshCom-Activity-Seite ist direkt im Dashboard eingebettet. Die Webseite übernimmt ihre eigene Aktualisierung; es gibt keinen zusätzlichen 15-Sekunden-Refresh.
 - **Weltweit-Selbstheilung:** Bei einem Renderer-Absturz oder einem länger anhaltenden Hänger wird die eingebettete Weltweit-Webseite automatisch wiederhergestellt.
-- **Klassisch-Fix:** Beim Wechsel zurück zur klassischen Ansicht werden Karte und Weltweit wieder als echte WebEngine-Ansichten angezeigt und nicht durch Platzhalter ersetzt.
+- **Klassisch-Fix:** Beim Wechsel zwischen Dashboard und Klassisch bleibt die OSM-Karte als QtWebEngine-Ansicht erhalten; Weltweit wird über WebKitGTK eingebettet.
 - **Monitor:** Lange Informationen und Nachrichten werden vollständig dargestellt und bei Bedarf umgebrochen; die Informationsspalte bleibt lesbar.
 - **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
 - **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und **GPS Eingabe** wurden in einer kompakten Dashboard-Zeile zusammengeführt.
@@ -202,7 +218,20 @@ Wechsle in den Projektordner:
 cd ~/Downloads/MeshCom
 ```
 
-## 3. Abhängigkeiten installieren
+## 3. WebKitGTK für „Weltweit“ installieren
+
+Unter **Linux / Raspberry Pi** benötigt der Tab **🌐 Weltweit** WebKitGTK.
+
+Führe im Projektordner einmal aus:
+
+```bash
+chmod +x install_webkitgtk.sh
+./install_webkitgtk.sh
+```
+
+Das Skript installiert die benötigten WebKitGTK-Systempakete. Dieser Schritt ist unter Linux für die Weltweit-Ansicht erforderlich.
+
+## 4. Abhängigkeiten installieren
 
 Führe aus:
 
@@ -224,7 +253,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 4. MeshCom-Guru starten
+## 5. MeshCom-Guru starten
 
 Mit:
 
@@ -510,5 +539,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

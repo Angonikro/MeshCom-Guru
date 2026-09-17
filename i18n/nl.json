@@ -247,5 +247,7 @@
   "⚯ Trennen": "⚯ Verbinding verbreken",
   "ℹ Node Info": "ℹ Node-info",
   "Karte benötigt PySide6-WebEngine.": "Kaart vereist PySide6-WebEngine.",
-  "Weltweit benötigt PySide6-WebEngine.": "Wereldwijd vereist PySide6-WebEngine."
+  "Weltweit benötigt PySide6-WebEngine.": "Wereldwijd vereist PySide6-WebEngine.",
+  "Telemetry": "Telemetrie",
+  "Ziel": "Doel"
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3.80 – Weltweit mit WebKitGTK und Übersetzungs-/Wetterkorrekturen
+
+- **🌐 Weltweit neu umgesetzt:** Die echte ÖVSV-MeshCom-Seite wird innerhalb von MeshCom-Guru über **WebKitGTK** eingebettet. Dadurch benötigt der Weltweit-Bereich keinen eigenen QtWebEngine/Chromium-Renderer mehr.
+- **Automatische Plattform-Erkennung:** MeshCom-Guru erkennt beim Start selbst, ob die Anwendung unter **Linux** oder **Windows** läuft, und wählt für den Tab **Weltweit** automatisch die passende Web-Technik: **WebKitGTK unter Linux/Raspberry Pi** und **QtWebEngine unter Windows**. Die OSM-Karte bleibt auf beiden Plattformen bei der vorhandenen QtWebEngine-Implementierung.
+- **ACTIVITY automatisch:** Beim Laden der ÖVSV-Seite wird weiterhin automatisch **ACTIVITY** geöffnet.
+- **OSM-Karte erhalten:** Die vorhandene OSM-/Leaflet-Karte bleibt unverändert als QtWebEngine-Ansicht erhalten.
+- **Weltweit-Größe korrigiert:** Die eingebettete WebKitGTK-Seite erhält beim Start zuverlässig ihre verfügbare Höhe und muss nicht mehr erst durch Ziehen des Splitters sichtbar gemacht werden.
+- **WebKitGTK-Installation:** Das Projekt enthält `install_webkitgtk.sh` für die benötigten Debian/Raspberry-Pi-Pakete.
+- **Übersetzungen aktualisiert:** Sichtbare Dashboard-, Monitor-, MH- und Wetterbezeichnungen wurden für Deutsch, English, Italiano, Nederlands und Français ergänzt bzw. korrigiert.
+- **Temperaturanzeige korrigiert:** Die Wetteranzeige verwendet wieder die saubere Bezeichnung **Temperatur** bzw. die jeweilige Übersetzung; der fehlerhafte zusätzliche Buchstabe am Ende der Bezeichnung wurde entfernt.
+- **Temperatur-/Wetter-Sprachwechsel stabilisiert:** Wetterwerte werden aus den Rohdaten neu aufgebaut, statt bereits übersetzte Texte erneut zu übersetzen.
+- Die bisherigen Emoji-, Schnelltext-, Chat-, Monitor-, MH-, GPS-, Wetter-, Statistik-, Dashboard- und Kartenfunktionen bleiben erhalten.
+
+
 ## v0.3.79 – Emoji-Einfügen korrigiert
 
 - **Emoji-Popup korrigiert:** Das Emoji-Fenster öffnet sich wieder direkt über dem jeweils gedrückten Smiley-Symbol – sowohl in **Klassisch** als auch im **Dashboard**.

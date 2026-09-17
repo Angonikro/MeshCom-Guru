@@ -67,6 +67,7 @@ _UI = {
     "Typ": "Type",
     "Von": "From",
     "Nach": "To",
+    "Ziel": "Target",
     "Rufzeichen": "Callsign",
     "Entfernung": "Distance",
     "Batterie": "Battery",
@@ -208,6 +209,7 @@ _UI = {
     "Länge:": "Longitude:",
     "Höhe:": "Altitude:",
     "Batteriekapazität:": "Battery capacity:",
+    "Telemetry": "Telemetry",
     "Eigene Station": "Own station",
     "Zuletzt gehört:": "Last heard:",
     "Entfernung:": "Distance:",
@@ -312,9 +314,9 @@ def ui_text(text):
         def replace_ui_phrase(value, source, target):
             pattern = re.escape(source)
             if source and source[0].isalnum():
-                pattern = r"(?<!\\w)" + pattern
+                pattern = r"(?<!\w)" + pattern
             if source and source[-1].isalnum():
-                pattern = pattern + r"(?!\\w)"
+                pattern = pattern + r"(?!\w)"
             return re.sub(pattern, lambda _m: target, value)
 
         # Always replace from German source phrases to the selected language.

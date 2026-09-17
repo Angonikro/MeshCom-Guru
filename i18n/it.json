@@ -247,5 +247,7 @@
   "⚯ Trennen": "⚯ Disconnetti",
   "ℹ Node Info": "ℹ Info nodo",
   "Karte benötigt PySide6-WebEngine.": "La mappa richiede PySide6-WebEngine.",
-  "Weltweit benötigt PySide6-WebEngine.": "Mondiale richiede PySide6-WebEngine."
+  "Weltweit benötigt PySide6-WebEngine.": "Mondiale richiede PySide6-WebEngine.",
+  "Telemetry": "Telemetria",
+  "Ziel": "Destinazione"
 }

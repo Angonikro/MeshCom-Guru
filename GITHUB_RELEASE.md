@@ -1,17 +1,19 @@
-# MeshCom-Guru v0.3.79
+# MeshCom-Guru v0.3.80
 
-## Emoji-Einfügen korrigiert
+## Weltweit mit WebKitGTK
 
-v0.3.79 behebt einen Fehler beim Einfügen von Emojis in der klassischen Ansicht und im Dashboard.
+v0.3.80 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitGTK** ein. Der Weltweit-Bereich verwendet damit keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
 
-- Das beim Öffnen des Emoji-Pickers aktive Nachrichtenfeld wird als Einfügeziel gespeichert.
-- Das Popup kann den Fokus übernehmen, ohne dass dadurch versehentlich das andere Nachrichtenfeld verwendet wird.
-- Bereits verwendete Smileys werden nicht mehr aus dem anderen Feld übernommen.
-- Nach dem Einfügen bleibt der Fokus im richtigen Nachrichtenfeld.
-- Schnelltexte, Dashboard, Weltweit, Karte, Monitor, Stations / MH und die übrigen Funktionen aus v0.3.78 bleiben erhalten.
+- ACTIVITY wird beim Laden weiterhin automatisch geöffnet.
+- Die OSM-/Leaflet-Karte bleibt als vorhandene QtWebEngine-Ansicht erhalten.
+- Die Startgröße des Weltweit-Bereichs wurde korrigiert, sodass die Seite sofort sichtbar ist und nicht erst über den Splitter vergrößert werden muss.
+- `install_webkitgtk.sh` installiert die benötigten WebKitGTK-/GTK-Pakete unter Debian/Raspberry Pi.
+- Übersetzungen für Deutsch, English, Italiano, Nederlands und Français wurden aktualisiert.
+- Die Temperaturbezeichnung wurde korrigiert; der zusätzliche Buchstabe wurde entfernt.
+- Die Wetteranzeige wird beim Sprachwechsel aus den Rohdaten neu aufgebaut, damit Temperatur, Luftfeuchte, QFE und QNH nicht durch mehrfaches Übersetzen beschädigt werden.
 
 ## Dokumentation
 
-- Version auf **0.3.79** aktualisiert.
+- Version auf **0.3.80** aktualisiert.
 - CHANGELOG und README ergänzt.
-- Die vorhandenen fünfsprachigen Anleitungen bleiben Bestandteil des Projekts.
+- Die vorhandenen Funktionen und die fünf unterstützten Sprachen bleiben erhalten.
