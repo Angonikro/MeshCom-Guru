@@ -1,4 +1,8 @@
-# MeshCom-Guru v0.3.80
+# MeshCom-Guru v0.3.81
+
+## Windows-OSM-Marker korrigiert
+
+Die OSM-/Leaflet-Stationsmarker verwenden jetzt eine eingebettete DivIcon-Darstellung. Damit benötigen sie unter Windows/QtWebEngine keine externen Leaflet-Marker-PNG-Dateien mehr.
 
 ## Weltweit mit WebKitGTK
 
@@ -14,6 +18,6 @@ v0.3.80 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitG
 
 ## Dokumentation
 
-- Version auf **0.3.80** aktualisiert.
+- Version auf **0.3.81** aktualisiert.
 - CHANGELOG und README ergänzt.
 - Die vorhandenen Funktionen und die fünf unterstützten Sprachen bleiben erhalten.

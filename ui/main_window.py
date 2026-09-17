@@ -5097,7 +5097,7 @@ class MainWindow(QMainWindow):
         import json
         station_json = json.dumps(stations, ensure_ascii=False)
         html_page = """<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>html,body,#map{height:100%;margin:0}</style></head>
+<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>html,body,#map{height:100%;margin:0}.meshcom-marker{width:28px;height:36px;position:relative}.meshcom-marker span{position:absolute;left:7px;top:1px;width:14px;height:14px;border-radius:50% 50% 50% 0;background:#1976d2;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);transform:rotate(-45deg)}.meshcom-marker span:after{content:'';position:absolute;left:4px;top:4px;width:4px;height:4px;border-radius:50%;background:#fff}.meshcom-marker.own span{background:#d32f2f}</style></head>
 <body><div id='map'></div><script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script><script>
 const initialStations=__STATIONS__;
 const map=L.map('map').setView([51,10],6);
@@ -5113,10 +5113,19 @@ function formatDistance(km){
 function renderStations(stations){
   const hadStations=markerLayer.getLayers().length>0;
   markerLayer.clearLayers();
-  stations.forEach(s=>{const m=L.marker([s.lat,s.lon]).addTo(markerLayer);const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
+  (stations||[]).forEach(s=>{
+    const lat=Number(s.lat), lon=Number(s.lon);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat > 90||lon < -180||lon > 180) return;
+    // Use a self-contained DivIcon instead of Leaflet's default PNG marker.
+    // This is important on Windows/QtWebEngine where the relative marker
+    // image URL can fail while the OSM tiles and Leaflet JavaScript still load.
+    const markerClass=s.own?'meshcom-marker own':'meshcom-marker';
+    const icon=L.divIcon({className:'',html:'<div class=\"'+markerClass+'\"><span></span></div>',iconSize:[28,36],iconAnchor:[14,36],popupAnchor:[0,-32]});
+    const m=L.marker([lat,lon],{icon:icon}).addTo(markerLayer);
+    const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
     const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
     const distanceText=distance && !s.own ? '<br><b>Entfernung:</b> '+esc(distance) : '';
-    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+'<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
+    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+'<br>Breite: '+lat.toFixed(6)+'<br>Länge: '+lon.toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
   });
   setTimeout(()=>map.invalidateSize(),50);
   if(firstRender && !hadStations){

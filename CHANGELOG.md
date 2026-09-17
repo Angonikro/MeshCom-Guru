@@ -1,4 +1,8 @@
 # Changelog
+## v0.3.81 – Windows OSM-Marker-Fix
+- OSM-Kartenmarker verwenden jetzt eine eingebettete Leaflet-Darstellung (DivIcon).
+- Dadurch sind die Stationsmarker auch unter Windows/QtWebEngine sichtbar, ohne Abhängigkeit von Leaflets externen Marker-PNGs.
+- Ungültige Koordinaten werden vor dem Setzen eines Markers verworfen.
 
 ## v0.3.80 – Weltweit mit WebKitGTK und Übersetzungs-/Wetterkorrekturen
 

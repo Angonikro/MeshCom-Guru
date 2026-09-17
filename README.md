@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -29,9 +21,14 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.80**
+**Version 0.3.81**
 
 
+
+## Neu in v0.3.81 – Windows-OSM-Marker korrigiert
+
+- **OSM-Marker unter Windows korrigiert:** Die Stationsmarker der OSM-/Leaflet-Karte verwenden jetzt eine eingebettete Leaflet-Darstellung (DivIcon). Dadurch sind sie unabhängig von externen Marker-PNG-Dateien auch unter Windows/QtWebEngine sichtbar.
+- **Ungültige Koordinaten abgefangen:** Marker werden nur bei gültigen Positionsdaten gesetzt.
 
 ## Neu in v0.3.80 – WebKitGTK für Weltweit
 
