@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.3.83
+- 💬 **Dashboard – „Alle“ korrigiert:** Beim Wechsel aus einem Raum auf **Alle** wird das Feld **Raum / Ziel** jetzt sofort geleert. Der zuletzt ausgewählte Raum bleibt nicht mehr als Sendeziel stehen.
+- Dashboard und klassische Ansicht verwenden beim Wechsel auf **Alle** dasselbe Verhalten.
+
 ## v0.3.82
 - ⚙️ **Einstellungen speichern:** Das Speichern im Dashboard und in der klassischen Ansicht trennt die bestehende MeshCom-Verbindung nicht mehr. Die Verbindung bleibt online, statt unnötig einen Disconnect mit anschließendem Auto-Reconnect auszulösen.
 

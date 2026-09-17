@@ -2732,6 +2732,14 @@ class MainWindow(QMainWindow):
             self.target_input.setText(str(key[1]))
             if hasattr(self, "dashboard_room_input"):
                 self.dashboard_room_input.setText(str(key[1]))
+        elif key[0] == "all":
+            # "Alle" hat bewusst kein Sendeziel. Beim Wechsel aus einem
+            # Raum darf der zuletzt gewählte Raum deshalb nicht im Feld
+            # "Raum / Ziel" stehen bleiben. Dashboard und klassische Ansicht
+            # müssen sich hier identisch verhalten.
+            self.target_input.clear()
+            if hasattr(self, "dashboard_room_input"):
+                self.dashboard_room_input.clear()
 
         self.dashboard_current_key = key
         self.unread.discard(key)
