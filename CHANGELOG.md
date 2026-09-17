@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v0.3.82
+- ⚙️ **Einstellungen speichern:** Das Speichern im Dashboard und in der klassischen Ansicht trennt die bestehende MeshCom-Verbindung nicht mehr. Die Verbindung bleibt online, statt unnötig einen Disconnect mit anschließendem Auto-Reconnect auszulösen.
+
 ## v0.3.81
 - 🌐 Weltweit: Externe Internetlinks öffnen im Systembrowser.
 - 🔗 Raum-Chats: Internetlinks in Nachrichten sind wieder anklickbar und öffnen im Systembrowser.
@@ -7,8 +10,6 @@
 - ✕ Dashboard: Sichtbarer X-Button zum Schließen privater Chats.
 - 🔢 Dashboard: Zeichenzähler `0/149` bis `149/149`.
 - Die Link- und Rufzeichenfunktionen wurden für die Raum-Chats wieder funktionsfähig integriert.
-
-# Changelog
 
 ## v0.3.80 – Weltweit mit WebKitGTK und Übersetzungs-/Wetterkorrekturen
 

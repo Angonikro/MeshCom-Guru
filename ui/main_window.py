@@ -3764,12 +3764,20 @@ class MainWindow(QMainWindow):
         self.own_lat, self.own_lon = lat, lon
         self._write_settings()
 
-        # Eine fehlende IP darf das Speichern der übrigen persönlichen
-        # Einstellungen nicht verhindern. Nur die MeshCom-Verbindung wird in
-        # diesem Fall unverändert gelassen.
+        # Einstellungen speichern darf die bestehende Verbindung NICHT
+        # trennen. Die bisherige Version erzeugte hier ein neues MeshCom-
+        # Objekt und setzte den Verbindungsstatus auf OFFLINE. Das löste
+        # anschließend unnötig den Auto-Reconnect aus.
+        #
+        # Wenn eine neue Hotspot-IP eingetragen wurde, wird nur die Adresse
+        # des bereits vorhandenen Clients aktualisiert. Die nächste Anfrage
+        # verwendet damit die neue Adresse, ohne beim Speichern bewusst zu
+        # disconnecten.
         if ip:
-            self.mesh = MeshCom(ip)
-            self._set_connection_status(False)
+            if hasattr(self, "mesh") and self.mesh is not None:
+                self.mesh.ip = ip
+            else:
+                self.mesh = MeshCom(ip)
         self._ensure_room_tabs()
         self._update_map()
         if ip:

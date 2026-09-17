@@ -1,19 +1,18 @@
-# MeshCom-Guru v0.3.81
+# MeshCom-Guru v0.3.82
 
-## Weltweit mit WebKitGTK
+## Einstellungen speichern
 
-v0.3.81 bettet die echte ÖVSV-MeshCom-Seite im Weltweit-Bereich über **WebKitGTK** ein. Der Weltweit-Bereich verwendet damit keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
+- Beim Speichern der Einstellungen im Dashboard und in der klassischen Ansicht wird die bestehende MeshCom-Verbindung nicht mehr unnötig getrennt.
+- Die Verbindung bleibt online, statt durch das Speichern einen Disconnect mit anschließendem Auto-Reconnect auszulösen.
 
-- ACTIVITY wird beim Laden weiterhin automatisch geöffnet.
-- Die OSM-/Leaflet-Karte bleibt als vorhandene QtWebEngine-Ansicht erhalten.
-- Die Startgröße des Weltweit-Bereichs wurde korrigiert, sodass die Seite sofort sichtbar ist und nicht erst über den Splitter vergrößert werden muss.
-- `install_webkitgtk.sh` installiert die benötigten WebKitGTK-/GTK-Pakete unter Debian/Raspberry Pi.
-- Übersetzungen für Deutsch, English, Italiano, Nederlands und Français wurden aktualisiert.
-- Die Temperaturbezeichnung wurde korrigiert; der zusätzliche Buchstabe wurde entfernt.
-- Die Wetteranzeige wird beim Sprachwechsel aus den Rohdaten neu aufgebaut, damit Temperatur, Luftfeuchte, QFE und QNH nicht durch mehrfaches Übersetzen beschädigt werden.
+## Vorgängerversion v0.3.81
 
-## Dokumentation
+- Internetlinks in **Weltweit** öffnen im Systembrowser.
+- Internetlinks in **Raum-Chats** sind wieder anklickbar und öffnen im Systembrowser.
+- Anklickbare **Rufzeichen in Raum-Chats** öffnen direkt den passenden privaten Chat.
+- Sichtbarer X-Button für private Chats im Dashboard.
+- Dashboard-Zeichenzähler `0/149` bis `149/149`.
 
-- Version auf **0.3.81** aktualisiert.
-- CHANGELOG und README ergänzt.
-- Die vorhandenen Funktionen und die fünf unterstützten Sprachen bleiben erhalten.
+## Grundlage
+
+Die übrigen Funktionen und die WebKitGTK-/Weltweit-Funktionen aus den vorherigen Versionen bleiben erhalten.

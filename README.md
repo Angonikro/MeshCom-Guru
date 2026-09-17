@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -29,19 +21,24 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.81**
+**Version 0.3.82**
 
 
 
 
-## Neu in v0.3.81 – Funktionsbasis
+## Neu in v0.3.82 – Einstellungen speichern
+
+- **⚙️ Einstellungen speichern:** Beim Speichern der Einstellungen im **Dashboard** und in der **klassischen Ansicht** wird die bestehende MeshCom-Verbindung nicht mehr unnötig getrennt.
+- Die Verbindung bleibt online, anstatt durch das Speichern einen Disconnect mit anschließendem automatischen Reconnect auszulösen.
+- Die bereits funktionierenden Link-, Rufzeichen-, Dashboard- und Chat-Funktionen aus **v0.3.81** bleiben erhalten.
+
+## Neu in v0.3.81 – Links und Rufzeichen in Raum-Chats
 
 - **🌐 Weltweit:** Externe Internetlinks in der eingebetteten ÖVSV-Seite öffnen im normalen Systembrowser; die Weltweit-Seite bleibt eingebettet.
 - **🔗 Raum-Chats – Internetlinks:** Internetlinks in den Nachrichten der Räume sind wieder anklickbar und öffnen im normalen Systembrowser.
 - **📡 Raum-Chats – Rufzeichen:** Anklickbare Rufzeichen in den Räumen öffnen direkt den passenden privaten Chat.
 - **✕ Privatchats:** Private Chats im Dashboard besitzen einen sichtbaren X-Button zum Schließen.
 - **🔢 Zeichenzähler:** Das Dashboard-Nachrichtenfeld zeigt live `0/149` bis `149/149`.
-- Die Link- und Rufzeichenfunktionen in den Raum-Chats wurden in v0.3.81 wieder funktionsfähig hergestellt.
 
 ## Neu in v0.3.80 – WebKitGTK für Weltweit
 
@@ -97,6 +94,7 @@ Das **neue Dashboard** steht in v0.3.78 ganz im Mittelpunkt. Unter **Einstellung
 - **Klassisch-Fix:** Beim Wechsel zwischen Dashboard und Klassisch bleibt die OSM-Karte als QtWebEngine-Ansicht erhalten; Weltweit wird über WebKitGTK eingebettet.
 - **Monitor:** Lange Informationen und Nachrichten werden vollständig dargestellt und bei Bedarf umgebrochen; die Informationsspalte bleibt lesbar.
 - **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
+- **Einstellungen speichern ohne Disconnect:** Das Speichern persönlicher Einstellungen trennt die bestehende MeshCom-Verbindung nicht mehr. Die Verbindung bleibt beim Speichern online.
 - **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und **GPS Eingabe** wurden in einer kompakten Dashboard-Zeile zusammengeführt.
 - **Mehrsprachigkeit:** Die neuen Dashboard-Bezeichnungen und Funktionen sind in Deutsch, English, Italiano, Nederlands und Français übersetzt.
 
@@ -557,5 +555,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
