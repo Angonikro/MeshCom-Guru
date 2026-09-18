@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
-
-- 🖥️ **Dashboard-Layout angepasst:** Die Aufteilung entspricht jetzt dem festgelegten Referenzlayout.
-- 💬 **Chatbereich:** Der Chat wurde gegenüber der vorherigen Aufteilung verbreitert.
-- 🗺️ **Karte und 🌐 Weltweit:** Beide Bereiche wurden entsprechend etwas kompakter gehalten, damit der zusätzliche Platz dem Chat zur Verfügung steht.
-- 📻 **Räume:** **Räume** und **+ Raum hinzufügen** stehen direkt nebeneinander. Die Größe und Anordnung der Raum-Buttons bleiben unverändert.
-- 🌐 **Weltweit:** Die bestehende WebKitGTK-Integration bleibt erhalten.
-- 🖱️ **Mausrad:** Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
 
 ## Inhalt
 
@@ -30,7 +22,15 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.85**
+## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
+
+- 🖥️ **Dashboard-Layout angepasst:** Die Aufteilung entspricht jetzt dem festgelegten Referenzlayout.
+- 💬 **Chatbereich:** Der Chat wurde gegenüber der vorherigen Aufteilung verbreitert.
+- 🗺️ **Karte und 🌐 Weltweit:** Beide Bereiche wurden entsprechend etwas kompakter gehalten, damit der zusätzliche Platz dem Chat zur Verfügung steht.
+- 📻 **Räume:** **Räume** und **+ Raum hinzufügen** stehen direkt nebeneinander. Die Größe und Anordnung der Raum-Buttons bleiben unverändert.
+- 🌐 **Weltweit:** Die bestehende WebKitGTK-Integration bleibt erhalten.
+- 🖱️ **Mausrad:** Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
+
 
 ## Neu in v0.3.84 – Nachrichtenanzeige und Monitor stabilisiert
 
