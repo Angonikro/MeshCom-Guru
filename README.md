@@ -2,13 +2,14 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
+## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
 
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
+- 🖥️ **Dashboard-Layout angepasst:** Die Aufteilung entspricht jetzt dem festgelegten Referenzlayout.
+- 💬 **Chatbereich:** Der Chat wurde gegenüber der vorherigen Aufteilung verbreitert.
+- 🗺️ **Karte und 🌐 Weltweit:** Beide Bereiche wurden entsprechend etwas kompakter gehalten, damit der zusätzliche Platz dem Chat zur Verfügung steht.
+- 📻 **Räume:** **Räume** und **+ Raum hinzufügen** stehen direkt nebeneinander. Die Größe und Anordnung der Raum-Buttons bleiben unverändert.
+- 🌐 **Weltweit:** Die bestehende WebKitGTK-Integration bleibt erhalten.
+- 🖱️ **Mausrad:** Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
 
 ## Inhalt
 
@@ -29,7 +30,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.84**
+**Version 0.3.85**
 
 ## Neu in v0.3.84 – Nachrichtenanzeige und Monitor stabilisiert
 
@@ -578,5 +579,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

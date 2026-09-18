@@ -77,6 +77,34 @@ class GtkWebKitWorldwide(QWidget):
             self._webview.set_hexpand(True)
             self._webview.set_vexpand(True)
             self._webview.connect("load-changed", self._on_load_changed)
+
+            # IMPORTANT: Catch the wheel at GTK's capture phase, before
+            # WebKit gets a chance to consume the native event.  The WebView
+            # is a native foreign X11 window inside Qt, so handling the wheel
+            # in Qt or with a DOM wheel listener is unreliable on this setup.
+            # GTK 3.24's EventControllerScroll receives both discrete mouse
+            # wheel events and smooth scroll events and gives us an unambiguous
+            # signed vertical delta.
+            self._wheel_controller = None
+            try:
+                flags = Gtk.EventControllerScrollFlags.VERTICAL
+                self._wheel_controller = Gtk.EventControllerScroll.new(
+                    self._gtk_window, flags
+                )
+                self._wheel_controller.set_propagation_phase(
+                    Gtk.PropagationPhase.CAPTURE
+                )
+                self._wheel_controller.connect("scroll", self._on_gtk_scroll)
+            except Exception:
+                self._wheel_controller = None
+
+            # If the WebView's own handler sees the event after our capture
+            # handler, stop propagation so the page is scrolled exactly once.
+            try:
+                self._webview.connect("scroll-event", self._consume_webview_scroll)
+            except Exception:
+                pass
+
             # External Internet links from the embedded ÖVSV page must open
             # in the normal system browser instead of navigating the embedded
             # WebKit view away from the Worldwide page.
@@ -141,6 +169,31 @@ class GtkWebKitWorldwide(QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         QTimer.singleShot(0, self._sync_foreign_geometry)
+
+    def _on_gtk_scroll(self, controller, dx, dy):
+        """Translate GTK's native wheel delta into one WebKit page scroll.
+
+        GTK reports positive Y for the physical downward wheel direction and
+        negative Y for upward scrolling.  Browser scrollTop uses the same
+        convention: positive values move the document downward.
+        """
+        if not self._webview or not GTK_WEBKIT_AVAILABLE:
+            return
+        try:
+            if abs(float(dy)) < 0.0001:
+                return
+            # Mouse wheels commonly arrive as +/-1. Smooth wheels can use
+            # fractional deltas. Scale both consistently without reversing
+            # either direction.
+            amount = float(dy) * 180.0
+            script = "window.scrollBy(0, %s);" % (repr(amount),)
+            self._webview.run_javascript(script, None, None, None)
+        except Exception:
+            pass
+
+    def _consume_webview_scroll(self, webview, event):
+        """Prevent WebKit from applying a second native scroll."""
+        return True
 
     def _iterate_gtk(self):
         if not GTK_WEBKIT_AVAILABLE:
@@ -228,6 +281,7 @@ class GtkWebKitWorldwide(QWidget):
         try:
             if hasattr(self, "_gtk_timer"):
                 self._gtk_timer.stop()
+            self._wheel_controller = None
             if self._gtk_window is not None:
                 self._gtk_window.hide()
                 self._gtk_window.destroy()

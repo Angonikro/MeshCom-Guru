@@ -2176,8 +2176,8 @@ class MainWindow(QMainWindow):
         # bereits gleichzeitig sichtbar (Räume/Private links, Chat Mitte,
         # Karte/Weltweit rechts, Monitor/MH/Statistik unten).
 
-        # Main area: proportions close to the reference design:
-        # sidebar 15 %, chat 28 %, map/worldwide 57 %.
+        # Main area: fixed initial widths matching the supplied reference.
+        # Sidebar stays unchanged; chat gets the space taken from the right column.
         main_split = QSplitter(Qt.Orientation.Horizontal)
         main_split.setChildrenCollapsible(False)
         main_split.setHandleWidth(5)
@@ -2196,8 +2196,9 @@ class MainWindow(QMainWindow):
         room_head = QHBoxLayout()
         title = QLabel(ui_text("📻 Räume"))
         title.setStyleSheet("font-size: 12pt; font-weight: 700;")
+        title.setFixedWidth(68)
+        room_head.setSpacing(5)
         room_head.addWidget(title)
-        room_head.addStretch(1)
         add_room = QPushButton(ui_text("＋ Raum hinzufügen"))
         add_room.setMinimumHeight(30)
         add_room.setToolTip(ui_text("Räume hinzufügen / bearbeiten"))
@@ -2375,12 +2376,10 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(750, _initial_right_split_sizes)
         main_split.addWidget(right_split)
 
-        # Give the splitter explicit initial sizes. Qt can still resize them
-        # interactively, but the dashboard starts in the intended proportions.
-        main_split.setStretchFactor(0, 15)
-        main_split.setStretchFactor(1, 28)
-        main_split.setStretchFactor(2, 57)
-        main_split.setSizes([205, 390, 625])
+        # Fixed initial layout matching the reference screenshot:
+        # rooms ≈ 220 px, chat ≈ 525 px, right column ≈ 635 px.
+        # Do not use stretch factors here: they would undo the intended split.
+        main_split.setSizes([220, 482, 678])
         root_layout.addWidget(main_split, 1)
 
         # Bottom information strip: Monitor 50 %, MH 30 %, Statistics 20 %.

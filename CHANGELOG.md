@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.3.85 – Dashboard-Layout angepasst
+
+- 🖥️ Dashboard-Aufteilung nach dem festgelegten Referenzlayout angepasst.
+- 💬 Chatbereich breiter dargestellt.
+- 🗺️ Karte und 🌐 Weltweit entsprechend kompakter angeordnet.
+- 📻 **Räume** und **+ Raum hinzufügen** direkt nebeneinander.
+- 🔘 Größe und Anordnung der Raum-Buttons bleiben erhalten.
+- 🖱️ Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
+- 🌐 Die bestehende WebKitGTK-Integration für Weltweit bleibt erhalten.
+
+# CHANGELOG
+
 ## v0.3.84
 - 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden.
 - 📡 **Monitor – eigene Sendungen stabilisiert:** Erfolgreich an den MeshCom-WebService übertragene eigene Nachrichten werden sofort im Monitor gespeichert und angezeigt.

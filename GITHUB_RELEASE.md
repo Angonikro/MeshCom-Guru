@@ -1,13 +1,25 @@
-# MeshCom-Guru v0.3.84
+# MeshCom-Guru v0.3.85
 
-## Änderungen in v0.3.84
-- 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Identischer Text vom gleichen Rufzeichen wird nur dann zusammengeführt, wenn auch der Zeitstempel identisch ist.
-- 📡 **Monitor – eigene Sendungen:** Erfolgreiche eigene Sendungen werden sofort im Monitor gespeichert und angezeigt.
-- 📡 **UDP-/MH-Echo:** Ein späteres eigenes Echo wird mit dem lokalen Eintrag zusammengeführt.
-- 🔎 **Exakte Zuordnung:** Echo und lokale Sendung werden anhand des exakten Nachrichtentextes zugeordnet.
-- ⏸️ **Monitor-Pause:** Eigene Sendungen gehen während der Pause nicht verloren.
-- 🧩 **Lange Laufzeit:** Wiederverwendete MsgIds können neue Nachrichten nicht mehr aus dem Chat verdrängen.
-- MH-/UDP-Empfang bleibt unverändert.
-## Vorgängerversionen
+## Änderungen in v0.3.85
+- 🖥️ Dashboard-Layout nach dem festgelegten Referenzlayout angepasst.
+- 💬 Chatbereich breiter dargestellt.
+- 🗺️ Karte und 🌐 Weltweit entsprechend kompakter angeordnet.
+- 📻 **Räume** und **+ Raum hinzufügen** direkt nebeneinander.
+- 🔘 Raum-Buttons bleiben in Größe und Anordnung unverändert.
+- 🖱️ Die funktionierende GTK-Capture-Mausradlösung für Weltweit bleibt erhalten.
+- 🌐 WebKitGTK für Weltweit bleibt erhalten.
 
-Die übrigen Funktionen aus v0.3.82 und den vorherigen Versionen bleiben erhalten.
+## Installation unter Linux / Raspberry Pi
+
+Für die Weltweit-Ansicht wird WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
+
+```bash
+chmod +x install_webkitgtk.sh
+./install_webkitgtk.sh
+```
+
+Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCom-Guru über `run_linux.sh` oder `python3 main.py` starten.
+
+## Debian-Paket
+
+Das Paket `MeshCom-Guru_v0.3.85_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
