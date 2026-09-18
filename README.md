@@ -2,14 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
-
 ## Inhalt
 
 - Chat mit empfangenen MeshCom-Nachrichten
@@ -29,7 +21,17 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-**Version 0.3.83**
+**Version 0.3.84**
+
+## Neu in v0.3.84 – Nachrichtenanzeige und Monitor stabilisiert
+
+- 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden. Ein zweites „test“ wird dadurch nicht mehr als Duplikat verworfen.
+- 📡 **Monitor – eigene Sendungen:** Eine erfolgreich an den MeshCom-WebService übertragene eigene Nachricht wird sofort im Monitor gespeichert und angezeigt – unabhängig davon, ob später ein UDP-/MH-Echo über die Antenne zurückkommt.
+- 📡 **Eigenes Echo:** Kommt das eigene Echo später zurück, wird es mit der vorhandenen lokalen Sendung zusammengeführt und nicht doppelt angezeigt.
+- 🔎 **Exakte Zuordnung:** Beim Zusammenführen wird der exakte Nachrichtentext verwendet, damit unterschiedliche Nachrichten nicht versehentlich zusammengeführt werden.
+- ⏸️ **Monitor-Pause:** Eigene Sendungen werden auch während einer Monitor-Pause intern gespeichert.
+- 🧩 **Lange Laufzeit:** Wiederverwendete MsgIds können neue Nachrichten nicht mehr aus dem Chat verdrängen.
+- Die bestehende MH-/UDP-Empfangsverarbeitung bleibt unverändert.
 
 ## Neu in v0.3.83 – Raum / Ziel bei „Alle“
 
@@ -568,5 +570,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

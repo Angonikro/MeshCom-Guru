@@ -891,7 +891,11 @@ class MainWindow(QMainWindow):
                     # Nachricht zusammenführen, damit sie nicht doppelt erscheint.
                     if existing_dst not in {"", "-", "*"} and current_dst not in {"", "-", "*", existing_dst}:
                         continue
-                    if detail.replace("#", "", 1).strip().casefold().endswith(str(existing.get("_text", "")).strip().casefold()):
+                    # Only merge the echo with the exact local text.
+                    # A suffix match can incorrectly consume a later message
+                    # (for example "test" after "my test").
+                    echo_text = re.sub(r"^#\d{1,6}\s*", "", str(detail)).strip()
+                    if str(existing.get("_text", "")).strip().casefold() == echo_text.casefold():
                         existing["detail"] = detail
                         existing["rssi"] = str(rssi) if rssi != "" else existing.get("rssi", "-")
                         existing["snr"] = str(snr) if snr != "" else existing.get("snr", "-")
@@ -4687,10 +4691,16 @@ class MainWindow(QMainWindow):
         if not plain:
             return None
         match = re.search(r"\bMSGID\s*[:=]\s*([0-9A-F]+)", plain, re.IGNORECASE)
-        if match:
-            return ("msgid", match.group(1).upper())
-
         timestamp = cls._timestamp_from_block(block) or ""
+        if match:
+            # MsgIds are not globally unique for the lifetime of the program.
+            # They can wrap/repeat after enough traffic. Using only MSGID as
+            # the cache key can therefore hide a later message in the chat
+            # although it is still visible in Monitor.
+            msgid = match.group(1).upper()
+            without_msgid = re.sub(r"\bMSGID\s*[:=\s]*[0-9A-F]+", "", plain, flags=re.IGNORECASE)
+            without_msgid = re.sub(r"\s+", " ", without_msgid).strip().casefold()
+            return ("msgid", msgid, timestamp, without_msgid)
         header = re.search(
             r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)*)"
             r"\s*>\s*(?P<target>\d{1,8})\b",
@@ -5554,25 +5564,23 @@ renderStations(initialStations);</script></body></html>"""
                     continue
 
                 callsign, text_key = identity
+                block_timestamp = self._timestamp_from_block(block) or ""
 
-                # Vorgabe für „Alle“: Rufzeichen UND Nachrichtentext müssen
-                # gemeinsam übereinstimmen, damit ein Eintrag als Duplikat
-                # verworfen wird. Nur eines von beiden darf niemals genügen:
-                # gleicher Rufname + anderer Text bleibt sichtbar und
-                # anderer Rufname + gleicher Text bleibt ebenfalls sichtbar.
-                # Bei „Alle“ kann derselbe Absender vom WebService mit
-                # zusätzlichen Zeichen/HTML-Entities vor dem Rufzeichen
-                # geliefert werden, z. B. „DO2QG-1>*“ und „✓ DO2QG-1>*“.
-                # Deshalb reicht ein einfacher String-Schlüssel nicht immer.
-                # Zwei Einträge gelten als Duplikat, wenn der normalisierte
-                # Nachrichtentext gleich ist und das jeweils erkannte
-                # Rufzeichen im anderen Rufzeichen-Feld enthalten ist.
-                # Damit bleiben unterschiedliche Texte desselben Rufzeichens
-                # sowie gleiche Texte verschiedener Rufzeichen sichtbar.
+                # In „Alle“ dürfen zwei echte Nachrichten desselben
+                # Rufzeichens mit exakt demselben Text NICHT als Duplikat
+                # verworfen werden, wenn sie zu unterschiedlichen Zeiten
+                # gesendet wurden.
+                #
+                # Gleichzeitig können dieselbe Nachricht und ihre leicht
+                # unterschiedlich gerenderte WebService-Variante weiterhin
+                # zusammengeführt werden: gleicher Absender + gleicher Text
+                # + gleicher Zeitstempel.
                 if callsign and text_key:
                     duplicate = False
-                    for old_callsign, old_text in seen_all_pairs:
+                    for old_callsign, old_text, old_timestamp in seen_all_pairs:
                         if old_text != text_key:
+                            continue
+                        if block_timestamp and old_timestamp and block_timestamp != old_timestamp:
                             continue
                         a = re.sub(r"[^A-Z0-9-]", "", callsign.upper())
                         b = re.sub(r"[^A-Z0-9-]", "", old_callsign.upper())
@@ -5581,7 +5589,7 @@ renderStations(initialStations);</script></body></html>"""
                             break
                     if duplicate:
                         continue
-                    seen_all_pairs.add((callsign.upper(), text_key))
+                    seen_all_pairs.add((callsign.upper(), text_key, block_timestamp))
                 else:
                     # Für ungewöhnliche Karten/Status-Blöcke ohne vollständige
                     # Rufzeichen+Text-Kombination weiterhin nur exakt identische
@@ -6106,22 +6114,33 @@ renderStations(initialStations);</script></body></html>"""
 
     # ---------- Send ----------
     def _monitor_add_local_message(self, text, target):
-        """Show the just-sent message immediately; later UDP echo is merged."""
-        if not hasattr(self, "monitor_rows") or getattr(self, "monitor_paused", False):
-            return
+        """Store every successful local send in the monitor immediately.
+
+        This is deliberately independent of the UDP echo: the monitor must
+        show that the WebService accepted the send even when the packet does
+        not later return over UDP/MH. A paused monitor still stores the row;
+        it becomes visible as soon as the monitor is resumed.
+        """
+        if not hasattr(self, "monitor_rows"):
+            self.monitor_rows = []
+        clean_text = str(text or "").strip()
+        clean_target = str(target or "-").strip() or "-"
         self.monitor_rows.append({
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": "MSG",
             "src": str(self.own_callsign or "-").strip() or "-",
-            "dst": str(target or "-").strip() or "-",
+            "dst": clean_target,
             "rssi": "-",
             "snr": "-",
-            "detail": str(text).strip(),
+            "detail": clean_text,
             "_local_send": True,
-            "_text": str(text).strip(),
+            "_text": clean_text,
+            "_source": "local_send",
         })
-        self.monitor_rows = self.monitor_rows[-500:]
-        self._render_monitor()
+        self.monitor_rows = self.monitor_rows[-1000:]
+        # Do not let the paused state prevent the send from being recorded.
+        if not getattr(self, "monitor_paused", False):
+            self._render_monitor()
 
     def send(self):
         if not self.connected:

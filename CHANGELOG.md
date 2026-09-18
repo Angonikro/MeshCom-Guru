@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.3.84
+- 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden.
+- 📡 **Monitor – eigene Sendungen stabilisiert:** Erfolgreich an den MeshCom-WebService übertragene eigene Nachrichten werden sofort im Monitor gespeichert und angezeigt.
+- 📡 **UDP-/MH-Echo:** Ein später empfangenes eigenes Echo wird mit der lokalen Sendung zusammengeführt, statt doppelt angezeigt zu werden.
+- 🔎 **Exakte Zuordnung:** Das Zusammenführen verwendet den exakten Nachrichtentext.
+- ⏸️ **Monitor-Pause:** Eigene Sendungen werden auch während der Pause intern gespeichert.
+- 🧩 **Lange Laufzeit:** Wiederverwendete MsgIds können neue Nachrichten nicht mehr aus dem Chat verdrängen.
+- MH-/UDP-Empfang bleibt unverändert.
+
 ## v0.3.83
 - 💬 **Dashboard – „Alle“ korrigiert:** Beim Wechsel aus einem Raum auf **Alle** wird das Feld **Raum / Ziel** jetzt sofort geleert. Der zuletzt ausgewählte Raum bleibt nicht mehr als Sendeziel stehen.
 - Dashboard und klassische Ansicht verwenden beim Wechsel auf **Alle** dasselbe Verhalten.
