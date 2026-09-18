@@ -485,6 +485,8 @@ class ChatView(QScrollArea):
 
 
 class MainWindow(QMainWindow):
+    # MH-Liste: maximal 250 zuletzt gehörte Stationen im Speicher.
+    MH_MAX_STATIONS = 250
     udpPacketReceived = Signal(dict)
     weatherUpdated = Signal(dict)
     @staticmethod
@@ -585,6 +587,9 @@ class MainWindow(QMainWindow):
         self.udp_status = "UDP: wird gestartet …"
         # Monitor: reine Anzeige des bereits empfangenen UDP-Datenstroms.
         self.monitor_rows = []
+        # Session counter for received telemetry packets. Kept separately from
+        # the monitor buffer so clearing the monitor does not erase the statistic.
+        self.telemetry_count = 0
         self.monitor_paused = False
         self.monitor_filter = "ALLE"
         self.monitor_search = ""
@@ -942,7 +947,22 @@ class MainWindow(QMainWindow):
             for col in (4, 5):
                 self.monitor_table.item(row_index, col).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.monitor_count_label.setText(ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert"))
+        count_text = ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert")
+        self.monitor_count_label.setText(count_text)
+        if hasattr(self, "dashboard_monitor_count_label"):
+            self.dashboard_monitor_count_label.setText(count_text)
+        if hasattr(self, "dashboard_monitor_filter_combo") and self.dashboard_monitor_filter_combo.currentText() != self.monitor_filter:
+            self.dashboard_monitor_filter_combo.blockSignals(True)
+            self.dashboard_monitor_filter_combo.setCurrentText(self.monitor_filter)
+            self.dashboard_monitor_filter_combo.blockSignals(False)
+        if hasattr(self, "dashboard_monitor_search_edit") and self.dashboard_monitor_search_edit.text() != self.monitor_search:
+            self.dashboard_monitor_search_edit.blockSignals(True)
+            self.dashboard_monitor_search_edit.setText(self.monitor_search)
+            self.dashboard_monitor_search_edit.blockSignals(False)
+        if hasattr(self, "dashboard_monitor_autoscroll_check") and self.dashboard_monitor_autoscroll_check.isChecked() != self.monitor_autoscroll:
+            self.dashboard_monitor_autoscroll_check.blockSignals(True)
+            self.dashboard_monitor_autoscroll_check.setChecked(self.monitor_autoscroll)
+            self.dashboard_monitor_autoscroll_check.blockSignals(False)
         if self.monitor_autoscroll and rows:
             self.monitor_table.scrollToBottom()
         # Keep the dashboard copy live whenever the classic monitor changes.
@@ -963,7 +983,10 @@ class MainWindow(QMainWindow):
 
     def _toggle_monitor_pause(self):
         self.monitor_paused = not self.monitor_paused
-        self.monitor_pause_button.setText(ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause"))
+        label = ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+        self.monitor_pause_button.setText(label)
+        if hasattr(self, "dashboard_monitor_pause_button"):
+            self.dashboard_monitor_pause_button.setText(label)
 
     def _clear_monitor(self):
         self.monitor_rows.clear()
@@ -1018,12 +1041,23 @@ class MainWindow(QMainWindow):
             return
 
         now = datetime.now().strftime("%H:%M:%S")
+        now_ts = time.time()
         row = self.mh_stations.setdefault(callsign, {
             "callsign": callsign, "lat": None, "lon": None,
             "rssi": None, "snr": None, "battery": None,
-            "last_heard": now, "alt": None, "firmware": "",
+            "last_heard": now, "last_heard_ts": now_ts, "alt": None, "firmware": "",
         })
         row["last_heard"] = now
+        row["last_heard_ts"] = now_ts
+
+        # Nur die 250 zuletzt gehörten Stationen behalten. Der älteste
+        # Eintrag wird entfernt, sobald die Obergrenze überschritten wird.
+        if len(self.mh_stations) > self.MH_MAX_STATIONS:
+            oldest_callsign = min(
+                self.mh_stations,
+                key=lambda key: self.mh_stations[key].get("last_heard_ts", 0.0),
+            )
+            del self.mh_stations[oldest_callsign]
 
         rssi = self._monitor_value(packet, "rssi", "RSSI", "signal")
         snr = self._monitor_value(packet, "snr", "SNR")
@@ -1076,6 +1110,7 @@ class MainWindow(QMainWindow):
         message_count = len(self.message_cache)
         node_count = len(self.mh_stations)
         position_count = len(self.station_positions)
+        telemetry_count = getattr(self, "telemetry_count", 0)
         monitor_count = len(self.monitor_rows)
 
         private_count = 0
@@ -1085,23 +1120,25 @@ class MainWindow(QMainWindow):
             if participants:
                 private_count += 1
                 continue
-            text = self._plain(block)
-            m = re.search(r"\b(?:Raum|room)\s*[:#]?\s*(\d+)\b", text, re.I)
-            if m:
-                room = m.group(1)
-                room_counts[room] = room_counts.get(room, 0) + 1
+            # Die Raumzuordnung kommt aus dem echten MeshCom-Ziel im Header
+            # (z. B. ``CALL>20``), nicht aus dem sichtbaren Wort "Raum".
+            # Nachrichten ohne erkennbares numerisches Ziel bleiben in "Alle".
+            room = self._room_from_block(block)
+            room_key = room if room else "Alle"
+            room_counts[room_key] = room_counts.get(room_key, 0) + 1
 
         self.statistics_summary.setText(
             f"{ui_text('Nachrichten:')} <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
             f"{ui_text('Nodes:')} <b>{node_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
             f"{ui_text('Positionen:')} <b>{position_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+            f"{ui_text('Telemetrie:')} <b>{telemetry_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
             f"{ui_text('Privatnachrichten:')} <b>{private_count}</b><br>"
             f"{ui_text('Monitor-Einträge:')} <b>{monitor_count}</b>"
         )
 
         if room_counts:
             room_label = ui_text("Raum")
-            parts = [f"{room_label} {room}: <b>{count}</b>" for room, count in sorted(room_counts.items(), key=lambda x: int(x[0]))]
+            parts = [f"{room_label} {room}: <b>{count}</b>" for room, count in sorted(room_counts.items(), key=lambda x: (x[0] != "Alle", int(x[0]) if x[0] != "Alle" else -1))]
             self.statistics_room_label.setText("<b>" + ui_text("Nachrichten nach Raum:") + "</b><br>" + " &nbsp;&nbsp; | &nbsp;&nbsp; ".join(parts))
         else:
             self.statistics_room_label.setText("<b>" + ui_text("Nachrichten nach Raum:") + "</b> " + ui_text("noch keine Daten"))
@@ -1113,7 +1150,7 @@ class MainWindow(QMainWindow):
     def _render_mh(self):
         if not hasattr(self, "mh_table"):
             return
-        rows = sorted(self.mh_stations.values(), key=lambda r: r.get("last_heard", ""), reverse=True)
+        rows = sorted(self.mh_stations.values(), key=lambda r: (r.get("last_heard_ts", 0.0), r.get("last_heard", "")), reverse=True)
         self.mh_table.setRowCount(len(rows))
         for i, station in enumerate(rows):
             distance = self._mh_distance_km(station.get("lat"), station.get("lon")) if station.get("lat") is not None else None
@@ -1149,6 +1186,8 @@ class MainWindow(QMainWindow):
         self._monitor_add_packet(packet)
         self._update_mh_from_packet(packet)
         ptype = str(packet.get("type", packet.get("packet_type", ""))).lower().strip()
+        if ptype in {"tel", "tele", "telemetry", "status"}:
+            self.telemetry_count += 1
         callsign = self._udp_callsign(packet.get("src", ""))
 
         # Punkt 2 – ausschließlich den EXTUDP-MSG-Strom für die Sendebestätigung
@@ -1560,7 +1599,16 @@ class MainWindow(QMainWindow):
         # Fester Tab ohne Schließen-X. Die Statistik verwendet ausschließlich
         # Daten, die MeshCom-Guru bereits während der laufenden Sitzung kennt.
         self.statistics_view = QWidget()
-        statistics_layout = QVBoxLayout(self.statistics_view)
+        statistics_view_layout = QVBoxLayout(self.statistics_view)
+        statistics_view_layout.setContentsMargins(0, 0, 0, 0)
+
+        statistics_scroll = QScrollArea()
+        statistics_scroll.setWidgetResizable(True)
+        statistics_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        statistics_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        statistics_content = QWidget()
+        statistics_layout = QVBoxLayout(statistics_content)
         statistics_layout.setContentsMargins(12, 12, 12, 12)
         statistics_layout.setSpacing(10)
 
@@ -1579,6 +1627,8 @@ class MainWindow(QMainWindow):
         statistics_layout.addWidget(self.statistics_room_label)
 
         statistics_layout.addStretch(1)
+        statistics_scroll.setWidget(statistics_content)
+        statistics_view_layout.addWidget(statistics_scroll)
 
         self.statistics_tab_index = self.tabs.insertTab(
             self.mh_tab_index + 1, self.statistics_view, ui_text("📊 Statistik")
@@ -2404,7 +2454,53 @@ class MainWindow(QMainWindow):
             dashboard_monitor_header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
         for col, width in {0: 70, 1: 50, 2: 95, 3: 65, 4: 55, 5: 55, 6: 420}.items():
             self.dashboard_monitor_table.setColumnWidth(col, width)
-        bottom_split.addWidget(self._dashboard_table_panel(ui_text("📡 Monitor – Live"), self.dashboard_monitor_table))
+        # Dashboard-Monitor: dieselben Bedienfunktionen wie im klassischen Monitor,
+        # aber ausschließlich in der vorhandenen Monitor-Fläche. Die übrigen
+        # Dashboard-Panels und deren Größen/Positionen bleiben unverändert.
+        monitor_panel = QFrame()
+        monitor_panel.setObjectName("DashboardPanel")
+        monitor_panel_layout = QVBoxLayout(monitor_panel)
+        monitor_panel_layout.setContentsMargins(6, 6, 6, 6)
+        monitor_panel_layout.setSpacing(3)
+        monitor_panel_layout.addWidget(QLabel(ui_text("📡 Monitor – Live")))
+        dashboard_monitor_toolbar = QHBoxLayout()
+        dashboard_monitor_toolbar.setSpacing(4)
+
+        self.dashboard_monitor_pause_button = QPushButton(ui_text("⏸ Pause"))
+        self.dashboard_monitor_pause_button.setFixedWidth(82)
+        self.dashboard_monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_pause_button)
+
+        self.dashboard_monitor_clear_button = QPushButton(ui_text("Leeren"))
+        self.dashboard_monitor_clear_button.setFixedWidth(70)
+        self.dashboard_monitor_clear_button.clicked.connect(self._clear_monitor)
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_clear_button)
+
+        dashboard_monitor_toolbar.addWidget(QLabel(ui_text("Filter:")))
+        self.dashboard_monitor_filter_combo = QComboBox()
+        self.dashboard_monitor_filter_combo.addItems(["ALLE", "MSG", "POS", "TEL", "ACK"])
+        self.dashboard_monitor_filter_combo.setCurrentText(self.monitor_filter)
+        self.dashboard_monitor_filter_combo.setFixedWidth(70)
+        self.dashboard_monitor_filter_combo.currentTextChanged.connect(self._set_monitor_filter)
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_filter_combo)
+
+        self.dashboard_monitor_search_edit = QLineEdit()
+        self.dashboard_monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
+        self.dashboard_monitor_search_edit.setMinimumWidth(90)
+        self.dashboard_monitor_search_edit.setMaximumWidth(150)
+        self.dashboard_monitor_search_edit.textChanged.connect(self._set_monitor_search)
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_search_edit)
+
+        self.dashboard_monitor_autoscroll_check = QCheckBox(ui_text("Auto-Scroll"))
+        self.dashboard_monitor_autoscroll_check.setChecked(self.monitor_autoscroll)
+        self.dashboard_monitor_autoscroll_check.toggled.connect(self._toggle_monitor_autoscroll)
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_autoscroll_check)
+        dashboard_monitor_toolbar.addStretch(1)
+        self.dashboard_monitor_count_label = QLabel(ui_text("0 angezeigt · 0 gespeichert"))
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_count_label)
+        monitor_panel_layout.addLayout(dashboard_monitor_toolbar)
+        monitor_panel_layout.addWidget(self.dashboard_monitor_table, 1)
+        bottom_split.addWidget(monitor_panel)
 
         self.dashboard_mh_table = QTableWidget(0, 4)
         self.dashboard_mh_table.setHorizontalHeaderLabels([
@@ -2424,7 +2520,26 @@ class MainWindow(QMainWindow):
         self.dashboard_mh_table.setColumnWidth(1, 82)
         self.dashboard_mh_table.setColumnWidth(2, 78)
         self.dashboard_mh_table.setColumnWidth(3, 58)
-        bottom_split.addWidget(self._dashboard_table_panel(ui_text("📋 Stations / MH – Letzte Stationen"), self.dashboard_mh_table))
+        # MH-Leiste bleibt in derselben vorhandenen Fläche; nur der zusätzliche
+        # Leeren-Button wird neben dem Titel eingeblendet.
+        mh_panel = QFrame()
+        mh_panel.setObjectName("DashboardPanel")
+        mh_panel_layout = QVBoxLayout(mh_panel)
+        mh_panel_layout.setContentsMargins(6, 6, 6, 6)
+        mh_panel_layout.setSpacing(3)
+        mh_title_row = QHBoxLayout()
+        mh_title_row.setSpacing(4)
+        mh_title = QLabel(ui_text("📋 Stations / MH – Letzte Stationen"))
+        mh_title.setStyleSheet("font-size: 11pt; font-weight: 700;")
+        mh_title_row.addWidget(mh_title)
+        mh_title_row.addStretch(1)
+        self.dashboard_mh_clear_button = QPushButton(ui_text("Leeren"))
+        self.dashboard_mh_clear_button.setFixedWidth(70)
+        self.dashboard_mh_clear_button.clicked.connect(self._clear_mh)
+        mh_title_row.addWidget(self.dashboard_mh_clear_button)
+        mh_panel_layout.addLayout(mh_title_row)
+        mh_panel_layout.addWidget(self.dashboard_mh_table, 1)
+        bottom_split.addWidget(mh_panel)
 
         stats_panel = QFrame()
         stats_panel.setObjectName("DashboardPanel")
@@ -2951,14 +3066,50 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, _dashboard_monitor_to_bottom)
         src = self.mh_table
         dst = self.dashboard_mh_table
-        rows = min(src.rowCount(), 8)
+        rows = min(src.rowCount(), MainWindow.MH_MAX_STATIONS)
         dst.setRowCount(rows)
         for r in range(rows):
             vals = [src.item(r, c).text() if src.item(r, c) else "" for c in (0,1,2,3)]
             for c, v in enumerate(vals):
                 dst.setItem(r, c, QTableWidgetItem(v))
         if hasattr(self, "statistics_summary"):
-            self.dashboard_statistics_label.setText(self.statistics_summary.text() + "\n" + self.statistics_room_label.text())
+            # Dashboard-Statistik bewusst untereinander statt in einer langen
+            # Zeile darstellen. Der vorhandene Statistikbereich bleibt dabei
+            # exakt gleich groß.
+            message_count = len(self.message_cache)
+            node_count = len(self.mh_stations)
+            position_count = len(self.station_positions)
+            telemetry_count = getattr(self, "telemetry_count", 0)
+            monitor_count = len(self.monitor_rows)
+            private_count = 0
+            room_counts = {}
+            for block in self.message_cache.values():
+                participants = self._private_participants(block)
+                if participants:
+                    private_count += 1
+                    continue
+                # Dieselbe Raumzuordnung wie in der klassischen Statistik:
+                # Ziel aus dem MeshCom-Header verwenden, sonst "Alle".
+                room = self._room_from_block(block)
+                room_key = room if room else "Alle"
+                room_counts[room_key] = room_counts.get(room_key, 0) + 1
+            lines = [
+                f"{ui_text('Nachrichten:')} <b>{message_count}</b>",
+                f"{ui_text('Nodes:')} <b>{node_count}</b>",
+                f"{ui_text('Positionen:')} <b>{position_count}</b>",
+                f"{ui_text('Telemetrie:')} <b>{telemetry_count}</b>",
+                f"{ui_text('Privatnachrichten:')} <b>{private_count}</b>",
+                f"{ui_text('Monitor-Einträge:')} <b>{monitor_count}</b>",
+                f"<b>{ui_text('Nachrichten nach Raum:')}</b>",
+            ]
+            if room_counts:
+                lines.extend(
+                    f"{ui_text('Raum')} {room}: <b>{count}</b>"
+                    for room, count in sorted(room_counts.items(), key=lambda x: (x[0] != "Alle", int(x[0]) if x[0] != "Alle" else -1))
+                )
+            else:
+                lines.append(ui_text("noch keine Daten"))
+            self.dashboard_statistics_label.setText("<br>".join(lines))
 
     def _worldwide_load_finished(self, ok):
         self._worldwide_health_pending = False
@@ -4015,7 +4166,7 @@ class MainWindow(QMainWindow):
             <h3>📡 Monitor, 📋 Stations / MH und 📊 Statistik</h3>
             <p>Der <b>Monitor</b> zeigt MeshCom-UDP-Pakete auf <b>Port 1799</b> mit Typ, Rufzeichen, Ziel, RSSI, SNR und Information. Die Informationsspalte bleibt lesbar und kann bei Bedarf gescrollt werden.</p>
             <p><b>Stations / MH</b> zeigt zuletzt gehörte Stationen mit Rufzeichen, Entfernung, RSSI und SNR. Die Spalten sind so angeordnet, dass keine unnötige horizontale Scrollleiste benötigt wird.</p>
-            <p><b>Statistik</b> zeigt die laufenden Sitzungszähler für Nachrichten, Nodes, Positionen, private Nachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
+            <p><b>Statistik</b> zeigt die laufenden Sitzungszähler für Nachrichten, Nodes, Positionen, Telemetrie, private Nachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
             <h3>🗺 Karte und 🌐 Weltweit</h3>
             <p>Die OSM-/Leaflet-Karte zeigt Positionsdaten und Stationen. Der Tab <b>🌐 Weltweit</b> bzw. die Weltweit-Ansicht im Dashboard öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.</p>
             <h3>🌤 Wetterdaten</h3>

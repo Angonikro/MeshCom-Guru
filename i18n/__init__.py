@@ -122,6 +122,7 @@ _UI = {
     "Nachrichten:": "Messages:",
     "Nodes:": "Nodes:",
     "Positionen:": "Positions:",
+    "Telemetrie:": "Telemetry:",
     "Privatnachrichten:": "Private messages:",
     "Monitor-Einträge:": "Monitor entries:",
     "Nachrichten nach Raum:": "Messages by room:",

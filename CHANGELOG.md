@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.3.86 – MH-Liste auf 250 Stationen erweitert
+
+- 📡 **MH-Liste:** Die MH-Liste speichert jetzt maximal **250 zuletzt gehörte Stationen**.
+- 🧹 Wird die 251. Station gehört, wird automatisch die **älteste Station entfernt**.
+- 🖥️ **Klassische Ansicht:** Die MH-Tabelle verwendet die vollständige Liste bis maximal 250 Stationen.
+- 📊 **Dashboard:** Auch die Dashboard-MH-Liste übernimmt bis zu 250 Stationen.
+- ⚡ Die Begrenzung verhindert, dass die MH-Liste bei langer Laufzeit unbegrenzt wächst.
+- 🔄 Die Sortierung erfolgt nach dem tatsächlichen letzten Empfangszeitpunkt.
+- 📡 **Dashboard-Monitor:** Die Bedienelemente aus dem klassischen Monitor sind jetzt auch direkt über dem Dashboard-Monitor verfügbar: **Pause, Leeren, Filter, Suche und Auto-Scroll**.
+- 🧹 **Dashboard-MH:** Die MH-Liste besitzt jetzt ebenfalls einen **Leeren**-Button.
+- 📊 **Dashboard-Statistik:** Die Sitzungswerte werden übersichtlich **untereinander** dargestellt.
+- 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
+- 🧩 **Layout unverändert:** Die vorhandenen Größen und Positionen von Chat, Karte, Weltweit, MH und Statistik bleiben erhalten.
+
 ## v0.3.85 – Dashboard-Layout angepasst
 
 - 🖥️ Dashboard-Aufteilung nach dem festgelegten Referenzlayout angepasst.

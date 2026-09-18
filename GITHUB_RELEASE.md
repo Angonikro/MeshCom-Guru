@@ -1,4 +1,15 @@
-# MeshCom-Guru v0.3.85
+# MeshCom-Guru v0.3.86
+
+## Änderungen in v0.3.86
+- 📡 MH-Liste auf maximal **250 zuletzt gehörte Stationen** erweitert.
+- 🧹 Beim 251. Eintrag wird automatisch die älteste Station entfernt.
+- 🖥️ Klassische Ansicht und 📊 Dashboard verwenden dieselbe Begrenzung von 250 Stationen.
+- 🔄 Sortierung nach dem tatsächlichen letzten Empfangszeitpunkt.
+- 📡 **Dashboard-Monitor:** Pause, Leeren, Filter, Suche und Auto-Scroll direkt über dem Monitor.
+- 🧹 **Dashboard-MH:** Leeren-Button für die MH-Liste.
+- 📊 **Dashboard-Statistik:** Werte übersichtlich untereinander.
+- 📡 **Telemetrie:** Empfangene Telemetrie-Datensätze werden in der Statistik mitgezählt.
+- 🧩 **Layout unverändert:** Keine Änderung der bestehenden Panel-Größen oder Positionen.
 
 ## Änderungen in v0.3.85
 - 🖥️ Dashboard-Layout nach dem festgelegten Referenzlayout angepasst.
@@ -22,4 +33,4 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.85_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.86_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.

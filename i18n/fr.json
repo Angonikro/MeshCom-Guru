@@ -250,5 +250,6 @@
   "Karte benötigt PySide6-WebEngine.": "La carte nécessite PySide6-WebEngine.",
   "Weltweit benötigt PySide6-WebEngine.": "Monde entier nécessite PySide6-WebEngine.",
   "Telemetry": "Télémétrie",
-  "Ziel": "Destination"
+  "Ziel": "Destination",
+  "Telemetrie:": "Télémétrie :"
 }

@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,6 +22,20 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
+## Neu in v0.3.86 – MH-Liste auf 250 Stationen erweitert
+
+- 📡 **MH-Liste:** Es werden maximal **250 zuletzt gehörte Stationen** gespeichert und angezeigt.
+- 🧹 Beim Empfang einer 251. Station wird automatisch der **älteste MH-Eintrag entfernt**.
+- 🖥️ **Klassische Ansicht:** Die MH-Liste kann bis zu 250 Stationen enthalten.
+- 📊 **Dashboard:** Die Dashboard-MH-Liste übernimmt ebenfalls bis zu 250 Stationen.
+- ⚡ Dadurch bleibt die MH-Liste auch bei langer Laufzeit überschaubar und speicherschonend.
+- 🔄 Die Einträge werden nach dem tatsächlichen letzten Empfangszeitpunkt sortiert.
+- 📡 **Dashboard-Monitor:** Pause, Leeren, Filter, Suche und Auto-Scroll stehen jetzt direkt über dem Monitor zur Verfügung – wie in der klassischen Ansicht.
+- 🧹 **MH-Leeren:** Die Dashboard-MH-Liste kann direkt über einen **Leeren**-Button gelöscht werden.
+- 📊 **Statistik:** Die Dashboard-Statistik wird übersichtlich untereinander angezeigt.
+- 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
+- 🧩 **Layout:** Die vorhandenen Dashboard-Fenster behalten ihre bisherigen Größen und Positionen.
+
 ## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
 
 - 🖥️ **Dashboard-Layout angepasst:** Die Aufteilung entspricht jetzt dem festgelegten Referenzlayout.
@@ -37,7 +44,6 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - 📻 **Räume:** **Räume** und **+ Raum hinzufügen** stehen direkt nebeneinander. Die Größe und Anordnung der Raum-Buttons bleiben unverändert.
 - 🌐 **Weltweit:** Die bestehende WebKitGTK-Integration bleibt erhalten.
 - 🖱️ **Mausrad:** Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
-
 
 ## Neu in v0.3.84 – Nachrichtenanzeige und Monitor stabilisiert
 
@@ -586,5 +592,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
