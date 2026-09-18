@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,15 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - 📊 **Statistik:** Die Dashboard-Statistik wird übersichtlich untereinander angezeigt.
 - 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
 - 🧩 **Layout:** Die vorhandenen Dashboard-Fenster behalten ihre bisherigen Größen und Positionen.
+
+## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
+
+- 📊 **Statistik:** Das Statistikfeld im Dashboard ist jetzt auch bei vielen Einträgen scrollbar, sodass alle Werte und Raumstatistiken erreichbar bleiben.
+- 📡 **Monitor:** Die Schaltflächen **Pause** und **Leeren** wurden etwas verbreitert und besser an die übrigen Bedienelemente angepasst.
+- 🔎 **Monitor-Spalten:** **Rufzeichen** und **Ziel** haben jetzt dieselbe Breite, damit auch längere Rufzeichen und Ziele vollständig lesbar bleiben.
+- 🌐 **Übersetzungen:** Der Monitor-Filter **„Alle“** verwendet jetzt beim Sprachwechsel die passende Übersetzung in Deutsch, English, Italiano, Nederlands und Français.
+- 📻 **Räume:** Die Überschrift **„Räume“** bleibt vollständig sichtbar; der Button **„Raum hinzufügen“** wurde dafür fein angepasst, ohne die übrige Raumliste zu verändern.
+- ✨ **Kleine optische Verbesserungen:** Mehrere Monitor- und Dashboard-Bedienelemente wurden für eine bessere Lesbarkeit und ein einheitlicheres Erscheinungsbild fein abgestimmt.
 
 ## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
 
@@ -599,5 +601,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

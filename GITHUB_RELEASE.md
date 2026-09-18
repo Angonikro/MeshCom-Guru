@@ -1,3 +1,11 @@
+# GitHub Release v0.3.87
+
+## Änderungen
+
+- 📻 „Räume“ im Dashboard vollständig sichtbar.
+- ➕ „Raum hinzufügen“ auf 155 px eingestellt.
+- 🧩 Übriges Dashboard-Layout unverändert.
+
 # MeshCom-Guru v0.3.86
 
 ## Änderungen in v0.3.86

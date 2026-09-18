@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.3.87 – Dashboard-Feinschliff, Monitor und Übersetzungen
+
+- 📊 **Statistik scrollbar:** Das Statistikfeld im Dashboard besitzt jetzt einen eigenen Scrollbereich. Auch bei einer langen Statistik bleiben alle Werte und Raumstatistiken erreichbar.
+- 📡 **Monitor-Schaltflächen:** **Pause** und **Leeren** wurden für bessere Bedienbarkeit etwas verbreitert.
+- 🔎 **Monitor-Spalten:** **Rufzeichen** und **Ziel** haben jetzt dieselbe Breite, damit längere Einträge besser lesbar sind.
+- 🌐 **Monitor-Filter übersetzt:** Der Eintrag **„Alle“** wird beim Sprachwechsel jetzt passend in Deutsch, English, Italiano, Nederlands und Français angezeigt.
+- 📻 **Räume:** Die Überschrift **„Räume“** bleibt vollständig sichtbar; der Button **„Raum hinzufügen“** wurde passend feinjustiert.
+- ✨ **Kleine optische Verbesserungen:** Mehrere Dashboard- und Monitor-Elemente wurden für bessere Lesbarkeit und ein einheitlicheres Erscheinungsbild leicht angepasst.
+- Die bestehenden Chat-, Karte-, Weltweit-, MH-, GPS-, Wetter- und Verbindungsfunktionen bleiben unverändert.
+
 ## v0.3.86 – MH-Liste auf 250 Stationen erweitert
 
 - 📡 **MH-Liste:** Die MH-Liste speichert jetzt maximal **250 zuletzt gehörte Stationen**.

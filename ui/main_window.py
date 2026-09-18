@@ -951,10 +951,15 @@ class MainWindow(QMainWindow):
         self.monitor_count_label.setText(count_text)
         if hasattr(self, "dashboard_monitor_count_label"):
             self.dashboard_monitor_count_label.setText(count_text)
-        if hasattr(self, "dashboard_monitor_filter_combo") and self.dashboard_monitor_filter_combo.currentText() != self.monitor_filter:
-            self.dashboard_monitor_filter_combo.blockSignals(True)
-            self.dashboard_monitor_filter_combo.setCurrentText(self.monitor_filter)
-            self.dashboard_monitor_filter_combo.blockSignals(False)
+        if hasattr(self, "dashboard_monitor_filter_combo"):
+            combo = self.dashboard_monitor_filter_combo
+            current_data = combo.currentData()
+            if current_data != self.monitor_filter:
+                combo.blockSignals(True)
+                idx = combo.findData(self.monitor_filter)
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+                combo.blockSignals(False)
         if hasattr(self, "dashboard_monitor_search_edit") and self.dashboard_monitor_search_edit.text() != self.monitor_search:
             self.dashboard_monitor_search_edit.blockSignals(True)
             self.dashboard_monitor_search_edit.setText(self.monitor_search)
@@ -971,6 +976,13 @@ class MainWindow(QMainWindow):
     def _set_monitor_filter(self, value):
         self.monitor_filter = value
         self._render_monitor()
+
+    def _set_monitor_filter_index(self, index):
+        sender = self.sender()
+        value = sender.itemData(index) if sender is not None else None
+        if not value and sender is not None:
+            value = sender.itemText(index)
+        self._set_monitor_filter(str(value or "ALLE"))
 
     def _set_monitor_search(self, text):
         self.monitor_search = text
@@ -1490,20 +1502,22 @@ class MainWindow(QMainWindow):
         monitor_toolbar = QHBoxLayout()
 
         self.monitor_pause_button = QPushButton("⏸ Pause")
-        self.monitor_pause_button.setFixedWidth(92)
+        self.monitor_pause_button.setFixedWidth(130)
         self.monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
         monitor_toolbar.addWidget(self.monitor_pause_button)
 
         monitor_clear_button = QPushButton("Leeren")
-        monitor_clear_button.setFixedWidth(78)
+        monitor_clear_button.setFixedWidth(116)
         monitor_clear_button.clicked.connect(self._clear_monitor)
         monitor_toolbar.addWidget(monitor_clear_button)
 
         monitor_toolbar.addWidget(QLabel("Filter:"))
         self.monitor_filter_combo = QComboBox()
-        self.monitor_filter_combo.addItems(["ALLE", "MSG", "POS", "TEL", "ACK"])
+        self.monitor_filter_combo.addItem(ui_text("Alle"), "ALLE")
+        self.monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
+        self.monitor_filter_combo.setCurrentIndex(max(0, self.monitor_filter_combo.findData(self.monitor_filter)))
         self.monitor_filter_combo.setFixedWidth(78)
-        self.monitor_filter_combo.currentTextChanged.connect(self._set_monitor_filter)
+        self.monitor_filter_combo.currentIndexChanged.connect(self._set_monitor_filter_index)
         monitor_toolbar.addWidget(self.monitor_filter_combo)
 
         self.monitor_search_edit = QLineEdit()
@@ -1543,7 +1557,7 @@ class MainWindow(QMainWindow):
         for col in range(6):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
-        for col, width in {0: 70, 1: 50, 2: 95, 3: 65, 4: 55, 5: 55}.items():
+        for col, width in {0: 70, 1: 50, 2: 108, 3: 108, 4: 55, 5: 55}.items():
             self.monitor_table.setColumnWidth(col, width)
         self.monitor_table.setColumnWidth(6, 420)
         self.monitor_table.setMinimumWidth(700)
@@ -2246,10 +2260,11 @@ class MainWindow(QMainWindow):
         room_head = QHBoxLayout()
         title = QLabel(ui_text("📻 Räume"))
         title.setStyleSheet("font-size: 12pt; font-weight: 700;")
-        title.setFixedWidth(68)
+        title.setFixedWidth(78)
         room_head.setSpacing(5)
         room_head.addWidget(title)
         add_room = QPushButton(ui_text("＋ Raum hinzufügen"))
+        add_room.setFixedWidth(155)
         add_room.setMinimumHeight(30)
         add_room.setToolTip(ui_text("Räume hinzufügen / bearbeiten"))
         add_room.clicked.connect(self._dashboard_manage_rooms)
@@ -2452,7 +2467,7 @@ class MainWindow(QMainWindow):
         dashboard_monitor_header.setStretchLastSection(False)
         for col in range(7):
             dashboard_monitor_header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
-        for col, width in {0: 70, 1: 50, 2: 95, 3: 65, 4: 55, 5: 55, 6: 420}.items():
+        for col, width in {0: 70, 1: 50, 2: 108, 3: 108, 4: 55, 5: 55, 6: 420}.items():
             self.dashboard_monitor_table.setColumnWidth(col, width)
         # Dashboard-Monitor: dieselben Bedienfunktionen wie im klassischen Monitor,
         # aber ausschließlich in der vorhandenen Monitor-Fläche. Die übrigen
@@ -2467,21 +2482,22 @@ class MainWindow(QMainWindow):
         dashboard_monitor_toolbar.setSpacing(4)
 
         self.dashboard_monitor_pause_button = QPushButton(ui_text("⏸ Pause"))
-        self.dashboard_monitor_pause_button.setFixedWidth(82)
+        self.dashboard_monitor_pause_button.setFixedWidth(120)
         self.dashboard_monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
         dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_pause_button)
 
         self.dashboard_monitor_clear_button = QPushButton(ui_text("Leeren"))
-        self.dashboard_monitor_clear_button.setFixedWidth(70)
+        self.dashboard_monitor_clear_button.setFixedWidth(108)
         self.dashboard_monitor_clear_button.clicked.connect(self._clear_monitor)
         dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_clear_button)
 
         dashboard_monitor_toolbar.addWidget(QLabel(ui_text("Filter:")))
         self.dashboard_monitor_filter_combo = QComboBox()
-        self.dashboard_monitor_filter_combo.addItems(["ALLE", "MSG", "POS", "TEL", "ACK"])
-        self.dashboard_monitor_filter_combo.setCurrentText(self.monitor_filter)
+        self.dashboard_monitor_filter_combo.addItem(tr("Alle"), "ALLE")
+        self.dashboard_monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
+        self.dashboard_monitor_filter_combo.setCurrentIndex(max(0, self.dashboard_monitor_filter_combo.findData(self.monitor_filter)))
         self.dashboard_monitor_filter_combo.setFixedWidth(70)
-        self.dashboard_monitor_filter_combo.currentTextChanged.connect(self._set_monitor_filter)
+        self.dashboard_monitor_filter_combo.currentIndexChanged.connect(self._set_monitor_filter_index)
         dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_filter_combo)
 
         self.dashboard_monitor_search_edit = QLineEdit()
@@ -2548,10 +2564,27 @@ class MainWindow(QMainWindow):
         stats_title = QLabel(ui_text("📊 Statistik"))
         stats_title.setStyleSheet("font-size: 12pt; font-weight: 700;")
         stats_layout.addWidget(stats_title)
+        # Statistik im Dashboard bekommt einen eigenen Scrollbereich.
+        # So bleiben alle Sitzungs- und Raumzeilen auch im normalen Fenstermodus
+        # erreichbar, ohne die feste Höhe des unteren Bereichs zu verändern.
+        statistics_scroll = QScrollArea()
+        statistics_scroll.setWidgetResizable(True)
+        statistics_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        statistics_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        statistics_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        statistics_content = QWidget()
+        statistics_content_layout = QVBoxLayout(statistics_content)
+        statistics_content_layout.setContentsMargins(0, 0, 0, 0)
+        statistics_content_layout.setSpacing(0)
+
         self.dashboard_statistics_label = QLabel(ui_text("Noch keine Sitzungsdaten"))
         self.dashboard_statistics_label.setWordWrap(True)
-        stats_layout.addWidget(self.dashboard_statistics_label)
-        stats_layout.addStretch(1)
+        self.dashboard_statistics_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        statistics_content_layout.addWidget(self.dashboard_statistics_label)
+        statistics_content_layout.addStretch(1)
+        statistics_scroll.setWidget(statistics_content)
+        stats_layout.addWidget(statistics_scroll, 1)
         bottom_split.addWidget(stats_panel)
         bottom_split.setMinimumHeight(155)
         bottom_split.setFixedHeight(185)
@@ -3883,6 +3916,8 @@ class MainWindow(QMainWindow):
                 ui_text("Zeit"), ui_text("Typ"), ui_text("Rufzeichen"), ui_text("Ziel"),
                 "RSSI", "SNR", ui_text("Information")
             ])
+        if hasattr(self, "dashboard_monitor_filter_combo") and self.dashboard_monitor_filter_combo.count() > 0:
+            self.dashboard_monitor_filter_combo.setItemText(0, tr("Alle"))
         if hasattr(self, "dashboard_mh_table"):
             self.dashboard_mh_table.setHorizontalHeaderLabels([
                 ui_text("Rufzeichen"), ui_text("Entfernung"), "RSSI", "SNR"
