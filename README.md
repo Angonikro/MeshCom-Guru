@@ -22,6 +22,16 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
+## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
+
+- 📊 **Statistik:** Das Statistikfeld im Dashboard ist jetzt auch bei vielen Einträgen scrollbar, sodass alle Werte und Raumstatistiken erreichbar bleiben.
+- 📡 **Monitor:** Die Schaltflächen **Pause** und **Leeren** wurden etwas verbreitert und besser an die übrigen Bedienelemente angepasst.
+- 🔎 **Monitor-Spalten:** **Rufzeichen** und **Ziel** haben jetzt dieselbe Breite, damit auch längere Rufzeichen und Ziele vollständig lesbar bleiben.
+- 🌐 **Übersetzungen:** Der Monitor-Filter **„Alle“** verwendet jetzt beim Sprachwechsel die passende Übersetzung in Deutsch, English, Italiano, Nederlands und Français.
+- 📻 **Räume:** Die Überschrift **„Räume“** bleibt vollständig sichtbar; der Button **„Raum hinzufügen“** wurde dafür fein angepasst, ohne die übrige Raumliste zu verändern.
+- ✨ **Kleine optische Verbesserungen:** Mehrere Monitor- und Dashboard-Bedienelemente wurden für eine bessere Lesbarkeit und ein einheitlicheres Erscheinungsbild fein abgestimmt.
+
+
 ## Neu in v0.3.86 – MH-Liste auf 250 Stationen erweitert
 
 - 📡 **MH-Liste:** Es werden maximal **250 zuletzt gehörte Stationen** gespeichert und angezeigt.
@@ -35,15 +45,6 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - 📊 **Statistik:** Die Dashboard-Statistik wird übersichtlich untereinander angezeigt.
 - 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
 - 🧩 **Layout:** Die vorhandenen Dashboard-Fenster behalten ihre bisherigen Größen und Positionen.
-
-## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
-
-- 📊 **Statistik:** Das Statistikfeld im Dashboard ist jetzt auch bei vielen Einträgen scrollbar, sodass alle Werte und Raumstatistiken erreichbar bleiben.
-- 📡 **Monitor:** Die Schaltflächen **Pause** und **Leeren** wurden etwas verbreitert und besser an die übrigen Bedienelemente angepasst.
-- 🔎 **Monitor-Spalten:** **Rufzeichen** und **Ziel** haben jetzt dieselbe Breite, damit auch längere Rufzeichen und Ziele vollständig lesbar bleiben.
-- 🌐 **Übersetzungen:** Der Monitor-Filter **„Alle“** verwendet jetzt beim Sprachwechsel die passende Übersetzung in Deutsch, English, Italiano, Nederlands und Français.
-- 📻 **Räume:** Die Überschrift **„Räume“** bleibt vollständig sichtbar; der Button **„Raum hinzufügen“** wurde dafür fein angepasst, ohne die übrige Raumliste zu verändern.
-- ✨ **Kleine optische Verbesserungen:** Mehrere Monitor- und Dashboard-Bedienelemente wurden für eine bessere Lesbarkeit und ein einheitlicheres Erscheinungsbild fein abgestimmt.
 
 ## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
 
