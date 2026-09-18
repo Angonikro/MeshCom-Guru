@@ -29,6 +29,8 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
+## Version 0.3.87
+
 ## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
 
 - 📊 **Statistik:** Das Statistikfeld im Dashboard ist jetzt auch bei vielen Einträgen scrollbar, sodass alle Werte und Raumstatistiken erreichbar bleiben.
