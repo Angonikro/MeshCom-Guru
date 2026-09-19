@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -29,7 +22,17 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
 
-## Version 0.3.87
+## Version 0.3.88
+
+## Neu in v0.3.88 – Rufzeichen-Menü und QRZ-Verknüpfung
+
+- 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über das neue Kontextmenü direkt weiterverarbeitet werden.
+- 💬 **Privat Chat:** Über das Rufzeichen-Menü kann direkt ein privater Chat mit dem ausgewählten Rufzeichen geöffnet werden.
+- 💬 **@Rufzeichen:** Über den Menüpunkt `@Rufzeichen` wird das Rufzeichen als Erwähnung für das Nachrichtenfeld vorbereitet.
+- 🌐 **QRZ.com:** Über das Rufzeichen-Menü lässt sich die passende QRZ.com-Seite direkt im normalen Systembrowser öffnen.
+- 🔎 **QRZ-Rufzeichen:** Für QRZ.com wird automatisch nur das reine Rufzeichen verwendet. Beispiel: `DO1ABC-12` wird bei QRZ.com zu `DO1ABC`.
+- 🧩 **Stabilität:** Die neue Rufzeichenfunktion wurde ohne Eingriff in die bestehende Empfangs-, Monitor- und Chat-Verarbeitung umgesetzt.
+
 
 ## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
 
@@ -54,6 +57,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - 📊 **Statistik:** Die Dashboard-Statistik wird übersichtlich untereinander angezeigt.
 - 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
 - 🧩 **Layout:** Die vorhandenen Dashboard-Fenster behalten ihre bisherigen Größen und Positionen.
+
 
 ## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
 
@@ -611,5 +615,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

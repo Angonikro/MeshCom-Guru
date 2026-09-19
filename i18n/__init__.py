@@ -92,6 +92,7 @@ _UI = {
     "🔄 Standard wiederherstellen": "🔄 Restore defaults",
     "Gemeinsame Farben für alle Räume und Chat-Ansichten:": "Shared colors for all rooms and chat views:",
     "OK": "OK",
+    "Privat Chat": "Private Chat",
     "Abbrechen": "Cancel",
     "Undo": "Rückgängig",
     "Redo": "Wiederholen",

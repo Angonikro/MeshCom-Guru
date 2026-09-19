@@ -26,7 +26,7 @@ try:
     from PySide6.QtMultimedia import QSoundEffect
 except Exception:
     QSoundEffect = None
-from PySide6.QtGui import QAction, QActionGroup, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF, QPixmap, QIcon
+from PySide6.QtGui import QAction, QActionGroup, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF, QPixmap, QIcon, QCursor
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -217,6 +217,7 @@ class BubbleWidget(QWidget):
 
 class ChatView(QScrollArea):
     callsignClicked = Signal(str)
+    callsignActionClicked = Signal(str, str)
 
     @staticmethod
     def _normalize_color(value):
@@ -291,7 +292,34 @@ class ChatView(QScrollArea):
     def _anchor_clicked(self, url):
         value = url.toString().strip()
         if value.startswith("meshcom://call/"):
-            self.callsignClicked.emit(value.rsplit("/", 1)[-1])
+            callsign = value.rsplit("/", 1)[-1]
+            callsign = re.sub(r"[^A-Za-z0-9-]", "", callsign).upper()
+            if not callsign:
+                return
+
+            # Nicht-modal öffnen: menu.exec() kann auf dem Raspberry Pi mit
+            # der Qt/GTK-Integration einen blockierenden Event-Loop erzeugen.
+            # popup() lässt den normalen Qt-Event-Loop weiterlaufen.
+            menu = QMenu(self)
+            private_action = menu.addAction(ui_text("Privat Chat"))
+            mention_action = menu.addAction(f"@{callsign}")
+            menu.addSeparator()
+            qrz_action = menu.addAction("QRZ.com")
+
+            private_action.triggered.connect(
+                lambda _checked=False, c=callsign: self.callsignActionClicked.emit(c, "private")
+            )
+            mention_action.triggered.connect(
+                lambda _checked=False, c=callsign: self.callsignActionClicked.emit(c, "mention")
+            )
+            qrz_action.triggered.connect(
+                lambda _checked=False, c=callsign: self.callsignActionClicked.emit(c, "qrz")
+            )
+
+            # Referenz bis zum Schließen behalten; kein modaler Dialog.
+            self._callsign_menu = menu
+            menu.aboutToHide.connect(lambda: setattr(self, "_callsign_menu", None))
+            menu.popup(QCursor.pos())
         elif value.startswith(("http://", "https://")):
             QDesktopServices.openUrl(url)
 
@@ -2333,7 +2361,7 @@ class MainWindow(QMainWindow):
         # die klassische Ansicht. Rufzeichen-Links werden dadurch intern an
         # open_private_chat weitergereicht; http/https-Links bleiben bei der
         # gemeinsamen ChatView-Verarbeitung und öffnen den Systembrowser.
-        self.dashboard_chat_view.callsignClicked.connect(self.open_private_chat)
+        self.dashboard_chat_view.callsignActionClicked.connect(self._handle_callsign_action)
         self._all_chat_views.append(self.dashboard_chat_view)
         chat_layout.addWidget(self.dashboard_chat_view, 1)
 
@@ -4188,6 +4216,7 @@ class MainWindow(QMainWindow):
             <h3>💬 Raum-Chats und 👤 Private Chats</h3>
             <p>Die bis zu <b>fünf gespeicherten Räume</b> werden im Dashboard links direkt als anklickbare <b>Raum-Chats</b> angezeigt. Ein Klick auf einen Raum öffnet ausschließlich diesen Raum. <b>Alle</b> ist eine eigene Ansicht und kann jederzeit wieder angeklickt werden.</p>
             <p><b>Private Chats</b> stehen getrennt darunter. Ein Klick auf einen privaten Chat öffnet die private Unterhaltung und wechselt nicht ungewollt zurück zu „Alle“. Neue private Nachrichten werden in der privaten Unterhaltung und im Bereich „Alle“ berücksichtigt.</p>
+            <p><b>Rufzeichen anklicken:</b> Ein anklickbares Rufzeichen öffnet ein kleines Menü mit <b>Privater Chat</b> und <b>QRZ.com</b>. Für QRZ.com wird automatisch nur das reine Rufzeichen verwendet, also z. B. <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Verbindung und Einstellungen</h3>
             <p><b>Hotspot-IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
             <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
@@ -4217,7 +4246,7 @@ class MainWindow(QMainWindow):
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
             <h3>🎛 Display: Classic or Dashboard</h3><p>Under <b>Settings → Display</b>, choose between <b>Classic</b> and the new <b>Dashboard</b>. Both views use the same MeshCom data and functions. The selection is saved and restored at the next start.</p><p>The Dashboard combines connection, rooms, chat, map, worldwide activity, monitor, MH and statistics in one view. The classic interface remains fully available.</p>
-            <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>five saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p>
+            <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>five saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p><p><b>Clicking a callsign:</b> A clickable callsign opens a small menu with <b>Private Chat</b> and <b>QRZ.com</b>. For QRZ.com, only the base callsign is used automatically, for example <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed. If a temporary network, hotspot or WebService error occurs, MeshCom-Guru tries to reconnect automatically. <b>Disconnect</b> deliberately disables automatic reconnection.</p>
             <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
@@ -4233,7 +4262,7 @@ class MainWindow(QMainWindow):
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
             <h3>🎛 Visualizzazione: Classica o Dashboard</h3><p>In <b>Impostazioni → Visualizzazione</b> è possibile scegliere tra <b>Classica</b> e la nuova <b>Dashboard</b>. Entrambe usano gli stessi dati e le stesse funzioni MeshCom. La scelta viene salvata.</p><p>La Dashboard riunisce connessione, stanze, chat, mappa, attività mondiale, monitor, MH e statistiche in un'unica vista.</p>
-            <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>cinque stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p>
+            <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>cinque stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p><p><b>Facendo clic su un nominativo:</b> un nominativo cliccabile apre un piccolo menu con <b>Chat privato</b> e <b>QRZ.com</b>. Per QRZ.com viene utilizzato automaticamente solo il nominativo base, ad esempio <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> inserire l'indirizzo IP del WebService MeshCom. <b>Stazione/GPS:</b> inserire il proprio nominativo e, se necessario, latitudine e longitudine. Le impostazioni personali sono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p><b>Connetti</b> stabilisce la connessione. Dopo una connessione manuale la riconnessione automatica è attiva. <b>Disconnetti</b> la disattiva intenzionalmente.</p>
             <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
@@ -4248,7 +4277,7 @@ class MainWindow(QMainWindow):
             "nl": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Korte handleiding</h3>
             <h3>🎛 Weergave: Klassiek of Dashboard</h3><p>Onder <b>Instellingen → Weergave</b> kun je kiezen tussen <b>Klassiek</b> en het nieuwe <b>Dashboard</b>. Beide weergaven gebruiken dezelfde MeshCom-gegevens en functies. De keuze wordt opgeslagen.</p><p>Het Dashboard combineert verbinding, ruimtes, chat, kaart, wereldwijde activiteit, monitor, MH en statistieken.</p>
-            <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>vijf opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p>
+            <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>vijf opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p><p><b>Op een roepnaam klikken:</b> een aanklikbare roepnaam opent een klein menu met <b>Privéchat</b> en <b>QRZ.com</b>. Voor QRZ.com wordt automatisch alleen de basisroepnaam gebruikt, bijvoorbeeld <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> voer het IP-adres van de MeshCom-WebService in. <b>Eigen station/GPS:</b> voer je roepnaam en eventueel breedte- en lengtegraad in. Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Verbinden / Verbinding verbreken / Automatische herverbinding</h3><p>Met <b>Verbinden</b> maak je verbinding met de MeshCom-WebService. Na een handmatige verbinding is automatische herverbinding actief. <b>Verbinding verbreken</b> schakelt dit bewust uit.</p>
             <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
@@ -4263,7 +4292,7 @@ class MainWindow(QMainWindow):
             "fr": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guide rapide</h3>
             <h3>🎛 Affichage : Classique ou Tableau de bord</h3><p>Dans <b>Paramètres → Affichage</b>, choisissez entre <b>Classique</b> et le nouveau <b>Tableau de bord</b>. Les deux vues utilisent les mêmes données et fonctions MeshCom. Le choix est enregistré.</p><p>Le Tableau de bord réunit connexion, salons, chat, carte, activité mondiale, moniteur, MH et statistiques dans une seule vue.</p>
-            <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>cinq salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p>
+            <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>cinq salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p><p><b>Cliquer sur un indicatif :</b> un indicatif cliquable ouvre un petit menu avec <b>Chat privé</b> et <b>QRZ.com</b>. Pour QRZ.com, seul l'indicatif de base est utilisé automatiquement, par exemple <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> saisir l'adresse IP du WebService MeshCom. <b>Station/GPS :</b> saisir votre indicatif et, si nécessaire, latitude et longitude. Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p><b>Connecter</b> établit la connexion au WebService MeshCom. Après une connexion manuelle, la reconnexion automatique est activée. <b>Déconnecter</b> la désactive volontairement.</p>
             <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
@@ -4571,7 +4600,7 @@ class MainWindow(QMainWindow):
         # immediately when the common background color changes.
         if view not in self._all_chat_views:
             self._all_chat_views.append(view)
-        view.callsignClicked.connect(self.open_private_chat)
+        view.callsignActionClicked.connect(self._handle_callsign_action)
         index = self.tabs.addTab(view, title or key[1])
         self.tab_keys[key] = index
         # Nur echte Privat-Chats dürfen geschlossen werden.
@@ -4666,6 +4695,30 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().setTabTextColor(idx, Qt.GlobalColor.black if self.current_theme == "light" else Qt.GlobalColor.white)
         if hasattr(self, "dashboard_sidebar"):
             self._dashboard_update_chat_button(key)
+
+    def _handle_callsign_action(self, callsign, action):
+        callsign = self._normalize_callsign(callsign)
+        if not callsign:
+            return
+        if action == "private":
+            self.open_private_chat(callsign)
+            return
+        if action == "mention":
+            text = f"@{callsign} "
+            # Nur das aktuell sichtbare Eingabefeld ändern. Dadurch werden
+            # keine unnötigen TextChanged-Signale im anderen Layout ausgelöst.
+            if getattr(self, "layout_mode", "classic") == "dashboard" and hasattr(self, "dashboard_message_input"):
+                target = self.dashboard_message_input
+            else:
+                target = self.message_input
+            target.setText(text)
+            target.setFocus()
+            target.setCursorPosition(len(text))
+            self.status.setText(ui_text(f"Erwähnung vorbereitet: @{callsign}"))
+            return
+        if action == "qrz":
+            qrz_callsign = callsign.split("-", 1)[0]
+            QDesktopServices.openUrl(QUrl(f"https://www.qrz.com/db/{qrz_callsign}"))
 
     def open_private_chat(self, callsign):
         callsign = self._normalize_callsign(callsign)
@@ -5096,13 +5149,43 @@ class MainWindow(QMainWindow):
     def _bubble_link_activated(self, url):
         """Handle links clicked inside room/private message bubbles.
 
-        This mirrors ChatView's existing link handling: MeshCom callsign links
-        open a private chat, while normal HTTP(S) links open in the system browser.
+        Rufzeichen in Bubble-Chats use the same non-modal context menu as the
+        normal QTextBrowser chats.  In particular, do NOT open a modal QMenu
+        here: on the Raspberry Pi that can block the Qt/GTK event loop.
         """
         value = str(url or "").strip()
         if value.startswith("meshcom://call/"):
-            self.open_private_chat(value.rsplit("/", 1)[-1])
-        elif value.startswith(("http://", "https://")):
+            callsign = re.sub(
+                r"[^A-Za-z0-9-]",
+                "",
+                value.rsplit("/", 1)[-1],
+            ).upper()
+            if not callsign:
+                return
+
+            menu = QMenu(self)
+            private_action = menu.addAction(ui_text("Privat Chat"))
+            mention_action = menu.addAction(f"@{callsign}")
+            menu.addSeparator()
+            qrz_action = menu.addAction("QRZ.com")
+
+            private_action.triggered.connect(
+                lambda _checked=False, c=callsign: self._handle_callsign_action(c, "private")
+            )
+            mention_action.triggered.connect(
+                lambda _checked=False, c=callsign: self._handle_callsign_action(c, "mention")
+            )
+            qrz_action.triggered.connect(
+                lambda _checked=False, c=callsign: self._handle_callsign_action(c, "qrz")
+            )
+
+            # Nicht-modal: der normale Event-Loop bleibt aktiv.
+            self._callsign_menu = menu
+            menu.aboutToHide.connect(lambda: setattr(self, "_callsign_menu", None))
+            menu.popup(QCursor.pos())
+            return
+
+        if value.startswith(("http://", "https://")):
             QDesktopServices.openUrl(QUrl(value))
 
     def _refresh_visible_ack_states(self):

@@ -1,32 +1,13 @@
-# GitHub Release v0.3.87
+# MeshCom-Guru v0.3.88
 
-## Änderungen
+## Änderungen in v0.3.88
 
-- 📻 „Räume“ im Dashboard vollständig sichtbar.
-- ➕ „Raum hinzufügen“ auf 155 px eingestellt.
-- 🧩 Übriges Dashboard-Layout unverändert.
-
-# MeshCom-Guru v0.3.86
-
-## Änderungen in v0.3.86
-- 📡 MH-Liste auf maximal **250 zuletzt gehörte Stationen** erweitert.
-- 🧹 Beim 251. Eintrag wird automatisch die älteste Station entfernt.
-- 🖥️ Klassische Ansicht und 📊 Dashboard verwenden dieselbe Begrenzung von 250 Stationen.
-- 🔄 Sortierung nach dem tatsächlichen letzten Empfangszeitpunkt.
-- 📡 **Dashboard-Monitor:** Pause, Leeren, Filter, Suche und Auto-Scroll direkt über dem Monitor.
-- 🧹 **Dashboard-MH:** Leeren-Button für die MH-Liste.
-- 📊 **Dashboard-Statistik:** Werte übersichtlich untereinander.
-- 📡 **Telemetrie:** Empfangene Telemetrie-Datensätze werden in der Statistik mitgezählt.
-- 🧩 **Layout unverändert:** Keine Änderung der bestehenden Panel-Größen oder Positionen.
-
-## Änderungen in v0.3.85
-- 🖥️ Dashboard-Layout nach dem festgelegten Referenzlayout angepasst.
-- 💬 Chatbereich breiter dargestellt.
-- 🗺️ Karte und 🌐 Weltweit entsprechend kompakter angeordnet.
-- 📻 **Räume** und **+ Raum hinzufügen** direkt nebeneinander.
-- 🔘 Raum-Buttons bleiben in Größe und Anordnung unverändert.
-- 🖱️ Die funktionierende GTK-Capture-Mausradlösung für Weltweit bleibt erhalten.
-- 🌐 WebKitGTK für Weltweit bleibt erhalten.
+- 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über ein Kontextmenü weiterverarbeitet werden.
+- 💬 **Privat Chat:** Direktes Öffnen eines privaten Chats für das ausgewählte Rufzeichen.
+- 💬 **@Rufzeichen:** Das ausgewählte Rufzeichen kann direkt als Erwähnung in das Nachrichtenfeld übernommen werden.
+- 🌐 **QRZ.com:** Direkter Aufruf des Rufzeichens im normalen Systembrowser.
+- 🔎 **QRZ-Rufzeichen:** Bei Rufzeichen mit SSID wird für QRZ.com nur das Basis-Rufzeichen verwendet, z. B. `DO1ABC-12` → `DO1ABC`.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor- und Chat-Verarbeitung bleibt unverändert.
 
 ## Installation unter Linux / Raspberry Pi
 
@@ -41,4 +22,4 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.86_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.88_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.

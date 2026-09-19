@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.3.88 – Rufzeichen-Menü und QRZ-Verknüpfung
+
+- 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über ein Kontextmenü weiterverarbeitet werden.
+- 💬 **Privat Chat:** Direktes Öffnen eines privaten Chats für das ausgewählte Rufzeichen.
+- 💬 **@Rufzeichen:** Das ausgewählte Rufzeichen kann direkt als Erwähnung in das Nachrichtenfeld übernommen werden.
+- 🌐 **QRZ.com:** Das ausgewählte Rufzeichen kann direkt im normalen Systembrowser auf QRZ.com geöffnet werden.
+- 🔎 **QRZ-Rufzeichen:** Rufzeichen mit SSID werden für QRZ.com automatisch auf das reine Rufzeichen reduziert, z. B. `DO1ABC-12` → `DO1ABC`.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor- und Chat-Verarbeitung bleibt unverändert.
+- 🖱️ **Rufzeichen in Räumen:** Auch in den Raum- und Privat-Chatblasen öffnet ein angeklicktes Rufzeichen jetzt dasselbe nicht-modale Menü wie im Dashboard.
+
 ## v0.3.87 – Dashboard-Feinschliff, Monitor und Übersetzungen
 
 - 📊 **Statistik scrollbar:** Das Statistikfeld im Dashboard besitzt jetzt einen eigenen Scrollbereich. Auch bei einer langen Statistik bleiben alle Werte und Raumstatistiken erreichbar.
