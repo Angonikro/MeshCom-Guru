@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.3.89 – Via-/Privatnachrichten sauber unterscheiden
+
+- 📡 **Via-Nachrichten:** Die vollständige Zielangabe rechts vom `>` wird jetzt vor der Privatnachrichten-Erkennung geprüft.
+- 💬 **Privat-Chat:** `RUFZEICHEN, VIA > ZIEL,RAUM` wird nicht mehr fälschlich als reine Direktnachricht erkannt.
+- 🧭 **Zielauswertung:** Ein Ziel-Rufzeichen mit anschließender Raumangabe wie `OE5XLM-12,232` ist kein reiner Direktchat-Header.
+- 🧩 **Stabilität:** Empfang, Monitor, Räume, Dashboard, Karte, Weltweit und die übrige Chatlogik bleiben unverändert.
+
+
 ## v0.3.88 – Rufzeichen-Menü und QRZ-Verknüpfung
 
 - 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über ein Kontextmenü weiterverarbeitet werden.

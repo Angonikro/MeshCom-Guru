@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -28,6 +21,15 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+
+## Version 0.3.89
+
+### Neu in v0.3.89 – Via-/Privatnachrichten sauber unterscheiden
+
+- 📡 **Via-Nachrichten:** Die vollständige Zielangabe hinter `>` wird jetzt bei der Privatnachrichten-Erkennung berücksichtigt.
+- 💬 **Privat-Chat:** Ein Header wie `OE5HWN-12,DO2GG-1 > OE5XLM-12,232` wird nicht mehr fälschlich als reine Privatnachricht erkannt, weil nach dem Ziel-Rufzeichen noch die Raumangabe `,232` folgt.
+- 🧭 **Zielauswertung:** Die App prüft den Zielteil rechts vom `>` vollständig, bevor eine Nachricht einem Privat-Chat zugeordnet wird.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor-, Raum-, Dashboard- und Chat-Verarbeitung bleibt ansonsten unverändert.
 
 ## Version 0.3.88
 
@@ -622,5 +624,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

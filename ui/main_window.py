@@ -84,7 +84,8 @@ OWN_CALLSIGN = ""  # eigenes Rufzeichen kommt ausschließlich aus settings.ini
 
 DIRECT_HEADER_RE = re.compile(
     r"(?P<left>(?:[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\s*,?\s*)+)"
-    r">\s*(?P<right>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)\b",
+    r">\s*(?P<right>[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?)"
+    r"(?=\s|$)",
     re.IGNORECASE,
 )
 
@@ -4957,7 +4958,8 @@ class MainWindow(QMainWindow):
         # Direct/private message without a numeric room.
         direct = re.search(
             r"[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\s*>\s*"
-            r"[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?\b",
+            r"[A-Z]{1,3}[0-9][A-Z0-9]{0,3}(?:-[0-9]{1,2})?"
+            r"(?=\s|$)",
             plain, re.IGNORECASE,
         )
         if direct:

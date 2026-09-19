@@ -1,13 +1,11 @@
-# MeshCom-Guru v0.3.88
+# MeshCom-Guru v0.3.89
 
-## Änderungen in v0.3.88
+## Änderungen in v0.3.89
 
-- 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über ein Kontextmenü weiterverarbeitet werden.
-- 💬 **Privat Chat:** Direktes Öffnen eines privaten Chats für das ausgewählte Rufzeichen.
-- 💬 **@Rufzeichen:** Das ausgewählte Rufzeichen kann direkt als Erwähnung in das Nachrichtenfeld übernommen werden.
-- 🌐 **QRZ.com:** Direkter Aufruf des Rufzeichens im normalen Systembrowser.
-- 🔎 **QRZ-Rufzeichen:** Bei Rufzeichen mit SSID wird für QRZ.com nur das Basis-Rufzeichen verwendet, z. B. `DO1ABC-12` → `DO1ABC`.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor- und Chat-Verarbeitung bleibt unverändert.
+- 📡 **Via-/Privatnachrichten:** Die vollständige Zielangabe rechts vom `>` wird jetzt vor der Privatnachrichten-Erkennung geprüft.
+- 💬 **Privat-Chat:** Via-/Raum-Header wie `OE5HWN-12,DO2GG-1 > OE5XLM-12,232` werden nicht mehr fälschlich als reine Privatnachrichten behandelt.
+- 🧭 **Zielauswertung:** Eine Raumangabe hinter dem Ziel-Rufzeichen verhindert die falsche Zuordnung zu einem Privat-Chat.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor-, Raum-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
 
 ## Installation unter Linux / Raspberry Pi
 
@@ -22,4 +20,5 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.88_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.89_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+
