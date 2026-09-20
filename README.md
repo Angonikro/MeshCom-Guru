@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -28,6 +21,17 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
 - **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
 - **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+
+## Version 0.3.90
+
+### Neu in v0.3.90 – Backup/Restore und Update-Prüfung
+
+- 💾 **Backup:** Die persönlichen MeshCom-Guru-Daten aus `~/.MeshCom` können als ZIP-Datei gesichert werden.
+- ♻️ **Restore:** Eine Sicherung kann wiederhergestellt werden. Die wiederhergestellten Daten werden direkt in die laufende Anwendung übernommen und bleiben auch nach dem Neustart erhalten.
+- 🔒 **Sicherer Restore:** Beim Neustart nach einem Restore wird verhindert, dass ein vorheriger leerer In-Memory-Zustand die restaurierten Einstellungen überschreibt.
+- 🔄 **Nach Update suchen:** MeshCom-Guru kann die aktuelle GitHub-Release-Version prüfen und bei Bedarf auf die Release-Seite hinweisen. Es erfolgt keine automatische Installation.
+- 🌐 **Übersetzungen:** Backup, Restore und Update-Prüfung sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
 
 ## Version 0.3.89
 
@@ -631,5 +635,3 @@ Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` i
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

@@ -1,11 +1,13 @@
-# MeshCom-Guru v0.3.89
+# MeshCom-Guru v0.3.90
 
-## Änderungen in v0.3.89
+## Änderungen in v0.3.90
 
-- 📡 **Via-/Privatnachrichten:** Die vollständige Zielangabe rechts vom `>` wird jetzt vor der Privatnachrichten-Erkennung geprüft.
-- 💬 **Privat-Chat:** Via-/Raum-Header wie `OE5HWN-12,DO2GG-1 > OE5XLM-12,232` werden nicht mehr fälschlich als reine Privatnachrichten behandelt.
-- 🧭 **Zielauswertung:** Eine Raumangabe hinter dem Ziel-Rufzeichen verhindert die falsche Zuordnung zu einem Privat-Chat.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor-, Raum-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
+- 💾 **Backup:** Persönliche MeshCom-Guru-Daten aus `~/.MeshCom` können als ZIP-Datei gesichert werden.
+- ♻️ **Restore:** Sicherungen können wiederhergestellt und direkt in die laufende Anwendung übernommen werden.
+- 🔒 **Restore-Schutz:** Beim Neustart nach dem Restore wird ein Überschreiben der restaurierten Daten durch den vorherigen In-Memory-Zustand verhindert.
+- 🔄 **Update-Prüfung:** Die aktuelle GitHub-Release-Version kann geprüft werden; es erfolgt kein automatischer Download oder keine automatische Installation.
+- 🌐 **Übersetzungen:** Die neuen Funktionen sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
 
 ## Installation unter Linux / Raspberry Pi
 
@@ -20,5 +22,5 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.89_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.90_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.3.90 – Backup/Restore und Update-Prüfung
+
+- 💾 **Backup:** Die persönlichen MeshCom-Guru-Daten aus `~/.MeshCom` können jetzt als ZIP-Sicherung gespeichert werden.
+- ♻️ **Restore:** Eine vorhandene Sicherung kann wiederhergestellt werden; die Daten werden anschließend auch in der laufenden Anwendung übernommen.
+- 🔒 **Restore-Schutz:** Beim anschließenden Neustart wird verhindert, dass der vorherige In-Memory-Zustand die restaurierten Daten wieder überschreibt.
+- 🔄 **Update-Prüfung:** Über die neue Update-Prüfung kann nach einer neueren GitHub-Version gesucht werden. Es erfolgt kein automatischer Download oder keine automatische Installation.
+- 🌐 **Übersetzungen:** Die neuen Funktionen sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
+- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
+
+
 ## v0.3.89 – Via-/Privatnachrichten sauber unterscheiden
 
 - 📡 **Via-Nachrichten:** Die vollständige Zielangabe rechts vom `>` wird jetzt vor der Privatnachrichten-Erkennung geprüft.

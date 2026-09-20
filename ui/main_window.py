@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QScrollArea,
     QSplitter,
     QStackedWidget,
@@ -61,6 +62,8 @@ from PySide6.QtWidgets import (
 
 from core.meshcom import MeshCom
 from core.settings import SETTINGS_FILE, load_settings
+from core.backup_restore import create_backup, restore_backup
+from core.update_checker import UpdateChecker
 from version import VERSION
 
 # WebKitGTK is used only on Linux. Windows keeps the proven QtWebEngine
@@ -536,6 +539,9 @@ class MainWindow(QMainWindow):
         # Dashboard-Kopfzeile vollständig sichtbar bleiben.
         self.resize(1634, 950)
         self.setMinimumSize(1434, 900)
+        # Nach einem Restore darf closeEvent die gerade wiederhergestellten
+        # Dateien nicht mit dem alten In-Memory-Zustand überschreiben.
+        self._skip_settings_write_on_close = False
 
         settings = load_settings()
         self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
@@ -646,6 +652,11 @@ class MainWindow(QMainWindow):
         self.auto_reconnect_enabled = False
         self.reconnect_in_progress = False
 
+        # Ergänzende Datensicherung / Update-Prüfung. Diese Helfer arbeiten
+        # unabhängig von Empfang, Chat, Dashboard und MeshCom-Verbindung.
+        self.update_checker = UpdateChecker(self)
+        self.update_checker.result.connect(self._handle_update_check_result)
+
         self._build_menu()
         self._build_ui(settings)
         self._apply_language_ui()
@@ -665,6 +676,10 @@ class MainWindow(QMainWindow):
         # vollständig initialisiert sind.
         if self.weather_enabled:
             QTimer.singleShot(1500, self._refresh_weather)
+
+        # Leise Update-Prüfung nach dem vollständigen Aufbau des Fensters.
+        # Es wird niemals automatisch heruntergeladen oder installiert.
+        QTimer.singleShot(3000, self._check_for_updates_silent)
 
         # Eigenständiger MeshCom-Positions-/Status-Empfang direkt per UDP.
         self._start_udp_listener(1799)
@@ -1307,6 +1322,16 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self._export_current_chat)
         file_menu.addAction(export_action)
         self.export_chat_action = export_action
+
+        backup_action = QAction(ui_text("Datensicherung erstellen …"), self)
+        backup_action.triggered.connect(self._create_backup_from_menu)
+        file_menu.addAction(backup_action)
+        self.backup_action = backup_action
+
+        restore_action = QAction(ui_text("Datensicherung wiederherstellen …"), self)
+        restore_action.triggered.connect(self._restore_backup_from_menu)
+        file_menu.addAction(restore_action)
+        self.restore_action = restore_action
         file_menu.addSeparator()
 
         exit_action = QAction("Beenden", self)
@@ -1376,6 +1401,187 @@ class MainWindow(QMainWindow):
         info_action = QAction("Info", self)
         info_action.triggered.connect(self.open_about)
         help_menu.addAction(info_action)
+
+        help_menu.addSeparator()
+        update_action = QAction(ui_text("Nach Update suchen …"), self)
+        update_action.triggered.connect(self._check_for_updates_manual)
+        help_menu.addAction(update_action)
+        self.update_action = update_action
+
+    # ---------- Ergänzende Datensicherung / Update-Prüfung ----------
+    def _create_backup_from_menu(self):
+        default_name = f"MeshCom-Guru_Backup_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.zip"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            ui_text("Datensicherung erstellen"),
+            str(Path.home() / default_name),
+            "MeshCom-Guru Backup (*.zip);;ZIP-Dateien (*.zip);;Alle Dateien (*)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".zip"):
+            path += ".zip"
+
+        ok, result = create_backup(path)
+        if ok:
+            QMessageBox.information(
+                self,
+                ui_text("Datensicherung"),
+                ui_text("Datensicherung erfolgreich erstellt: ") + result,
+            )
+        else:
+            QMessageBox.critical(
+                self,
+                ui_text("Datensicherung"),
+                ui_text("Datensicherung fehlgeschlagen: ") + result,
+            )
+
+    def _restore_backup_from_menu(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            ui_text("Datensicherung wiederherstellen"),
+            str(Path.home()),
+            "MeshCom-Guru Backup (*.zip);;ZIP-Dateien (*.zip);;Alle Dateien (*)",
+        )
+        if not path:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            ui_text("Datensicherung wiederherstellen"),
+            ui_text(
+                "Die persönlichen Einstellungen aus dem Backup werden in ~/.MeshCom "
+                "wiederhergestellt. Nicht zum Backup gehörende Dateien werden nicht gelöscht. "
+                "Nach der Wiederherstellung ist ein Neustart von MeshCom-Guru erforderlich. "
+                "Fortfahren?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        ok, result = restore_backup(path)
+        if ok:
+            # Die wiederhergestellten Werte sofort aus der neuen settings.ini
+            # laden, damit auch die laufende Oberfläche den Backup-Stand kennt.
+            self._reload_restored_settings()
+            restart = QMessageBox.question(
+                self,
+                ui_text("Datensicherung"),
+                ui_text("Datensicherung erfolgreich wiederhergestellt. MeshCom-Guru jetzt beenden, damit die Einstellungen beim nächsten Start übernommen werden?"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if restart == QMessageBox.StandardButton.Yes:
+                # Beim anschließenden Beenden darf closeEvent NICHT den alten
+                # In-Memory-Zustand erneut in settings.ini schreiben.
+                self._skip_settings_write_on_close = True
+                QApplication.quit()
+        else:
+            QMessageBox.critical(
+                self,
+                ui_text("Datensicherung"),
+                ui_text("Wiederherstellung fehlgeschlagen: ") + result,
+            )
+
+    def _reload_restored_settings(self):
+        """Synchronize restored settings into the currently running UI.
+
+        The restore itself writes the files to ~/.MeshCom. This method only
+        updates the existing widgets/state; it deliberately does not call
+        _write_settings(), so the restored backup remains authoritative.
+        """
+        settings = load_settings()
+        try:
+            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+            set_language(self.language)
+            if hasattr(self, "ip_input"):
+                self.ip_input.setText(settings.get("ip", ""))
+            if hasattr(self, "target_input"):
+                self.target_input.setText(settings.get("target", ""))
+            if hasattr(self, "own_callsign_input"):
+                self.own_callsign_input.setText(self._normalize_callsign(settings.get("own_callsign", "")))
+            if hasattr(self, "own_lat_input"):
+                self.own_lat_input.setText(settings.get("own_lat", ""))
+            if hasattr(self, "own_lon_input"):
+                self.own_lon_input.setText(settings.get("own_lon", ""))
+            if hasattr(self, "filter_enabled"):
+                self.filter_enabled.setChecked(settings.get("filter_enabled", "0") == "1")
+            if hasattr(self, "dashboard_hotspot_input"):
+                self.dashboard_hotspot_input.setText(settings.get("ip", ""))
+            if hasattr(self, "dashboard_room_input"):
+                self.dashboard_room_input.setText(settings.get("target", ""))
+            if hasattr(self, "dashboard_callsign_input"):
+                self.dashboard_callsign_input.setText(self._normalize_callsign(settings.get("own_callsign", "")))
+            if hasattr(self, "dashboard_lat_input"):
+                self.dashboard_lat_input.setText(settings.get("own_lat", ""))
+            if hasattr(self, "dashboard_lon_input"):
+                self.dashboard_lon_input.setText(settings.get("own_lon", ""))
+
+            self.own_callsign = self._normalize_callsign(settings.get("own_callsign", ""))
+            try:
+                self.own_lat = float(settings.get("own_lat", "").replace(",", ".")) if settings.get("own_lat", "") else None
+                self.own_lon = float(settings.get("own_lon", "").replace(",", ".")) if settings.get("own_lon", "") else None
+            except (TypeError, ValueError):
+                self.own_lat = self.own_lon = None
+
+            self.quick_texts = self._load_quick_texts(settings)
+            self._load_filter_fields(settings)
+            self._apply_language_ui()
+            self.status.setText(ui_text("Datensicherung geladen – Neustart erforderlich"))
+        except Exception as exc:
+            self.status.setText(ui_text("Backup geladen, Oberfläche wird beim Neustart vollständig übernommen: ") + str(exc))
+
+    def _check_for_updates_silent(self):
+        """Check in the background and only notify when a newer release exists."""
+        self._update_check_manual = False
+        self.update_checker.check_async(VERSION)
+
+    def _check_for_updates_manual(self):
+        """Manual update check; also reports when the installed version is current."""
+        self._update_check_manual = True
+        self.update_checker.check_async(VERSION)
+
+    def _handle_update_check_result(self, result):
+        manual = bool(getattr(self, "_update_check_manual", False))
+        self._update_check_manual = False
+
+        if not result.get("ok"):
+            if manual:
+                QMessageBox.warning(
+                    self,
+                    ui_text("Nach Update suchen"),
+                    ui_text("Die GitHub-Release-Prüfung konnte nicht durchgeführt werden: ")
+                    + str(result.get("error", "")),
+                )
+            return
+
+        current = result.get("current", VERSION)
+        latest = result.get("latest", current)
+        url = result.get("url", "https://github.com/Angonikro/MeshCom-Guru/releases/latest")
+
+        if result.get("update_available"):
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Information)
+            box.setWindowTitle(ui_text("Update verfügbar"))
+            box.setText(
+                ui_text("Eine neue MeshCom-Guru-Version ist verfügbar.")
+                + f"\n\n{ui_text('Installiert')}: v{current}\n"
+                + f"{ui_text('Neu')}: v{latest}"
+            )
+            open_button = box.addButton(ui_text("GitHub Release öffnen"), QMessageBox.ButtonRole.AcceptRole)
+            box.addButton(QMessageBox.StandardButton.Close)
+            box.exec()
+            if box.clickedButton() is open_button:
+                QDesktopServices.openUrl(QUrl(url))
+        elif manual:
+            QMessageBox.information(
+                self,
+                ui_text("Nach Update suchen"),
+                ui_text("Du verwendest bereits die aktuelle Version.")
+                + f"\n\n{ui_text('Installiert')}: v{current}",
+            )
 
     def _build_ui(self, settings):
         # Verbindungsstatus links und Uhr/Datum rechts in derselben Zeile.
@@ -4242,7 +4448,9 @@ class MainWindow(QMainWindow):
             <p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe anklickbarer Rufzeichen und Internetlinks eingestellt werden. Sound, Lautstärke und Hell-/Dunkel-Theme können ebenfalls konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
             <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
-            <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+<h3>💾 Datensicherung und ♻️ Wiederherstellung</h3><p>Über <b>Datei → Datensicherung erstellen …</b> können die persönlichen MeshCom-Guru-Daten aus <code>~/.MeshCom</code> als ZIP-Datei gesichert werden. Mit <b>Datei → Datensicherung wiederherstellen …</b> kann eine zuvor erstellte Sicherung zurückgespielt werden. Nicht im Backup enthaltene Dateien werden nicht gelöscht.</p><p>Nach einer Wiederherstellung werden die Daten auch in der laufenden Anwendung übernommen. Beim anschließenden Neustart bleibt der restaurierte Backup-Stand erhalten.</p>
+<h3>🔄 Nach Updates suchen</h3><p>Über <b>Hilfe → Nach Update suchen …</b> kann die installierte Version mit der aktuellen GitHub-Release verglichen werden. Bei einer neueren Version wird ein Hinweis mit Link zur GitHub-Release angezeigt. MeshCom-Guru lädt Updates nicht automatisch herunter und installiert sie nicht automatisch.</p>
+                        <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
@@ -4258,7 +4466,9 @@ class MainWindow(QMainWindow):
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
             <h3>Node Info</h3><p><b>Open Node Info</b> displays information from the connected MeshCom WebService.</p>
             <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The choice is saved, and the built-in guide follows the selected language.</p>
-            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
+<h3>💾 Backup and ♻️ Restore</h3><p>Use <b>File → Create backup …</b> to save the personal MeshCom-Guru data from <code>~/.MeshCom</code> as a ZIP file. Use <b>File → Restore backup …</b> to restore a previously created backup. Files that are not included in the backup are not deleted.</p><p>After a restore, the restored data is also applied to the running application. During the following restart, the restored backup state is preserved.</p>
+<h3>🔄 Check for updates</h3><p>Use <b>Help → Check for updates …</b> to compare the installed version with the current GitHub release. If a newer version is available, MeshCom-Guru shows a notice with a link to the GitHub release. MeshCom-Guru does not download or install updates automatically.</p>
+                        <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
@@ -4273,6 +4483,8 @@ class MainWindow(QMainWindow):
             <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
             <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
             <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. Anche questa guida segue la lingua selezionata.</p>
+            <h3>💾 Backup e ♻️ Ripristino</h3><p>Con <b>File → Crea backup …</b> puoi salvare i dati personali di MeshCom-Guru da <code>~/.MeshCom</code> in un file ZIP. Con <b>File → Ripristina backup …</b> puoi ripristinare un backup creato in precedenza. I file non inclusi nel backup non vengono eliminati.</p><p>Dopo il ripristino, i dati vengono applicati anche all'applicazione in esecuzione. Al riavvio successivo il contenuto ripristinato viene mantenuto.</p>
+            <h3>🔄 Controlla aggiornamenti</h3><p>Con <b>Aiuto → Cerca aggiornamenti …</b> puoi confrontare la versione installata con la release GitHub corrente. Se è disponibile una versione più recente, MeshCom-Guru mostra un avviso con il link alla release GitHub. Gli aggiornamenti non vengono scaricati o installati automaticamente.</p>
             <h3>Installazione</h3><p><b>Linux:</b> estrarre <code>MeshCom</code> e avviare <code>./run_linux.sh</code>. <b>Windows:</b> avviare <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>.</p>
             """,
             "nl": f"""
@@ -4288,6 +4500,8 @@ class MainWindow(QMainWindow):
             <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
             <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
             <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De ingebouwde handleiding volgt de gekozen taal.</p>
+            <h3>💾 Back-up en ♻️ Herstellen</h3><p>Gebruik <b>Bestand → Back-up maken …</b> om de persoonlijke MeshCom-Guru-gegevens uit <code>~/.MeshCom</code> als ZIP-bestand op te slaan. Met <b>Bestand → Back-up herstellen …</b> kun je een eerder gemaakte back-up terugzetten. Bestanden die niet in de back-up staan worden niet verwijderd.</p><p>Na herstel worden de teruggezette gegevens ook in de actieve toepassing overgenomen. Bij de daaropvolgende herstart blijft de herstelde back-up behouden.</p>
+            <h3>🔄 Naar updates zoeken</h3><p>Via <b>Help → Naar updates zoeken …</b> kun je de geïnstalleerde versie vergelijken met de huidige GitHub-release. Als een nieuwere versie beschikbaar is, toont MeshCom-Guru een melding met een link naar de GitHub-release. Updates worden niet automatisch gedownload of geïnstalleerd.</p>
             <h3>Installatie</h3><p><b>Linux:</b> pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>.</p>
             """,
             "fr": f"""
@@ -4303,7 +4517,9 @@ class MainWindow(QMainWindow):
             <h3>🎨 Couleurs du chat et 🔊 Son</h3><p>Les couleurs du chat, des indicatifs/liens cliquables, le son, le volume et le thème clair/sombre sont configurables dans les paramètres.</p>
             <h3>Infos du nœud</h3><p><b>Infos du nœud</b> affiche les informations du WebService MeshCom connecté.</p>
             <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le guide intégré suit également la langue sélectionnée.</p>
-            <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
+<h3>💾 Sauvegarde et ♻️ restauration</h3><p>Utilisez <b>Fichier → Créer une sauvegarde …</b> pour enregistrer les données personnelles de MeshCom-Guru depuis <code>~/.MeshCom</code> dans un fichier ZIP. Avec <b>Fichier → Restaurer une sauvegarde …</b>, vous pouvez restaurer une sauvegarde précédente. Les fichiers qui ne figurent pas dans la sauvegarde ne sont pas supprimés.</p><p>Après la restauration, les données restaurées sont également appliquées à l'application en cours d'exécution. Lors du redémarrage suivant, l'état restauré est conservé.</p>
+<h3>🔄 Rechercher les mises à jour</h3><p>Avec <b>Aide → Rechercher les mises à jour …</b>, vous pouvez comparer la version installée avec la release GitHub actuelle. Si une version plus récente est disponible, MeshCom-Guru affiche un message avec un lien vers la release GitHub. Les mises à jour ne sont ni téléchargées ni installées automatiquement.</p>
+                        <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
             """,
         }
         view.setHtml(guides.get(lang, guides["de"]))
@@ -6519,6 +6735,7 @@ renderStations(initialStations);</script></body></html>"""
             except Exception:
                 pass
         try:
-            self._write_settings()
+            if not getattr(self, "_skip_settings_write_on_close", False):
+                self._write_settings()
         finally:
             event.accept()
