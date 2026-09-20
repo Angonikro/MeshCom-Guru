@@ -1,13 +1,13 @@
-# MeshCom-Guru v0.3.90
+# MeshCom-Guru v0.3.91
 
-## Änderungen in v0.3.90
+## Änderungen in v0.3.91
 
-- 💾 **Backup:** Persönliche MeshCom-Guru-Daten aus `~/.MeshCom` können als ZIP-Datei gesichert werden.
-- ♻️ **Restore:** Sicherungen können wiederhergestellt und direkt in die laufende Anwendung übernommen werden.
-- 🔒 **Restore-Schutz:** Beim Neustart nach dem Restore wird ein Überschreiben der restaurierten Daten durch den vorherigen In-Memory-Zustand verhindert.
-- 🔄 **Update-Prüfung:** Die aktuelle GitHub-Release-Version kann geprüft werden; es erfolgt kein automatischer Download oder keine automatische Installation.
-- 🌐 **Übersetzungen:** Die neuen Funktionen sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
+- 🧹 **„No messages available.“:** Die WebService-Statusmeldung wird nicht mehr als Chatnachricht übernommen, gespeichert oder dauerhaft am Ende des Chats angezeigt.
+- 🌐 Die Statusmeldung wird auch in den vorhandenen Sprachvarianten erkannt.
+- 🛠️ Die übrigen Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Funktionen bleiben unverändert.
+## Installation
+
+Das Debian-Paket `MeshCom-Guru_v0.3.91_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 
 ## Installation unter Linux / Raspberry Pi
 
@@ -22,5 +22,5 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.90_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.91_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 

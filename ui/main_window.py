@@ -4964,6 +4964,32 @@ class MainWindow(QMainWindow):
 
     # ---------- Message parsing ----------
     @staticmethod
+    def _is_no_messages_response(block):
+        """Return True for the WebService response that means there are no messages.
+
+        Such a status response is not a real MeshCom message and must never enter
+        the chat/session cache. The node/WebService can return this in different
+        UI languages.
+        """
+        plain = MainWindow._normalized_plain(block).strip().casefold()
+        if not plain:
+            return False
+
+        no_message_texts = {
+            "no messages available.",
+            "no messages available",
+            "keine nachrichten verfügbar.",
+            "keine nachrichten verfügbar",
+            "nessun messaggio disponibile.",
+            "nessun messaggio disponibile",
+            "geen berichten beschikbaar.",
+            "geen berichten beschikbaar",
+            "aucun message disponible.",
+            "aucun message disponible",
+        }
+        return plain in no_message_texts
+
+    @staticmethod
     def _extract_message_blocks(page):
         """Extract normal message cards plus position/status cards.
 
@@ -5110,6 +5136,9 @@ class MainWindow(QMainWindow):
                     blocks.append(candidate)
                     existing.add(candidate)
 
+        # A status response such as "No messages available." is not a
+        # MeshCom message. Never pass it into the chat/session cache.
+        blocks = [block for block in blocks if not MainWindow._is_no_messages_response(block)]
         return blocks
 
     @staticmethod
@@ -5872,10 +5901,17 @@ renderStations(initialStations);</script></body></html>"""
         try:
             page = self.mesh.get_messages()
             self._set_connection_status(True)
-            blocks = self._extract_message_blocks(page)
-            if not blocks:
-                # Keep compatibility with nodes that return the message HTML directly.
-                blocks = [page] if page.strip() else []
+
+            # "No messages available." is a WebService status response, not a
+            # MeshCom message. It must be discarded before the compatibility
+            # fallback below can treat the complete response as a chat block.
+            if self._is_no_messages_response(page):
+                blocks = []
+            else:
+                blocks = self._extract_message_blocks(page)
+                if not blocks:
+                    # Keep compatibility with nodes that return the message HTML directly.
+                    blocks = [page] if page.strip() else []
 
             # Positions werden ausschließlich direkt über die eigene UDP-
             # Schnittstelle übernommen.

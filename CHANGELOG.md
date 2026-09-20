@@ -1,3 +1,10 @@
+# MeshCom-Guru – Changelog
+
+## v0.3.91 – „No messages available.“ nicht mehr als Chatnachricht
+
+- 🧹 **No-Messages-Fix:** Die WebService-Meldung **„No messages available.“** wird nicht mehr als normale Chatnachricht übernommen oder im lokalen Nachrichtenpuffer gespeichert.
+- 🌐 Die entsprechende Statusmeldung wird auch in den vorhandenen Sprachvarianten erkannt.
+- 🛠️ **Stabilität:** Der Empfangs- und Chatablauf bleibt ansonsten unverändert.
 # CHANGELOG
 
 ## v0.3.90 – Backup/Restore und Update-Prüfung
