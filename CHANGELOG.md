@@ -1,5 +1,12 @@
 # MeshCom-Guru – Changelog
 
+## v0.3.92 – Langzeitstabilität von „Alle“
+
+- 📨 **„Alle“-Langzeit-Fix:** Neue empfangene Raum-Nachrichten bleiben auch nach mehreren Stunden in „Alle“ sichtbar.
+- 📡 **Gezielter Fallback:** Der zusätzliche Empfangspfad ist auf „Alle“ begrenzt und greift nicht in Privat-Chats oder die normalen Raum-Tabs ein.
+- 🛡️ **Weltweit/Monitor/Karte:** Diese Bereiche und ihre bestehende Verarbeitung bleiben unverändert.
+- 🧩 **Stabilität:** Die bestehende Nachrichten- und Sendelogik bleibt erhalten.
+
 ## v0.3.91 – „No messages available.“ nicht mehr als Chatnachricht
 
 - 🧹 **No-Messages-Fix:** Die WebService-Meldung **„No messages available.“** wird nicht mehr als normale Chatnachricht übernommen oder im lokalen Nachrichtenpuffer gespeichert.

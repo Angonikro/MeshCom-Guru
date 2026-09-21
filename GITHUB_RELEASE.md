@@ -1,13 +1,14 @@
-# MeshCom-Guru v0.3.91
+# MeshCom-Guru v0.3.92
 
-## Änderungen in v0.3.91
+## Änderungen in v0.3.92
 
-- 🧹 **„No messages available.“:** Die WebService-Statusmeldung wird nicht mehr als Chatnachricht übernommen, gespeichert oder dauerhaft am Ende des Chats angezeigt.
-- 🌐 Die Statusmeldung wird auch in den vorhandenen Sprachvarianten erkannt.
-- 🛠️ Die übrigen Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Funktionen bleiben unverändert.
+- 📨 **„Alle“-Langzeit-Fix:** Empfangene Raum-Nachrichten bleiben auch nach mehreren Stunden in „Alle“ sichtbar.
+- 📡 **Gezielter Fallback:** Der zusätzliche Empfangspfad ist auf „Alle“ begrenzt und greift nicht in Privat-Chats oder die normalen Raum-Tabs ein.
+- 🧹 **„No messages available.“:** Die WebService-Statusmeldung wird weiterhin nicht als Chatnachricht übernommen oder gespeichert.
+- 🛡️ **Stabilität:** Weltweit, Monitor, Karte und die bestehende Sendelogik bleiben unverändert.
 ## Installation
 
-Das Debian-Paket `MeshCom-Guru_v0.3.91_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Debian-Paket `MeshCom-Guru_v0.3.92_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 
 ## Installation unter Linux / Raspberry Pi
 
@@ -22,5 +23,5 @@ Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCo
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.91_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Paket `MeshCom-Guru_v0.3.92_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 
