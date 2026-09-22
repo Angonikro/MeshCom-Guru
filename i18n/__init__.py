@@ -3,10 +3,10 @@ import os
 import re
 
 _language = "de"
-_SUPPORTED_LANGUAGES = ("de", "en", "it", "nl", "fr")
+_SUPPORTED_LANGUAGES = ("de", "en", "it", "nl", "fr", "es", "sv")
 _catalogs = {}
 _base = os.path.dirname(__file__)
-for _lang in ("de", "en", "it", "nl", "fr"):
+for _lang in ("de", "en", "it", "nl", "fr", "es", "sv"):
     try:
         with open(os.path.join(_base, _lang + ".json"), "r", encoding="utf-8") as _f:
             _catalogs[_lang] = json.load(_f)
@@ -14,7 +14,7 @@ for _lang in ("de", "en", "it", "nl", "fr"):
         _catalogs[_lang] = {}
 
 # Load the additional UI language catalogs.
-for _lang in ("it", "nl", "fr"):
+for _lang in ("it", "nl", "fr", "es", "sv"):
     try:
         with open(os.path.join(_base, _lang + ".json"), "r", encoding="utf-8") as _f:
             _catalogs[_lang].update(json.load(_f))
@@ -48,6 +48,7 @@ _UI = {
     "Theme": "Theme",
     "Hilfe": "Help",
     "Einstellungen speichern": "Save settings",
+    "⚙ Einstellungen speichern": "⚙ Save settings",
     "Nachrichten aktualisieren": "Refresh messages",
     "Beenden": "Exit",
     "Sprache / Language …": "Language / Sprache …",

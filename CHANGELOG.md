@@ -1,3 +1,19 @@
+# CHANGELOG
+
+## v0.3.93 – Spanisch und Schwedisch
+
+- 🇪🇸 **Spanische Benutzeroberfläche:** Spanisch ergänzt, einschließlich der integrierten Anleitung.
+- 🇸🇪 **Schwedische Benutzeroberfläche:** Schwedisch ergänzt, einschließlich der integrierten Anleitung.
+- 🔄 **Sprachumschaltung:** Spanisch und Schwedisch werden sofort angewendet und nach einem Neustart korrekt wiederhergestellt.
+- 📡 **Monitor:** Dynamische Zähler wie „8 angezeigt · 8 gespeichert“ werden jetzt vollständig übersetzt.
+- 🖥️ **Klassische Ansicht:** Einstellungen, GPS, Filter, Wetter, Nachrichten und Bedienelemente werden beim Sprachwechsel korrekt aktualisiert.
+- 🗺️ **Karte:** Der Karten-Tab wird unabhängig von seiner vorherigen Sprache zuverlässig neu übersetzt.
+- 💬 **„Alle“:** Der Dashboard-Eintrag „Alle“ wird beim Sprachwechsel ebenfalls zuverlässig aktualisiert.
+- 🧭 **GPS:** GPS-Beschriftungen und zugehörige Eingabefelder sind in allen unterstützten Sprachen berücksichtigt.
+- 🌐 **Weltweit:** Der klassische Weltweit-Tab wird beim Sprachwechsel jetzt zuverlässig über das Widget aktualisiert.
+- 📝 **Dokumentation:** README und GitHub-Release-Dokumentation auf v0.3.93 aktualisiert.
+- 🛠️ **Stabilität:** Nachrichten-, Empfangs-, „Alle“-, Monitor-, Karten- und Weltweit-Verarbeitung wurden durch diese Übersetzungsänderungen nicht verändert.
+
 # MeshCom-Guru – Changelog
 
 ## v0.3.92 – Langzeitstabilität von „Alle“

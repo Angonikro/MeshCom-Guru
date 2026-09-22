@@ -157,7 +157,7 @@
   "Breitengrad, z. B. 51.93": "Latitudine, ad es. 51.93",
   "Längengrad, z. B. 8.88": "Longitudine, ad es. 8.88",
   "eigenes Rufzeichen, z. B. DL9ABC-1": "proprio nominativo, ad es. DL9ABC-1",
-  "Raum oder Ziel, z. B. 262 oder DL9ABC-1": "stanza o destinatario, ad es. 262 o DL9ABC-1",
+  "Raum oder Ziel, z. B. 262 oder DL9ABC-1": "Stanza o destinatario, ad es. 262 o DL9ABC-1",
   "Letzter Sendeauftrag": "Ultimo invio",
   "Sendeauftrag an den Hotspot übertragen – warte auf Node-Rückmeldung": "Richiesta di invio trasmessa all’hotspot – in attesa della risposta del nodo",
   "Nachrichten aktualisiert – alle Räume": "Messaggi aggiornati – tutte le stanze",
@@ -270,5 +270,15 @@
   "Du verwendest bereits die aktuelle Version.": "Stai già utilizzando la versione più recente.",
   "Die GitHub-Release-Prüfung konnte nicht durchgeführt werden: ": "Impossibile controllare la release GitHub: ",
   "Die persönlichen Einstellungen aus dem Backup werden in ~/.MeshCom wiederhergestellt. Nicht zum Backup gehörende Dateien werden nicht gelöscht. Nach der Wiederherstellung ist ein Neustart von MeshCom-Guru erforderlich. Fortfahren?": "Le impostazioni personali del backup verranno ripristinate in ~/.MeshCom. I file non presenti nel backup non verranno eliminati. Dopo il ripristino è necessario riavviare MeshCom-Guru. Continuare?",
-  "Datensicherung erfolgreich wiederhergestellt. MeshCom-Guru jetzt beenden, damit die Einstellungen beim nächsten Start übernommen werden?": "Backup ripristinato correttamente. Chiudere MeshCom-Guru ora per applicare le impostazioni al prossimo avvio?"
+  "Datensicherung erfolgreich wiederhergestellt. MeshCom-Guru jetzt beenden, damit die Einstellungen beim nächsten Start übernommen werden?": "Backup ripristinato correttamente. Chiudere MeshCom-Guru ora per applicare le impostazioni al prossimo avvio?",
+  "spanish": "Spagnolo",
+  "swedish": "Svedese",
+  "Raum / Ziel:": "Stanza / Destinazione:",
+  "Rufzeichen:": "Nominativo:",
+  "GPS Eingabe:": "Inserimento GPS:",
+  "📍 GPS speichern": "📍 Salva GPS",
+  "⚙ Einstellungen speichern": "⚙ Salva impostazioni",
+  "angezeigt": "visualizzati",
+  "gespeichert": "salvati",
+  "Raum oder Ziel": "Stanza o Destinatario"
 }

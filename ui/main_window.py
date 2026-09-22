@@ -544,7 +544,7 @@ class MainWindow(QMainWindow):
         self._skip_settings_write_on_close = False
 
         settings = load_settings()
-        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
         set_language(self.language)
         # Let Qt translate its own standard context menus (Undo/Copy/Paste/...).
         # This is safer than intercepting ContextMenu events with a global
@@ -991,7 +991,7 @@ class MainWindow(QMainWindow):
             for col in (4, 5):
                 self.monitor_table.item(row_index, col).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        count_text = ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert")
+        count_text = f"{len(rows)} {ui_text('angezeigt')} · {len(self.monitor_rows)} {ui_text('gespeichert')}"
         self.monitor_count_label.setText(count_text)
         if hasattr(self, "dashboard_monitor_count_label"):
             self.dashboard_monitor_count_label.setText(count_text)
@@ -1494,7 +1494,7 @@ class MainWindow(QMainWindow):
         """
         settings = load_settings()
         try:
-            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
             set_language(self.language)
             if hasattr(self, "ip_input"):
                 self.ip_input.setText(settings.get("ip", ""))
@@ -1621,28 +1621,31 @@ class MainWindow(QMainWindow):
 
         self.ip_input = QLineEdit(settings.get("ip", ""))
         self.target_input = QLineEdit(settings.get("target", ""))
-        self.target_input.setPlaceholderText("Raum oder Ziel, z. B. 262 oder DL9ABC-1")
+        self.target_input.setPlaceholderText(ui_text("Raum oder Ziel, z. B. 262 oder DL9ABC-1"))
 
         form = QFormLayout()
-        form.addRow("Hotspot IP", self.ip_input)
-        form.addRow("Raum / Ziel", self.target_input)
+        self.classic_hotspot_label = QLabel(ui_text("Hotspot IP"))
+        form.addRow(self.classic_hotspot_label, self.ip_input)
+        self.classic_target_label = QLabel(ui_text("Raum / Ziel"))
+        form.addRow(self.classic_target_label, self.target_input)
 
         self.own_callsign_input = QLineEdit(settings.get("own_callsign", ""))
-        self.own_callsign_input.setPlaceholderText("eigenes Rufzeichen, z. B. DL9ABC-1")
+        self.own_callsign_input.setPlaceholderText(ui_text("eigenes Rufzeichen, z. B. DL9ABC-1"))
         self.own_lat_input = QLineEdit(settings.get("own_lat", ""))
-        self.own_lat_input.setPlaceholderText("Breitengrad, z. B. 51.93")
+        self.own_lat_input.setPlaceholderText(ui_text("Breitengrad, z. B. 51.93"))
         self.own_lon_input = QLineEdit(settings.get("own_lon", ""))
-        self.own_lon_input.setPlaceholderText("Längengrad, z. B. 8.88")
+        self.own_lon_input.setPlaceholderText(ui_text("Längengrad, z. B. 8.88"))
         location_row = QHBoxLayout()
         location_row.addWidget(self.own_callsign_input)
         location_row.addWidget(self.own_lat_input)
         location_row.addWidget(self.own_lon_input)
-        form.addRow("Eigene Station / GPS", location_row)
+        self.classic_gps_label = QLabel(ui_text("Eigene Station / GPS"))
+        form.addRow(self.classic_gps_label, location_row)
 
-        self.save_button = QPushButton("Einstellungen speichern")
+        self.save_button = QPushButton(ui_text("Einstellungen speichern"))
         self.save_button.clicked.connect(self.save_all_settings)
-        self.node_info_button = QPushButton("Node Info aufrufen")
-        self.node_info_button.setToolTip("Node Information des verbundenen MeshCom-WebService anzeigen")
+        self.node_info_button = QPushButton(ui_text("Node Info aufrufen"))
+        self.node_info_button.setToolTip(ui_text("Node Information des verbundenen MeshCom-WebService anzeigen"))
         self.node_info_button.clicked.connect(self.open_node_info)
 
         # Schaltflächenzeile der klassischen Ansicht. Diese wurde beim
@@ -1651,7 +1654,7 @@ class MainWindow(QMainWindow):
         settings_buttons.addWidget(self.save_button, 1)
         settings_buttons.addWidget(self.node_info_button, 1)
 
-        self.filter_enabled = QCheckBox("Raumfilter aktiv")
+        self.filter_enabled = QCheckBox(ui_text("Raumfilter aktiv"))
         self.filter_enabled.setChecked(settings.get("filter_enabled", "0") == "1")
         self.filter_enabled.toggled.connect(self._filter_toggled)
 
@@ -1665,12 +1668,13 @@ class MainWindow(QMainWindow):
             field.setText(settings.get(f"filter_room{i + 1}", ""))
             self.filter_inputs.append(field)
             filter_row.addWidget(field)
-        self.filter_save_button = QPushButton("Filter speichern")
+        self.filter_save_button = QPushButton(ui_text("Filter speichern"))
         self.filter_save_button.clicked.connect(self.save_filter_settings)
         filter_row.addWidget(self.filter_save_button)
 
         filter_box = QVBoxLayout()
-        filter_box.addWidget(QLabel("Nachrichtenfilter – bis zu 5 Räume"))
+        self.classic_filter_title = QLabel(ui_text("Nachrichtenfilter – bis zu 5 Räume"))
+        filter_box.addWidget(self.classic_filter_title)
         filter_box.addWidget(self.filter_enabled)
         filter_box.addLayout(filter_row)
 
@@ -1678,25 +1682,27 @@ class MainWindow(QMainWindow):
         self.weather_panel = QWidget()
         weather_layout = QVBoxLayout(self.weather_panel)
         weather_layout.setContentsMargins(0, 4, 0, 4)
-        weather_title = QLabel("Wetterdaten")
+        weather_title = QLabel(ui_text("Wetterdaten"))
+        self.classic_weather_title = weather_title
         weather_title.setStyleSheet("font-weight: 600;")
         weather_layout.addWidget(weather_title)
 
         weather_row = QHBoxLayout()
-        weather_row.addWidget(QLabel("Stadt:"))
+        self.classic_city_label = QLabel(ui_text("Stadt:"))
+        weather_row.addWidget(self.classic_city_label)
         self.weather_city_input = QLineEdit()
         self.weather_city_input.setPlaceholderText(ui_text("Stadtname, z. B. Bielefeld"))
         self.weather_city_input.setText(settings.get("weather_city", ""))
         weather_row.addWidget(self.weather_city_input, 1)
-        self.weather_refresh_button = QPushButton("Wetter aktualisieren")
+        self.weather_refresh_button = QPushButton(ui_text("Wetter aktualisieren"))
         self.weather_refresh_button.clicked.connect(self._refresh_weather)
         weather_row.addWidget(self.weather_refresh_button)
-        self.weather_send_button = QPushButton("Wetter senden")
+        self.weather_send_button = QPushButton(ui_text("Wetter senden"))
         self.weather_send_button.clicked.connect(self._send_weather)
         weather_row.addWidget(self.weather_send_button)
         weather_layout.addLayout(weather_row)
 
-        self.weather_values_label = QLabel("Warte auf WX-Information …")
+        self.weather_values_label = QLabel(ui_text("Warte auf WX-Information …"))
         self.weather_values_label.setWordWrap(True)
         weather_layout.addWidget(self.weather_values_label)
         self.weather_status_label = QLabel("")
@@ -1720,7 +1726,7 @@ class MainWindow(QMainWindow):
         else:
             self.map_view = QLabel("Karte ist im Dashboard aktiv.")
             self.map_view.setMinimumHeight(300)
-        self.map_tab_index = self.tabs.addTab(self.map_view, "Karte")
+        self.map_tab_index = self.tabs.addTab(self.map_view, ui_text("Karte"))
         # Die Karte ist ein fester Tab und darf nicht geschlossen werden.
         self.tabs.tabBar().setTabButton(
             self.map_tab_index,
@@ -1736,17 +1742,18 @@ class MainWindow(QMainWindow):
         monitor_layout.setContentsMargins(6, 6, 6, 6)
         monitor_toolbar = QHBoxLayout()
 
-        self.monitor_pause_button = QPushButton("⏸ Pause")
+        self.monitor_pause_button = QPushButton(ui_text("⏸ Pause"))
         self.monitor_pause_button.setFixedWidth(130)
         self.monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
         monitor_toolbar.addWidget(self.monitor_pause_button)
 
-        monitor_clear_button = QPushButton("Leeren")
+        monitor_clear_button = QPushButton(ui_text("Leeren"))
         monitor_clear_button.setFixedWidth(116)
         monitor_clear_button.clicked.connect(self._clear_monitor)
         monitor_toolbar.addWidget(monitor_clear_button)
 
-        monitor_toolbar.addWidget(QLabel("Filter:"))
+        self.monitor_filter_label = QLabel(ui_text("Filter:"))
+        monitor_toolbar.addWidget(self.monitor_filter_label)
         self.monitor_filter_combo = QComboBox()
         self.monitor_filter_combo.addItem(ui_text("Alle"), "ALLE")
         self.monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
@@ -1756,18 +1763,18 @@ class MainWindow(QMainWindow):
         monitor_toolbar.addWidget(self.monitor_filter_combo)
 
         self.monitor_search_edit = QLineEdit()
-        self.monitor_search_edit.setPlaceholderText("Suchen …")
+        self.monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
         self.monitor_search_edit.setMinimumWidth(130)
         self.monitor_search_edit.setMaximumWidth(190)
         self.monitor_search_edit.textChanged.connect(self._set_monitor_search)
         monitor_toolbar.addWidget(self.monitor_search_edit)
 
-        self.monitor_autoscroll_check = QCheckBox("Auto-Scroll")
+        self.monitor_autoscroll_check = QCheckBox(ui_text("Auto-Scroll"))
         self.monitor_autoscroll_check.setChecked(True)
         self.monitor_autoscroll_check.toggled.connect(self._toggle_monitor_autoscroll)
         monitor_toolbar.addWidget(self.monitor_autoscroll_check)
         monitor_toolbar.addStretch(1)
-        self.monitor_count_label = QLabel("0 angezeigt · 0 gespeichert")
+        self.monitor_count_label = QLabel(ui_text("0 angezeigt · 0 gespeichert"))
         monitor_toolbar.addWidget(self.monitor_count_label)
         monitor_toolbar.addWidget(QLabel("MSG / POS / TEL / ACK"))
         monitor_layout.addLayout(monitor_toolbar)
@@ -1814,7 +1821,7 @@ class MainWindow(QMainWindow):
         self.mh_count_label = QLabel("0 Station(en)")
         mh_toolbar.addWidget(self.mh_count_label)
         mh_toolbar.addStretch(1)
-        mh_clear_button = QPushButton("Leeren")
+        mh_clear_button = QPushButton(ui_text("Leeren"))
         mh_clear_button.setFixedWidth(78)
         mh_clear_button.clicked.connect(self._clear_mh)
         mh_toolbar.addWidget(mh_clear_button)
@@ -1934,8 +1941,8 @@ class MainWindow(QMainWindow):
         self.message_counter.setToolTip("Maximal 149 Zeichen")
         self.message_input.textChanged.connect(self._update_message_counter)
 
-        self.send_button = QPushButton("Senden")
-        self.update_button = QPushButton("Aktualisieren")
+        self.send_button = QPushButton(ui_text("Senden"))
+        self.update_button = QPushButton(ui_text("Aktualisieren"))
         self.send_button.clicked.connect(self.send)
         self.update_button.clicked.connect(self.update_messages)
         self.message_input.returnPressed.connect(self.send)
@@ -1944,12 +1951,12 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self.send_button)
         buttons.addWidget(self.update_button)
 
-        self.send_log = QLabel("Letzter Sendeauftrag: noch keiner")
+        self.send_log = QLabel(ui_text("Letzter Sendeauftrag: noch keiner"))
         self.send_log.setWordWrap(True)
-        self.status = QLabel("Bereit")
+        self.status = QLabel(ui_text("Bereit"))
         self.status.setWordWrap(True)
 
-        self.message_label = QLabel("Nachricht:")
+        self.message_label = QLabel(ui_text("Nachricht:"))
         self.classic_message_panel = QWidget()
         classic_message_layout = QVBoxLayout(self.classic_message_panel)
         classic_message_layout.setContentsMargins(0, 0, 0, 0)
@@ -2712,7 +2719,8 @@ class MainWindow(QMainWindow):
         monitor_panel_layout = QVBoxLayout(monitor_panel)
         monitor_panel_layout.setContentsMargins(6, 6, 6, 6)
         monitor_panel_layout.setSpacing(3)
-        monitor_panel_layout.addWidget(QLabel(ui_text("📡 Monitor – Live")))
+        self.dashboard_monitor_title = QLabel(ui_text("📡 Monitor – Live"))
+        monitor_panel_layout.addWidget(self.dashboard_monitor_title)
         dashboard_monitor_toolbar = QHBoxLayout()
         dashboard_monitor_toolbar.setSpacing(4)
 
@@ -2726,7 +2734,8 @@ class MainWindow(QMainWindow):
         self.dashboard_monitor_clear_button.clicked.connect(self._clear_monitor)
         dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_clear_button)
 
-        dashboard_monitor_toolbar.addWidget(QLabel(ui_text("Filter:")))
+        self.dashboard_monitor_filter_label = QLabel(ui_text("Filter:"))
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_filter_label)
         self.dashboard_monitor_filter_combo = QComboBox()
         self.dashboard_monitor_filter_combo.addItem(tr("Alle"), "ALLE")
         self.dashboard_monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
@@ -2997,7 +3006,7 @@ class MainWindow(QMainWindow):
         # den einzelnen Räumen. Es bleibt ein eigener Chat-Eintrag und ist
         # niemals Teil der gespeicherten Raumliste.
         all_key = ("all", "all")
-        all_button = QPushButton("💬 Alle")
+        all_button = QPushButton(ui_text("💬 Alle"))
         all_button.setMinimumHeight(30)
         all_button.setProperty("dashboardNav", True)
         all_button.setProperty("chatKey", all_key)
@@ -3100,7 +3109,7 @@ class MainWindow(QMainWindow):
                 self._ensure_tab(key, self._room_tab_title(key[1]))
                 index = self.tab_keys.get(key)
             elif key[0] == "all":
-                self._ensure_tab(key, "Alle")
+                self._ensure_tab(key, tr("Alle"))
                 index = self.tab_keys.get(key)
             else:
                 return
@@ -3992,7 +4001,7 @@ class MainWindow(QMainWindow):
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
         section["chat_link_color"] = self.chat_link_color
-        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
@@ -4031,8 +4040,10 @@ class MainWindow(QMainWindow):
         combo.addItem(tr("italian"), "it")
         combo.addItem(tr("dutch"), "nl")
         combo.addItem(tr("french"), "fr")
+        combo.addItem(tr("spanish"), "es")
+        combo.addItem(tr("swedish"), "sv")
         current = getattr(self, "language", "de")
-        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4}.get(current, 0))
+        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4, "es": 5, "sv": 6}.get(current, 0))
         layout.addWidget(label)
         layout.addWidget(combo)
         button = QPushButton("OK")
@@ -4062,7 +4073,7 @@ class MainWindow(QMainWindow):
 
     def _set_ui_language(self, language):
         """Save and immediately apply the selected UI language."""
-        language = language if language in ("de", "en", "it", "nl", "fr") else "de"
+        language = language if language in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
         self.language = language
         set_language(language)
         self._apply_qt_translation(language)
@@ -4127,6 +4138,22 @@ class MainWindow(QMainWindow):
                     elif title == "📋 MH":
                         self.tabs.setTabText(i, tr("📋 MH"))
 
+            # Karten-Tab immer über das Widget identifizieren. Der bisherige
+            # Textvergleich erkannte nur "Karte" oder "Map"; wenn der Tab z. B.
+            # "Carte" hieß, blieb er beim Wechsel zurück auf Deutsch unverändert.
+            if hasattr(self, "map_view"):
+                map_idx = self.tabs.indexOf(self.map_view)
+                if map_idx >= 0:
+                    self.tabs.setTabText(map_idx, ui_text("Karte"))
+
+            # Weltweit-Tab immer über das Widget identifizieren. So wird
+            # z. B. "Worldwide" nach einem Sprachwechsel zuverlässig wieder
+            # auf "🌐 Weltweit" gesetzt.
+            if hasattr(self, "worldwide_view"):
+                worldwide_idx = self.tabs.indexOf(self.worldwide_view)
+                if worldwide_idx >= 0:
+                    self.tabs.setTabText(worldwide_idx, ui_text("🌐 Weltweit"))
+
             # Statistik-Tab muss beim Sprachwechsel sofort umbenannt werden.
             # Da der aktuelle Tab-Titel bereits "📊 Statistics" sein kann,
             # reicht eine reine Prüfung auf den deutschen Ausgangstext nicht.
@@ -4135,11 +4162,103 @@ class MainWindow(QMainWindow):
                 if stats_idx >= 0:
                     self.tabs.setTabText(stats_idx, ui_text("📊 Statistik"))
 
+        # Dashboard-"Alle"-Button immer über den stabilen deutschen
+        # Quellschlüssel aktualisieren. Dadurch bleibt z. B. "Todos" nicht
+        # stehen, wenn die Oberfläche wieder auf Deutsch gewechselt wird.
+        if hasattr(self, "dashboard_all_button") and self.dashboard_all_button is not None:
+            self.dashboard_all_button.setText(ui_text("💬 Alle"))
+
         # Wetteranzeige immer aus den unveränderten Rohwerten neu aufbauen.
         # Wichtig: Niemals den bereits übersetzten Anzeigetext erneut durch
         # ui_text() schicken. Sonst können bei einem Sprachwechsel aus
         # "Temperatur"/"Temperatuur"/"Temperature" Buchstaben angehängt werden.
         self._update_weather_display()
+
+        # Klassische Ansicht: alle eigenen Bedienelemente werden immer aus
+        # stabilen deutschen Quellschlüsseln neu übersetzt. Dadurch bleiben
+        # sie auch nach einem Sprachwechsel bzw. Neustart konsistent.
+        classic_refs = {
+            "classic_hotspot_label": "Hotspot IP",
+            "classic_target_label": "Raum / Ziel",
+            "classic_gps_label": "Eigene Station / GPS",
+            "save_button": "Einstellungen speichern",
+            "node_info_button": "Node Info aufrufen",
+            "filter_enabled": "Raumfilter aktiv",
+            "filter_save_button": "Filter speichern",
+            "classic_filter_title": "Nachrichtenfilter – bis zu 5 Räume",
+            "classic_weather_title": "Wetterdaten",
+            "classic_city_label": "Stadt:",
+            "weather_refresh_button": "Wetter aktualisieren",
+            "weather_send_button": "Wetter senden",
+            "message_label": "Nachricht:",
+            "send_button": "Senden",
+            "update_button": "Aktualisieren",
+            "send_log": "Letzter Sendeauftrag: noch keiner",
+        }
+        for attr, source_key in classic_refs.items():
+            widget = getattr(self, attr, None)
+            if widget is not None:
+                widget.setText(ui_text(source_key))
+        if hasattr(self, "target_input"):
+            self.target_input.setPlaceholderText(
+                ui_text("Raum oder Ziel, z. B. 262 oder DL9ABC-1")
+            )
+        if hasattr(self, "own_callsign_input"):
+            self.own_callsign_input.setPlaceholderText(
+                ui_text("eigenes Rufzeichen, z. B. DL9ABC-1")
+            )
+        if hasattr(self, "own_lat_input"):
+            self.own_lat_input.setPlaceholderText(
+                ui_text("Breitengrad, z. B. 51.93")
+            )
+        if hasattr(self, "own_lon_input"):
+            self.own_lon_input.setPlaceholderText(
+                ui_text("Längengrad, z. B. 8.88")
+            )
+        if hasattr(self, "weather_values_label") and not getattr(self, "weather_data", None):
+            self.weather_values_label.setText(ui_text("Warte auf WX-Information …"))
+
+        # Monitor-Bedienelemente müssen bei einem Sprachwechsel sofort aus
+        # den stabilen deutschen Quelltexten neu aufgebaut werden. Einige
+        # dieser Elemente wurden früher als bereits übersetzter Text
+        # weiterverwendet; dadurch blieben sie bis zum Neustart deutsch.
+        if hasattr(self, "monitor_pause_button"):
+            self.monitor_pause_button.setText(
+                ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+            )
+        if hasattr(self, "monitor_view"):
+            # Klassischer Monitor
+            for child in self.monitor_view.findChildren(QPushButton):
+                txt = child.text()
+                if txt in {"Leeren", "Clear", "Rensa", "Effacer", "Borrar"}:
+                    child.setText(ui_text("Leeren"))
+        if hasattr(self, "monitor_filter_label"):
+            self.monitor_filter_label.setText(ui_text("Filter:"))
+        if hasattr(self, "monitor_search_edit"):
+            self.monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
+        if hasattr(self, "monitor_autoscroll_check"):
+            self.monitor_autoscroll_check.setText(ui_text("Auto-Scroll"))
+        count_text = f"{len(self.monitor_rows)} {ui_text('angezeigt')} · {len(self.monitor_rows)} {ui_text('gespeichert')}"
+        if hasattr(self, "monitor_count_label"):
+            self.monitor_count_label.setText(count_text)
+        if hasattr(self, "dashboard_monitor_count_label"):
+            self.dashboard_monitor_count_label.setText(count_text)
+
+        # Dashboard-Monitor
+        if hasattr(self, "dashboard_monitor_title"):
+            self.dashboard_monitor_title.setText(ui_text("📡 Monitor – Live"))
+        if hasattr(self, "dashboard_monitor_pause_button"):
+            self.dashboard_monitor_pause_button.setText(
+                ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+            )
+        if hasattr(self, "dashboard_monitor_clear_button"):
+            self.dashboard_monitor_clear_button.setText(ui_text("Leeren"))
+        if hasattr(self, "dashboard_monitor_filter_label"):
+            self.dashboard_monitor_filter_label.setText(ui_text("Filter:"))
+        if hasattr(self, "dashboard_monitor_search_edit"):
+            self.dashboard_monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
+        if hasattr(self, "dashboard_monitor_autoscroll_check"):
+            self.dashboard_monitor_autoscroll_check.setText(ui_text("Auto-Scroll"))
 
         # Table headers
         if hasattr(self, "monitor_table"):
@@ -4407,6 +4526,8 @@ class MainWindow(QMainWindow):
             "it": "MeshCom-Guru – Guida utente",
             "nl": "MeshCom-Guru – Gebruikershandleiding",
             "fr": "MeshCom-Guru – Guide utilisateur",
+            "es": "MeshCom-Guru – Guía de usuario",
+            "sv": "MeshCom-Guru – Användarhandbok",
         }
         dialog.setWindowTitle(titles.get(lang, titles["de"]))
         dialog.resize(860, 720)
@@ -4447,7 +4568,7 @@ class MainWindow(QMainWindow):
             <h3>🎨 Chat-Farben und 🔊 Sound</h3>
             <p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe anklickbarer Rufzeichen und Internetlinks eingestellt werden. Sound, Lautstärke und Hell-/Dunkel-Theme können ebenfalls konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
-            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
+            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands, Français, Español und Svenska</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
 <h3>💾 Datensicherung und ♻️ Wiederherstellung</h3><p>Über <b>Datei → Datensicherung erstellen …</b> können die persönlichen MeshCom-Guru-Daten aus <code>~/.MeshCom</code> als ZIP-Datei gesichert werden. Mit <b>Datei → Datensicherung wiederherstellen …</b> kann eine zuvor erstellte Sicherung zurückgespielt werden. Nicht im Backup enthaltene Dateien werden nicht gelöscht.</p><p>Nach einer Wiederherstellung werden die Daten auch in der laufenden Anwendung übernommen. Beim anschließenden Neustart bleibt der restaurierte Backup-Stand erhalten.</p>
 <h3>🔄 Nach Updates suchen</h3><p>Über <b>Hilfe → Nach Update suchen …</b> kann die installierte Version mit der aktuellen GitHub-Release verglichen werden. Bei einer neueren Version wird ein Hinweis mit Link zur GitHub-Release angezeigt. MeshCom-Guru lädt Updates nicht automatisch herunter und installiert sie nicht automatisch.</p>
                         <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
@@ -4520,6 +4641,82 @@ class MainWindow(QMainWindow):
 <h3>💾 Sauvegarde et ♻️ restauration</h3><p>Utilisez <b>Fichier → Créer une sauvegarde …</b> pour enregistrer les données personnelles de MeshCom-Guru depuis <code>~/.MeshCom</code> dans un fichier ZIP. Avec <b>Fichier → Restaurer une sauvegarde …</b>, vous pouvez restaurer une sauvegarde précédente. Les fichiers qui ne figurent pas dans la sauvegarde ne sont pas supprimés.</p><p>Après la restauration, les données restaurées sont également appliquées à l'application en cours d'exécution. Lors du redémarrage suivant, l'état restauré est conservé.</p>
 <h3>🔄 Rechercher les mises à jour</h3><p>Avec <b>Aide → Rechercher les mises à jour …</b>, vous pouvez comparer la version installée avec la release GitHub actuelle. Si une version plus récente est disponible, MeshCom-Guru affiche un message avec un lien vers la release GitHub. Les mises à jour ne sont ni téléchargées ni installées automatiquement.</p>
                         <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
+            """,
+            "es": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Guía rápida</h3>
+            <h3>🎛 Vista: Clásica o Dashboard</h3>
+            <p>En <b>Ajustes → Vista</b> puedes elegir entre la vista <b>Clásica</b> y el nuevo <b>Dashboard</b>. Ambas utilizan los mismos datos y funciones de MeshCom. La selección se guarda y se restaura al iniciar de nuevo.</p>
+            <p>El Dashboard reúne conexión, salas, chat, mapa, actividad mundial, monitor, MH y estadísticas en una sola vista. La interfaz clásica sigue estando disponible.</p>
+            <h3>💬 Chats de salas y 👤 Chats privados</h3>
+            <p>Las hasta <b>cinco salas guardadas</b> aparecen a la izquierda como <b>chats de sala</b> seleccionables. Al hacer clic en una sala se abre únicamente esa sala. <b>Todos</b> es una vista independiente y puede seleccionarse de nuevo en cualquier momento.</p>
+            <p>Los <b>chats privados</b> aparecen por separado. Al hacer clic en uno se abre la conversación privada y no se vuelve accidentalmente a «Todos». Los mensajes privados nuevos aparecen en la conversación privada y en «Todos».</p>
+            <p><b>Hacer clic en un indicativo:</b> un indicativo seleccionable abre un pequeño menú con <b>Chat privado</b> y <b>QRZ.com</b>. Para QRZ.com se utiliza automáticamente solo el indicativo base, por ejemplo <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>Conexión y ajustes</h3>
+            <p><b>IP del hotspot:</b> introduce la dirección IP del WebService de MeshCom.</p>
+            <p><b>Estación propia / GPS:</b> introduce tu indicativo y, opcionalmente, latitud y longitud.</p>
+            <p><b>Guardar ajustes:</b> los ajustes personales se guardan en <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Conectar / Desconectar / Reconexión automática</h3>
+            <p>Usa <b>Conectar</b> para establecer la conexión con el WebService de MeshCom. Después de una conexión manual se activa la reconexión automática.</p>
+            <p>Si la conexión se pierde temporalmente por un problema de red, hotspot o WebService, MeshCom-Guru intenta reconectarse automáticamente. <b>Desconectar</b> desactiva deliberadamente la reconexión automática.</p>
+            <h3>Enviar mensajes</h3>
+            <p>En el Dashboard basta con pulsar <b>Enter</b> para enviar. No hace falta un botón de envío adicional.</p>
+            <p>Los mensajes están limitados a <b>149 caracteres</b> y el contador muestra la longitud actual.</p>
+            <h3>📡 Monitor, 📋 Estaciones / MH y 📊 Estadísticas</h3>
+            <p>El <b>Monitor</b> muestra los paquetes UDP de MeshCom en el <b>puerto 1799</b> con tipo, indicativo, destino, RSSI, SNR e información. La columna de información puede desplazarse cuando sea necesario.</p>
+            <p><b>Estaciones / MH</b> muestra las estaciones escuchadas recientemente con indicativo, distancia, RSSI y SNR.</p>
+            <p><b>Estadísticas</b> muestra los contadores de sesión de mensajes, nodos, posiciones, telemetría, mensajes privados, entradas del monitor y mensajes por sala.</p>
+            <h3>🗺 Mapa y 🌐 Mundial</h3>
+            <p>El mapa OSM/Leaflet muestra posiciones y estaciones. La vista <b>Mundial</b> abre la página pública de actividad de MeshCom del ÖVSV y selecciona automáticamente <b>ACTIVITY</b>. La página integrada gestiona sus propias actualizaciones; MeshCom-Guru no añade una actualización cada 15 segundos.</p>
+            <h3>🌤 Tiempo</h3>
+            <p>La información WX muestra temperatura, humedad, QFE y QNH cuando el WebService proporciona estos valores. El tiempo puede actualizarse y enviarse al destino seleccionado.</p>
+            <h3>⚡ Textos rápidos y 😊 Emojis</h3>
+            <p>Los textos rápidos se pueden insertar, editar, añadir y eliminar. Insertar un texto rápido no lo envía automáticamente. El selector de emojis inserta el emoji seleccionado en la posición del cursor.</p>
+            <h3>🎨 Colores del chat y 🔊 Sonido</h3>
+            <p>En <b>Ajustes → Colores del chat …</b> puedes configurar el fondo, el color del texto de «Todos» y el color de los indicativos y enlaces de Internet. También se pueden configurar el sonido, el volumen y el tema claro/oscuro.</p>
+            <h3>Información del nodo</h3><p><b>Abrir información del nodo</b> muestra la información del WebService de MeshCom conectado.</p>
+            <h3>Idioma</h3><p>La interfaz admite <b>Deutsch, English, Italiano, Nederlands, Français, Español y Svenska</b>. La selección se guarda y esta guía integrada utiliza el idioma seleccionado.</p>
+            <h3>💾 Copia de seguridad y ♻️ Restauración</h3>
+            <p>Mediante <b>Archivo → Crear copia de seguridad …</b> puedes guardar los datos personales de MeshCom-Guru de <code>~/.MeshCom</code> como archivo ZIP. Con <b>Archivo → Restaurar copia de seguridad …</b> puedes restaurar una copia existente. Los archivos que no forman parte de la copia no se eliminan.</p>
+            <h3>🔄 Buscar actualizaciones</h3><p>Mediante <b>Ayuda → Buscar actualizaciones …</b> puedes comparar la versión instalada con la versión actual de GitHub. Si hay una versión más reciente, MeshCom-Guru muestra un aviso con un enlace a la release de GitHub. Las actualizaciones no se descargan ni instalan automáticamente.</p>
+            <h3>Instalación</h3><p><b>ZIP de Linux:</b> extrae la carpeta <code>MeshCom</code> y ejecuta <code>./run_linux.sh</code>. <b>Windows:</b> ejecuta <code>run_windows.bat</code>. <b>Debian:</b> instalación en <code>/usr/share/MeshCom</code>; los ajustes personales permanecen en <code>~/.MeshCom/settings.ini</code>.</p>
+            """,
+            "sv": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Snabbguide</h3>
+            <h3>🎛 Visning: Klassisk eller Dashboard</h3>
+            <p>Under <b>Inställningar → Visning</b> kan du välja mellan <b>Klassisk</b> och den nya <b>Dashboard</b>. Båda vyerna använder samma MeshCom-data och funktioner. Valet sparas och återställs vid nästa start.</p>
+            <p>Dashboard samlar anslutning, rum, chatt, karta, världsomfattande aktivitet, monitor, MH och statistik i en vy. Det klassiska gränssnittet finns fortfarande kvar.</p>
+            <h3>💬 Rumschattar och 👤 Privata chattar</h3>
+            <p>Upp till <b>fem sparade rum</b> visas till vänster som klickbara <b>rumschattar</b>. Klicka på ett rum för att öppna endast det rummet. <b>Alla</b> är en separat vy och kan alltid väljas igen.</p>
+            <p><b>Privata chattar</b> visas separat. Ett klick öppnar den privata konversationen och hoppar inte tillbaka till ”Alla”. Nya privata meddelanden visas i den privata konversationen och i ”Alla”.</p>
+            <p><b>Klicka på en anropssignal:</b> en klickbar anropssignal öppnar en liten meny med <b>Privat chatt</b> och <b>QRZ.com</b>. För QRZ.com används automatiskt bara grundanropssignalen, till exempel <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>Anslutning och inställningar</h3>
+            <p><b>Hotspot-IP:</b> ange IP-adressen till MeshCom-WebService.</p>
+            <p><b>Egen station / GPS:</b> ange din anropssignal och vid behov latitud och longitud.</p>
+            <p><b>Spara inställningar:</b> personliga inställningar sparas i <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Anslut / Koppla från / Automatisk återanslutning</h3>
+            <p>Använd <b>Anslut</b> för att ansluta till MeshCom-WebService. Efter en manuell anslutning är automatisk återanslutning aktiverad.</p>
+            <p>Om anslutningen tillfälligt förloras på grund av nätverk, hotspot eller WebService försöker MeshCom-Guru ansluta igen automatiskt. <b>Koppla från</b> stänger av den automatiska återanslutningen.</p>
+            <h3>Skicka meddelanden</h3>
+            <p>I Dashboard räcker det att trycka på <b>Enter</b> för att skicka. Ingen separat Skicka-knapp behövs.</p>
+            <p>Meddelanden är begränsade till <b>149 tecken</b> och räknaren visar aktuell längd.</p>
+            <h3>📡 Monitor, 📋 Stationer / MH och 📊 Statistik</h3>
+            <p><b>Monitor</b> visar MeshCom-UDP-paket på <b>port 1799</b> med typ, anropssignal, mål, RSSI, SNR och information. Informationskolumnen kan rullas vid behov.</p>
+            <p><b>Stationer / MH</b> visar senast hörda stationer med anropssignal, avstånd, RSSI och SNR.</p>
+            <p><b>Statistik</b> visar aktuella sessionsräknare för meddelanden, noder, positioner, telemetri, privata meddelanden, monitorposter och meddelanden per rum.</p>
+            <h3>🗺 Karta och 🌐 Världen</h3>
+            <p>OSM/Leaflet-kartan visar positioner och stationer. Världsvyn öppnar MeshComs offentliga aktivitetssida från ÖVSV och väljer automatiskt <b>ACTIVITY</b>. Den integrerade webbsidan sköter sina egna uppdateringar; MeshCom-Guru använder ingen extra uppdatering var 15:e sekund.</p>
+            <h3>🌤 Väder</h3>
+            <p>WX-informationen visar temperatur, luftfuktighet, QFE och QNH när WebService levererar dessa värden. Vädret kan uppdateras och skickas till det valda målet.</p>
+            <h3>⚡ Snabbtexter och 😊 Emojis</h3>
+            <p>Snabbtexter kan infogas, redigeras, läggas till och tas bort. Att infoga en snabbtext skickar den inte automatiskt. Emoji-väljaren infogar vald emoji vid markörens position.</p>
+            <h3>🎨 Chattfärger och 🔊 Ljud</h3>
+            <p>Under <b>Inställningar → Chattfärger …</b> kan bakgrund, textfärg för ”Alla” samt färg för klickbara anropssignaler och internetlänkar ställas in. Ljud, volym och ljust/mörkt tema kan också konfigureras.</p>
+            <h3>Nodinformation</h3><p><b>Öppna nodinformation</b> visar information från den anslutna MeshCom-WebService.</p>
+            <h3>Språk</h3><p>Gränssnittet stöder <b>Deutsch, English, Italiano, Nederlands, Français, Español och Svenska</b>. Valet sparas och denna inbyggda guide följer valt språk.</p>
+            <h3>💾 Säkerhetskopiering och ♻️ Återställning</h3>
+            <p>Via <b>Arkiv → Skapa säkerhetskopia …</b> kan MeshCom-Gurus personliga data från <code>~/.MeshCom</code> sparas som en ZIP-fil. Via <b>Arkiv → Återställ säkerhetskopia …</b> kan en tidigare säkerhetskopia återställas. Filer som inte ingår i säkerhetskopian raderas inte.</p>
+            <h3>🔄 Sök efter uppdateringar</h3><p>Via <b>Hjälp → Sök efter uppdateringar …</b> kan den installerade versionen jämföras med den aktuella GitHub-releasen. Om en nyare version finns visar MeshCom-Guru ett meddelande med länk till GitHub-releasen. Uppdateringar laddas inte ner eller installeras automatiskt.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> packa upp mappen <code>MeshCom</code> och kör <code>./run_linux.sh</code>. <b>Windows:</b> kör <code>run_windows.bat</code>. <b>Debian:</b> installation i <code>/usr/share/MeshCom</code>; personliga inställningar finns kvar i <code>~/.MeshCom/settings.ini</code>.</p>
             """,
         }
         view.setHtml(guides.get(lang, guides["de"]))

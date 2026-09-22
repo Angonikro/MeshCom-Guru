@@ -51,5 +51,21 @@
   "Du verwendest bereits die aktuelle Version.": "You are already using the latest version.",
   "Die GitHub-Release-Prüfung konnte nicht durchgeführt werden: ": "The GitHub release check could not be completed: ",
   "Die persönlichen Einstellungen aus dem Backup werden in ~/.MeshCom wiederhergestellt. Nicht zum Backup gehörende Dateien werden nicht gelöscht. Nach der Wiederherstellung ist ein Neustart von MeshCom-Guru erforderlich. Fortfahren?": "Personal settings from the backup will be restored to ~/.MeshCom. Files not included in the backup will not be deleted. MeshCom-Guru must be restarted after the restore. Continue?",
-  "Datensicherung erfolgreich wiederhergestellt. MeshCom-Guru jetzt beenden, damit die Einstellungen beim nächsten Start übernommen werden?": "Backup restored successfully. Quit MeshCom-Guru now so the settings are applied at the next start?"
+  "Datensicherung erfolgreich wiederhergestellt. MeshCom-Guru jetzt beenden, damit die Einstellungen beim nächsten Start übernommen werden?": "Backup restored successfully. Quit MeshCom-Guru now so the settings are applied at the next start?",
+  "spanish": "Spanish",
+  "swedish": "Swedish",
+  "Raum / Ziel:": "Room / Target:",
+  "Rufzeichen:": "Callsign:",
+  "GPS Eingabe:": "GPS input:",
+  "📍 GPS speichern": "📍 Save GPS",
+  "⚙ Einstellungen speichern": "⚙ Save settings",
+  "Alle": "All",
+  "Auto-Scroll": "Auto-scroll",
+  "Suchen …": "Search …",
+  "0 angezeigt · 0 gespeichert": "0 displayed · 0 saved",
+  "📡 Monitor – Live": "📡 Monitor – Live",
+  "angezeigt": "displayed",
+  "gespeichert": "saved",
+  "Raum oder Ziel, z. B. 262 oder DL9ABC-1": "Room or target, e.g. 262 or DL9ABC-1",
+  "Raum oder Ziel": "Room or Target"
 }

@@ -1,27 +1,28 @@
-# MeshCom-Guru v0.3.92
+# MeshCom-Guru v0.3.93
 
-## Änderungen in v0.3.92
+## Änderungen in v0.3.93
 
-- 📨 **„Alle“-Langzeit-Fix:** Empfangene Raum-Nachrichten bleiben auch nach mehreren Stunden in „Alle“ sichtbar.
-- 📡 **Gezielter Fallback:** Der zusätzliche Empfangspfad ist auf „Alle“ begrenzt und greift nicht in Privat-Chats oder die normalen Raum-Tabs ein.
-- 🧹 **„No messages available.“:** Die WebService-Statusmeldung wird weiterhin nicht als Chatnachricht übernommen oder gespeichert.
-- 🛡️ **Stabilität:** Weltweit, Monitor, Karte und die bestehende Sendelogik bleiben unverändert.
-## Installation
+- 🇪🇸 Spanische Benutzeroberfläche einschließlich integrierter Anleitung.
+- 🇸🇪 Schwedische Benutzeroberfläche einschließlich integrierter Anleitung.
+- 📖 Anleitung folgt zuverlässig der ausgewählten Sprache.
+- 📡 Monitor-Zähler und dynamische Anzeigen werden beim Sprachwechsel korrekt übersetzt.
+- 🗺️ Karten-Tab und 🌐 Weltweit-Tab werden beim Sprachwechsel zuverlässig aktualisiert.
+- 🛰️ GPS- und Raum/Ziel-Beschriftungen sind in allen sieben Sprachen berücksichtigt.
+- 🧩 Keine Änderungen an der bestehenden Nachrichten-, Empfangs-, „Alle“- und Sendelogik.
 
-Das Debian-Paket `MeshCom-Guru_v0.3.92_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+## Debian-Paket
 
-## Installation unter Linux / Raspberry Pi
+Das Debian-Paket `MeshCom-Guru_v0.3.93_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 
-Für die Weltweit-Ansicht wird WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
+Für die Weltweit-Ansicht wird unter Linux/Raspberry Pi WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
 
 ```bash
 chmod +x install_webkitgtk.sh
 ./install_webkitgtk.sh
 ```
 
-Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCom-Guru über `run_linux.sh` oder `python3 main.py` starten.
+## GitHub-ZIP
 
-## Debian-Paket
+Das ZIP `MeshCom-Guru_v0.3.93_GITHUB.zip` enthält den vollständigen Projektstand. Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
 
-Das Paket `MeshCom-Guru_v0.3.92_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
-
+Die integrierte Anleitung ist mehrsprachig und folgt der in MeshCom-Guru ausgewählten Sprache.
