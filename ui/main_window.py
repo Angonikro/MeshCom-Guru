@@ -622,6 +622,9 @@ class MainWindow(QMainWindow):
         self.udp_status = "UDP: wird gestartet …"
         # Monitor: reine Anzeige des bereits empfangenen UDP-Datenstroms.
         self.monitor_rows = []
+        # Eigener Gesamtpuffer für „Alle“: exakt dieselben UDP-Pakete wie der Monitor,
+        # einschließlich MSG/POS/TEL/ACK. Er ist vom Monitor-Filter unabhängig.
+        self.monitor_all_rows = []
         # Session counter for received telemetry packets. Kept separately from
         # the monitor buffer so clearing the monitor does not erase the statistic.
         self.telemetry_count = 0
@@ -951,7 +954,7 @@ class MainWindow(QMainWindow):
                         self._render_monitor()
                         return
 
-        self.monitor_rows.append({
+        row = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": ptype,
             "src": str(src),
@@ -959,9 +962,65 @@ class MainWindow(QMainWindow):
             "rssi": str(rssi) if rssi != "" else "-",
             "snr": str(snr) if snr != "" else "-",
             "detail": detail,
-        })
+        }
+        # Dasselbe Row-Objekt wird in beiden Puffern verwendet. Wenn das
+        # EXTUDP-Echo einer eigenen Nachricht später den Monitor-Eintrag
+        # ergänzt, ist „Alle“ automatisch ebenfalls auf dem gleichen Stand.
+        self.monitor_rows.append(row)
+        self.monitor_all_rows.append(row)
         self.monitor_rows = self.monitor_rows[-500:]
+        self.monitor_all_rows = self.monitor_all_rows[-500:]
         self._render_monitor()
+
+    def _monitor_rows_to_all_blocks(self):
+        """Render the same received UDP packets as monitor-compatible blocks for 'Alle'.
+
+        „Alle“ uses this stream instead of the parallel WebService message stream.
+        This is deliberate: one physical MeshCom packet must have one source of
+        truth, while POS/TEL/ACK remain visible when the room filter is off.
+        """
+        blocks = []
+        for row in list(self.monitor_all_rows):
+            if not isinstance(row, dict):
+                continue
+            ptype = str(row.get("type", "UDP") or "UDP").upper()
+            src = str(row.get("src", "-") or "-")
+            dst = str(row.get("dst", "-") or "-")
+            stamp = str(row.get("time", "") or "")
+            detail = str(row.get("detail", "") or "")
+            rssi = str(row.get("rssi", "-") or "-")
+            snr = str(row.get("snr", "-") or "-")
+
+            # Numeric room / global / direct destination is kept in the header
+            # so the existing room-filter parser can work unchanged. POS/TEL
+            # packets normally have no room target and therefore disappear when
+            # the user enables the room filter.
+            target = dst if dst else "-"
+            header = f"{html.escape(src)}&gt;{html.escape(target)}"
+            safe_time = html.escape(stamp)
+
+            body = detail
+            if ptype == "MSG":
+                body = re.sub(r"^#\d{1,6}\s*", "", body).strip() or "Nachricht"
+            elif ptype == "POS":
+                body = detail or "Position"
+            elif ptype == "TEL":
+                body = detail or "Telemetry"
+            elif ptype == "ACK":
+                body = detail or "ACK"
+
+            meta = f"RSSI: {html.escape(rssi)} | SNR: {html.escape(snr)} | Typ: {html.escape(ptype)}"
+            block = (
+                '<div class="monitor-derived" data-monitor-row="1" '
+                f'data-monitor-type="{html.escape(ptype)}">'
+                f'<div>{header}</div>'
+                f'<div>{safe_time}</div>'
+                f'<div>{self._make_clickable(html.escape(body))}</div>'
+                f'<div>{meta}</div>'
+                '</div>'
+            )
+            blocks.append(block)
+        return blocks
 
     def _render_monitor(self):
         if not hasattr(self, "monitor_table"):
@@ -5752,18 +5811,35 @@ class MainWindow(QMainWindow):
     def _filter_blocks(self, blocks):
         if not self.filter_enabled.isChecked():
             return blocks
+
         rooms = self._rooms()
-        if not rooms:
-            return [b for b in blocks if self._is_all_target(b)]
-        # Bei aktivem Raumfilter bleiben die gespeicherten Räume sichtbar.
-        # Zusätzlich müssen Nachrichten, die ausdrücklich an „Alle“
-        # (>* bzw. >ALL) gerichtet sind, weiterhin im Tab „Alle“ erscheinen.
-        return [
-            b for b in blocks
-            if self._room_from_block(b) in rooms
-            or self._is_all_target(b)
-            or self._private_participants(b) is not None
-        ]
+        filtered = []
+        for block in blocks:
+            # POS/TEL packets from the UDP stream do not carry a MeshCom room
+            # destination.  When the room filter is explicitly enabled they
+            # must therefore not bypass the filter and reappear in „Alle“.
+            # With the filter OFF they remain fully visible, as intended.
+            if 'class="monitor-derived"' in block and re.search(
+                r"data-monitor-type=[\"'](?:POS|TEL)[\"']",
+                block, re.IGNORECASE,
+            ):
+                continue
+
+            if not rooms:
+                if self._is_all_target(block):
+                    filtered.append(block)
+                continue
+
+            # Bei aktivem Raumfilter bleiben nur Nachrichten der ausgewählten
+            # Räume, explizite globale Nachrichten und echte Privatnachrichten.
+            if (
+                self._room_from_block(block) in rooms
+                or self._is_all_target(block)
+                or self._private_participants(block) is not None
+            ):
+                filtered.append(block)
+
+        return filtered
 
     @classmethod
     def _is_all_target(cls, block):
@@ -6222,105 +6298,16 @@ renderStations(initialStations);</script></body></html>"""
             if hasattr(self, "dashboard_sidebar"):
                 self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
 
-            # Tab „Alle“ basiert ebenfalls auf dem lokalen Nachrichtenpuffer.
-            # Dadurch verschwinden Nachrichten nicht mehr nur deshalb, weil der
-            # WebService sie bei einer späteren Abfrage nicht mehr zurückliefert.
+            # Tab „Alle“ basiert bewusst ausschließlich auf dem bereits vom
+            # Monitor verarbeiteten UDP-Datenstrom. Dadurch gibt es keinen zweiten
+            # WebService-MSG-Pfad mehr, der dasselbe MeshCom-Paket ein zweites Mal
+            # in „Alle“ eintragen kann. MSG, POS, TEL und ACK kommen aus derselben
+            # Quelle wie im Monitor. Der Monitor-Filter selbst hat keinen Einfluss
+            # auf „Alle“; nur der Raumfilter darf den Gesamtstrom einschränken.
             all_key = ("all", "all")
             all_index = self._ensure_tab(all_key, "Alle")
-            # Der Raumfilter gilt auch für den Gesamt-Tab „Alle“:
-            # - Filter AUS: unverändert alle bekannten Nachrichten anzeigen.
-            # - Filter EIN: ausschließlich Nachrichten aus den gespeicherten Räumen
-            #   anzeigen. Die übrigen Tabs und die eigentliche Nachrichtenablage
-            #   bleiben davon unberührt.
-            all_blocks = self._filter_blocks(cached_blocks)
-
-            # Zusätzlich bekannte UDP-Positionsdaten werden nur bei
-            # deaktiviertem Raumfilter als Nachrichtenblock in „Alle“ angezeigt.
-            # Die Positionsdaten selbst bleiben unabhängig davon in
-            # station_positions für die Karte erhalten. Dadurch verschwinden
-            # beim aktiven Raumfilter die Koordinaten aus dem Chat, während die
-            # Kartenmarker weiterhin sichtbar bleiben.
-            seen_all = {self._message_identity(b) for b in all_blocks if self._message_identity(b)}
-            if not self.filter_enabled.isChecked():
-                for block in self.udp_position_blocks:
-                    key = self._message_identity(block)
-                    if key and key in seen_all:
-                        continue
-                    if key:
-                        seen_all.add(key)
-                    all_blocks.append(block)
-
-            # Eine eigene lokale Kopie wird NICHT zusätzlich erzeugt. Eigene
-            # Nachrichten kommen weiterhin über den normalen WebService zurück.
-            self.local_all_messages.clear()
-
-            # Nur für „Alle“: dieselbe Room-Nachricht kann vom WebService
-            # in zwei HTML-Varianten geliefert werden (z. B. einmal mit einem
-            # zusätzlichen HTML-Entity/Icon vor dem Rufzeichen). Diese Varianten
-            # werden hier als identisch behandelt. Die Raum-Tabs werden bewusst
-            # NICHT verändert.
-            unique_all = []
-            seen_all_pairs = set()
-            seen_all_fallback = set()
-            for block in all_blocks:
-                # Die spezielle Dublettenprüfung darf NUR auf Nachrichten
-                # angewendet werden, die selbst an „Alle“ gerichtet sind
-                # (z. B. >* / >ALL). Nachrichten aus Raum-Tabs werden zwar
-                # unter „Alle“ mit angezeigt, dürfen aber niemals mit dieser
-                # Prüfung untereinander oder mit einer Alle-Nachricht
-                # verglichen werden.
-                plain_block = self._normalized_plain(block)
-                all_target = re.search(
-                    r"\s*>\s*(?:\*|ALL)(?=\s|$)", plain_block, re.IGNORECASE
-                ) is not None
-                if not all_target:
-                    unique_all.append(block)
-                    continue
-
-                identity = self._all_display_identity(block)
-                if identity is None:
-                    unique_all.append(block)
-                    continue
-
-                callsign, text_key = identity
-                block_timestamp = self._timestamp_from_block(block) or ""
-
-                # In „Alle“ dürfen zwei echte Nachrichten desselben
-                # Rufzeichens mit exakt demselben Text NICHT als Duplikat
-                # verworfen werden, wenn sie zu unterschiedlichen Zeiten
-                # gesendet wurden.
-                #
-                # Gleichzeitig können dieselbe Nachricht und ihre leicht
-                # unterschiedlich gerenderte WebService-Variante weiterhin
-                # zusammengeführt werden: gleicher Absender + gleicher Text
-                # + gleicher Zeitstempel.
-                if callsign and text_key:
-                    duplicate = False
-                    for old_callsign, old_text, old_timestamp in seen_all_pairs:
-                        if old_text != text_key:
-                            continue
-                        if block_timestamp and old_timestamp and block_timestamp != old_timestamp:
-                            continue
-                        a = re.sub(r"[^A-Z0-9-]", "", callsign.upper())
-                        b = re.sub(r"[^A-Z0-9-]", "", old_callsign.upper())
-                        if a and b and (a in b or b in a):
-                            duplicate = True
-                            break
-                    if duplicate:
-                        continue
-                    seen_all_pairs.add((callsign.upper(), text_key, block_timestamp))
-                else:
-                    # Für ungewöhnliche Karten/Status-Blöcke ohne vollständige
-                    # Rufzeichen+Text-Kombination weiterhin nur exakt identische
-                    # Fallback-Daten unterdrücken.
-                    fallback = (callsign.upper(), text_key)
-                    if fallback in seen_all_fallback:
-                        continue
-                    seen_all_fallback.add(fallback)
-                unique_all.append(block)
-            all_blocks = unique_all
-
-            # Chronologisch sortieren.
+            monitor_blocks = self._monitor_rows_to_all_blocks()
+            all_blocks = self._filter_blocks(monitor_blocks)
             all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
 
             self._update_tab_content(all_key, all_index, all_blocks)
@@ -6844,7 +6831,7 @@ renderStations(initialStations);</script></body></html>"""
             self.monitor_rows = []
         clean_text = str(text or "").strip()
         clean_target = str(target or "-").strip() or "-"
-        self.monitor_rows.append({
+        row = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": "MSG",
             "src": str(self.own_callsign or "-").strip() or "-",
@@ -6855,8 +6842,13 @@ renderStations(initialStations);</script></body></html>"""
             "_local_send": True,
             "_text": clean_text,
             "_source": "local_send",
-        })
+        }
+        self.monitor_rows.append(row)
+        if not hasattr(self, "monitor_all_rows"):
+            self.monitor_all_rows = []
+        self.monitor_all_rows.append(row)
         self.monitor_rows = self.monitor_rows[-1000:]
+        self.monitor_all_rows = self.monitor_all_rows[-500:]
         # Do not let the paused state prevent the send from being recorded.
         if not getattr(self, "monitor_paused", False):
             self._render_monitor()

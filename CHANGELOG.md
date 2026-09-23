@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.3.94 – „Alle“ folgt dem Monitor-Empfangsstrom
+
+- 📡 **Ein Empfangsstrom:** „Alle“ übernimmt jetzt denselben bereits verarbeiteten UDP-Datenstrom wie der Monitor.
+- 📨 **Keine UDP/WebService-Doppelung:** Eine MSG wird nicht mehr parallel aus UDP und WebService in „Alle“ eingetragen.
+- 📍 **POS sichtbar:** Positionsdaten werden ebenfalls in „Alle“ angezeigt, wenn der Raumfilter ausgeschaltet ist.
+- 🌡️ **TEL sichtbar:** Telemetrie-/Statusdaten werden ebenfalls in „Alle“ übernommen.
+- ✓ **ACK sichtbar:** ACK-Einträge bleiben Teil desselben Monitor-Empfangsstroms.
+- 🔎 **Raumfilter:** Bei aktiviertem Raumfilter bleiben nur passende Raum-/Direktnachrichten bzw. globale Ziele sichtbar; nicht raumgebundene POS/TEL-Daten können damit ausgeblendet werden.
+- 🛡️ **Monitor unverändert:** Die bestehende UDP-, MH-, Karten- und Monitorverarbeitung wurde nicht durch einen zweiten Empfangspfad ersetzt.
+
+
 ## v0.3.93 – Spanisch und Schwedisch
 
 - 🇪🇸 **Spanische Benutzeroberfläche:** Spanisch ergänzt, einschließlich der integrierten Anleitung.

@@ -2,13 +2,6 @@
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -31,29 +24,28 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Die ausführlichen PDF-Handbücher für v0.3.93 liegen im Ordner `docs/` – jeweils in der passenden Sprache:
+Die ausführlichen PDF-Handbücher aus v0.3.93 liegen weiterhin unverändert im Ordner `docs/`. Die v0.3.94-Änderung betrifft die Empfangs-/„Alle“-Logik und erfordert keine neue Handbuchfassung:
 
-- 🇩🇪 `docs/MeshCom-Guru_Anleitung_v0.3.93_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_Manual_v0.3.93_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_v0.3.93_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Handleiding_v0.3.93_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_v0.3.93_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_v0.3.93_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Manual_v0.3.93_SV.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.93_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.93_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.93_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.93_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.93_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.93_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.93_SV.pdf`
 
-## Version 0.3.93
+## Version 0.3.94
 
-### Neu in v0.3.93 – Spanisch, Schwedisch und vollständige Sprachumschaltung
+### Neu in v0.3.94 – „Alle“ folgt dem Monitor-Empfangsstrom
 
-- 🇪🇸 **Spanische Benutzeroberfläche:** Spanisch vollständig ergänzt, einschließlich der integrierten Anleitung.
-- 🇸🇪 **Schwedische Benutzeroberfläche:** Schwedisch vollständig ergänzt, einschließlich der integrierten Anleitung.
-- 📖 **Integrierte Anleitung:** Die Anleitung folgt jetzt zuverlässig der ausgewählten Sprache – auch in Spanisch und Schwedisch.
-- 📡 **Monitor:** Dynamische Anzeigen wie „angezeigt / gespeichert“ werden beim Sprachwechsel korrekt übersetzt.
-- 🗺️ **Karte:** Der Karten-Tab wird unabhängig vom vorherigen Sprachtext zuverlässig neu übersetzt.
-- 🌐 **Weltweit:** Der Weltweit-Tab wird beim Sprachwechsel ebenfalls zuverlässig über das tatsächliche Widget aktualisiert.
-- 🛰️ **GPS:** GPS-Beschriftungen und zugehörige Eingabefelder sind in allen sieben unterstützten Sprachen berücksichtigt.
-- 🧭 **Klassische Ansicht:** Einstellungen, Raum/Ziel, Wetter, Filter, Karte, Weltweit, Monitor, MH und Statistik werden beim Sprachwechsel korrekt aktualisiert.
-- 📦 **Release:** GitHub-ZIP und Debian-Paket wurden für v0.3.93 aktualisiert; das ZIP beginnt mit `MeshCom/`, das DEB verwendet Architektur `all` und enthält den Desktop-Launcher einschließlich Icon.
+- 📡 **Ein Empfangsstrom:** „Alle“ übernimmt denselben bereits verarbeiteten UDP-Datenstrom wie der Monitor.
+- 📨 **Keine UDP/WebService-Doppelung:** Eine MSG wird nicht mehr parallel aus UDP und WebService in „Alle“ eingetragen.
+- 📍 **POS sichtbar:** Positionsdaten werden ebenfalls in „Alle“ angezeigt, wenn der Raumfilter ausgeschaltet ist.
+- 🌡️ **TEL sichtbar:** Telemetrie-/Statusdaten werden ebenfalls in „Alle“ übernommen.
+- ✓ **ACK sichtbar:** ACK-Einträge bleiben Teil desselben Monitor-Empfangsstroms.
+- 🔎 **Raumfilter:** Bei aktiviertem Raumfilter können nicht raumgebundene POS/TEL-Daten ausgeblendet werden.
+- 🛡️ **Monitor unverändert:** Der bestehende UDP-, MH-, Karten- und Monitorpfad bleibt erhalten.
+- 📦 **Release:** Der GitHub-Stand ist auf v0.3.94 aktualisiert; das ZIP beginnt mit `MeshCom/`.
 
 # Sprache / Language
 
@@ -305,7 +297,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.93**
+**Version 0.3.94**
 
 **By Goldisoft 2026**
 
@@ -445,7 +437,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.93**  
+**MeshCom-Guru v0.3.94**  
 **By Goldisoft 2026**
 
 
@@ -463,5 +455,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

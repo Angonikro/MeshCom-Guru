@@ -1,6 +1,6 @@
-# MeshCom-Guru v0.3.93
+# MeshCom-Guru v0.3.94
 
-## Änderungen in v0.3.93
+## Änderungen in v0.3.94
 
 - 🇪🇸 Spanische Benutzeroberfläche einschließlich integrierter Anleitung.
 - 🇸🇪 Schwedische Benutzeroberfläche einschließlich integrierter Anleitung.
@@ -8,11 +8,14 @@
 - 📡 Monitor-Zähler und dynamische Anzeigen werden beim Sprachwechsel korrekt übersetzt.
 - 🗺️ Karten-Tab und 🌐 Weltweit-Tab werden beim Sprachwechsel zuverlässig aktualisiert.
 - 🛰️ GPS- und Raum/Ziel-Beschriftungen sind in allen sieben Sprachen berücksichtigt.
-- 🧩 Keine Änderungen an der bestehenden Nachrichten-, Empfangs-, „Alle“- und Sendelogik.
+- 📡 „Alle“ verwendet jetzt denselben bereits verarbeiteten UDP-Empfangsstrom wie der Monitor.
+- 📨 UDP/WebService-Doppelungen werden dadurch in „Alle“ vermieden.
+- 📍 POS, TEL und ACK werden ebenfalls übernommen, wenn der Raumfilter ausgeschaltet ist.
+- 🛡️ Der bestehende Monitor-/MH-/Kartenpfad bleibt erhalten.
 
 ## Debian-Paket
 
-Das Debian-Paket `MeshCom-Guru_v0.3.93_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
+Das Debian-Paket `MeshCom-Guru_v0.3.94_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
 
 Für die Weltweit-Ansicht wird unter Linux/Raspberry Pi WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
 
@@ -23,6 +26,6 @@ chmod +x install_webkitgtk.sh
 
 ## GitHub-ZIP
 
-Das ZIP `MeshCom-Guru_v0.3.93_GITHUB.zip` enthält den vollständigen Projektstand. Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
+Das ZIP `MeshCom-Guru_v0.3.94_GITHUB.zip` enthält den vollständigen Projektstand. Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
 
 Die integrierte Anleitung ist mehrsprachig und folgt der in MeshCom-Guru ausgewählten Sprache.
