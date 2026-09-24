@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.3.96 – Picrd-Bildvorschau
+
+- 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.
+- 🔗 **Original-Link bleibt anklickbar:** Die ursprüngliche Adresse bleibt unter der Vorschau verfügbar und öffnet sich im Standard-Webbrowser.
+- 🌐 **Normale Internetlinks:** Links ohne Bildziel werden weiterhin wie bisher dargestellt.
+- 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Vorschauen werden auch nach späteren Chat-Aktualisierungen nicht erneut eingefügt.
+- 📡 **Bestehende Nachrichtenfunktionen bleiben erhalten:** Empfang, Senden, Räume, Private Chats, Monitor und „Alle“ wurden für die Vorschaufunktion nicht verändert.
+- 🌐 **Mehrsprachige Anleitung:** Die neue Funktion ist in Deutsch, English, Italiano, Nederlands, Français, Español und Svenska beschrieben.
+- 📄 **PDF-Handbücher:** Alle sieben PDF-Handbücher wurden um die v0.3.96-Funktionsbeschreibung ergänzt.
+
 ## v0.3.95 – Karten-Verbindungen
 
 - 🔗 **Karten-Verbindungen:** Tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte dargestellt werden.

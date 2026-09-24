@@ -10,6 +10,9 @@ import json
 import socket
 import threading
 import time
+import urllib.request
+import urllib.error
+from urllib.parse import urljoin
 from datetime import datetime
 from pathlib import Path
 
@@ -64,6 +67,7 @@ from core.meshcom import MeshCom
 from core.settings import SETTINGS_FILE, load_settings
 from core.backup_restore import create_backup, restore_backup
 from core.update_checker import UpdateChecker
+from ui.picrd_uploader import PicrdUploader
 from version import VERSION
 
 # WebKitGTK is used only on Linux. Windows keeps the proven QtWebEngine
@@ -141,6 +145,223 @@ def _meshcom_extract_coordinates(raw):
 
 
 from i18n import tr, set_language, ui_text
+
+# ---------------------------------------------------------------------------
+# Chat image previews
+# ---------------------------------------------------------------------------
+_CHAT_IMAGE_CACHE = {}
+_CHAT_IMAGE_PENDING = set()
+_CHAT_IMAGE_LOCK = threading.Lock()
+_CHAT_IMAGE_CACHE_DIR = Path.home() / ".MeshCom" / "chat_image_cache"
+_CHAT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
+_CHAT_IMAGE_TIMEOUT = 7
+
+# The preview cache is intentionally bounded.  Without cleanup, every image
+# preview received in chat would remain on disk forever and ~/.MeshCom would
+# grow continuously on long-running Raspberry Pi installations.
+_CHAT_IMAGE_CACHE_MAX_FILES = 50
+_CHAT_IMAGE_CACHE_MAX_TOTAL_BYTES = 50 * 1024 * 1024
+
+
+def _cleanup_chat_image_cache():
+    """Keep the on-disk chat preview cache bounded by age/size.
+
+    The newest files are kept.  Cleanup errors are deliberately ignored so
+    that a cache problem can never affect normal chat operation.
+    """
+    try:
+        if not _CHAT_IMAGE_CACHE_DIR.is_dir():
+            return
+
+        files = [
+            p for p in _CHAT_IMAGE_CACHE_DIR.iterdir()
+            if p.is_file() and p.suffix == ".img"
+        ]
+        if not files:
+            return
+
+        # Newest first.  mtime is updated when a cached file is created.
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        kept = []
+        total = 0
+        for path in files:
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+
+            if (
+                len(kept) < _CHAT_IMAGE_CACHE_MAX_FILES
+                and total + size <= _CHAT_IMAGE_CACHE_MAX_TOTAL_BYTES
+            ):
+                kept.append(path)
+                total += size
+            else:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+
+                # Do not leave an in-memory URL -> path entry pointing to a
+                # file that cleanup has just removed.
+                with _CHAT_IMAGE_LOCK:
+                    for cached_url, cached_path in list(_CHAT_IMAGE_CACHE.items()):
+                        if cached_path == str(path):
+                            _CHAT_IMAGE_CACHE.pop(cached_url, None)
+    except Exception:
+        pass
+
+
+# Clean an existing cache once when the application starts.  This also trims
+# caches created by older versions of MeshCom-Guru.
+_cleanup_chat_image_cache()
+
+
+def _chat_image_cache_file(url):
+    digest = hashlib.sha256(str(url).encode("utf-8", errors="ignore")).hexdigest()
+    return _CHAT_IMAGE_CACHE_DIR / f"{digest}.img"
+
+
+def _chat_image_download(url):
+    """Resolve a chat URL and cache an actual image target in the background.
+
+    The target may either be a direct image URL (Content-Type: image/*) or a
+    normal HTML page which exposes its main image through og:image/twitter:image
+    or a usable <img src=...>.  The chat itself is never blocked by the network
+    request and non-image pages are simply ignored.
+    """
+    url = str(url or "").strip()
+    if not re.match(r"^https?://", url, re.I):
+        return
+    with _CHAT_IMAGE_LOCK:
+        if url in _CHAT_IMAGE_CACHE or url in _CHAT_IMAGE_PENDING:
+            return
+        _CHAT_IMAGE_PENDING.add(url)
+
+    def load_image(data):
+        if not data or len(data) > _CHAT_IMAGE_MAX_BYTES:
+            return None
+        from PySide6.QtGui import QImage
+        image = QImage()
+        if not image.loadFromData(data):
+            return None
+        return image
+
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "MeshCom-Guru/0.3.95",
+                "Accept": "image/avif,image/webp,image/apng,image/*,text/html,*/*;q=0.2",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=_CHAT_IMAGE_TIMEOUT) as response:
+            content_type = str(response.headers.get("Content-Type", "")).lower()
+            data = response.read(_CHAT_IMAGE_MAX_BYTES + 1)
+            image = None
+
+            if content_type.startswith("image/"):
+                image = load_image(data)
+            elif "text/html" in content_type or data.lstrip().lower().startswith((b"<!doctype html", b"<html", b"<head")):
+                # Many image-sharing services use a short page URL rather than
+                # exposing the image directly. Look for the page's canonical
+                # preview image without pulling in another HTML engine.
+                text = data.decode("utf-8", errors="ignore")
+                candidates = []
+                for pattern in (
+                    r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+content=["\']([^"\']+)',
+                    r'<meta[^>]+name=["\']twitter:image(?::src)?["\'][^>]+content=["\']([^"\']+)',
+                    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image(?::secure_url)?["\']',
+                    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image(?::src)?["\']',
+                    r'<img[^>]+src=["\']([^"\']+)',
+                ):
+                    for m in re.finditer(pattern, text, re.I):
+                        candidates.append(m.group(1))
+
+                # Prefer absolute URLs, but also support relative image paths.
+                for candidate in candidates[:12]:
+                    image_url = urljoin(url, html.unescape(candidate.strip()))
+                    if not re.match(r"^https?://", image_url, re.I):
+                        continue
+                    try:
+                        image_req = urllib.request.Request(
+                            image_url,
+                            headers={
+                                "User-Agent": "MeshCom-Guru/0.3.95",
+                                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.2",
+                            },
+                        )
+                        with urllib.request.urlopen(image_req, timeout=_CHAT_IMAGE_TIMEOUT) as image_response:
+                            image_data = image_response.read(_CHAT_IMAGE_MAX_BYTES + 1)
+                            image = load_image(image_data)
+                            if image is not None:
+                                break
+                    except Exception:
+                        continue
+
+            if image is None:
+                return
+
+            _CHAT_IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            path = _chat_image_cache_file(url)
+            if not image.save(str(path), "PNG"):
+                return
+
+            with _CHAT_IMAGE_LOCK:
+                _CHAT_IMAGE_CACHE[url] = str(path)
+
+            # Keep long-running installations from accumulating preview files.
+            _cleanup_chat_image_cache()
+    except Exception:
+        pass
+    finally:
+        with _CHAT_IMAGE_LOCK:
+            _CHAT_IMAGE_PENDING.discard(url)
+
+
+def _chat_image_preview_html(url, link_color):
+    """Return a cached preview or an empty string while it downloads."""
+    url = str(url or "").strip()
+    with _CHAT_IMAGE_LOCK:
+        cached = _CHAT_IMAGE_CACHE.get(url)
+
+    if cached and not Path(cached).is_file():
+        with _CHAT_IMAGE_LOCK:
+            _CHAT_IMAGE_CACHE.pop(url, None)
+        cached = None
+
+    if not cached:
+        path = _chat_image_cache_file(url)
+        if path.is_file():
+            cached = str(path)
+            with _CHAT_IMAGE_LOCK:
+                _CHAT_IMAGE_CACHE[url] = cached
+
+    if not cached:
+        threading.Thread(
+            target=_chat_image_download,
+            args=(url,),
+            daemon=True,
+            name="MeshComChatImage",
+        ).start()
+        return ""
+
+    try:
+        # Keep previews deliberately small so a large photo cannot blow up the
+        # chat layout or Raspberry Pi memory usage.
+        src = QUrl.fromLocalFile(cached).toString()
+        safe_url = html.escape(url, quote=True)
+        return (
+            f'<div style="margin-top:5px;margin-bottom:3px;">'
+            f'<a href="{safe_url}">'
+            f'<img src="{src}" width="260" '
+            f'style="border-radius:8px;border:1px solid #667;"/></a>'
+            f'</div>'
+        )
+    except Exception:
+        return ""
+
 
 class BubbleWidget(QWidget):
     """Compact WhatsApp-style message bubble with a small inward tail."""
@@ -276,6 +497,7 @@ class ChatView(QScrollArea):
         self.chat_background = self._normalize_color(background)
         self.chat_text_color = self._normalize_color(text)
         self.chat_link_color = self._normalize_color(link or self.chat_link_color)
+        ChatView.chat_link_color = self.chat_link_color
         self._apply_scroll_style()
         self._apply_html_style()
         if hasattr(self, "_bubble_container"):
@@ -517,6 +739,13 @@ class ChatView(QScrollArea):
 
 
 class MainWindow(QMainWindow):
+    # Tracks previews that were already rendered for the exact same message
+    # block in the consolidated "Alle" view.  This survives the 5-second
+    # refresh and therefore prevents an asynchronously cached image from
+    # appearing a second time later.  It is intentionally used ONLY for
+    # image previews; the underlying message list is never changed.
+    _ALL_IMAGE_PREVIEW_RENDERED = set()
+
     # MH-Liste: maximal 250 zuletzt gehörte Stationen im Speicher.
     MH_MAX_STATIONS = 250
     udpPacketReceived = Signal(dict)
@@ -555,6 +784,7 @@ class MainWindow(QMainWindow):
         self.chat_background = self._normalize_chat_color(settings.get("chat_background", "#101722"))
         self.chat_text_color = self._normalize_chat_color(settings.get("chat_text_color", "#e6edf3"))
         self.chat_link_color = self._normalize_chat_color(settings.get("chat_link_color", "#062f6f"))
+        ChatView.chat_link_color = self.chat_link_color
         self._all_chat_views = []
         self.current_theme = settings.get("theme", "dark").strip().lower()
         self.layout_mode = settings.get("layout_mode", "classic").strip().lower()
@@ -2081,6 +2311,11 @@ class MainWindow(QMainWindow):
         self.message_input.setPlaceholderText("Nachricht eingeben …")
         self.message_input.setMaxLength(149)
 
+        # Bild-Upload: direkte picrd-API, ohne Browser/WebKit und ohne Clipboard.
+        self._picrd_uploader = PicrdUploader(self)
+        self._picrd_uploader.finished.connect(self._picrd_upload_finished)
+        self._picrd_uploader.error.connect(self._picrd_upload_error)
+
         # Schnelltexte: auswählbar, bearbeitbar und um neue Einträge erweiterbar.
         self.quick_text_button = QPushButton("⚡ Schnelltexte")
         self.quick_text_button.setFixedWidth(120)
@@ -2129,6 +2364,14 @@ class MainWindow(QMainWindow):
 
         message_row = QHBoxLayout()
         message_row.addWidget(self.message_input, 1)
+
+        self.paperclip_button = QPushButton()
+        self.paperclip_button.setIcon(QIcon(str(Path(__file__).resolve().parent.parent / "icons" / "paperclip.svg")))
+        self.paperclip_button.setIconSize(QPixmap(24, 24).size())
+        self.paperclip_button.setFixedSize(42, 30)
+        self.paperclip_button.setToolTip(ui_text("Bild hochladen"))
+        self.paperclip_button.clicked.connect(self._select_picrd_image)
+        message_row.addWidget(self.paperclip_button)
         message_row.addWidget(self.quick_text_button)
         message_row.addWidget(self.emoji_button)
         message_row.addWidget(self.message_counter)
@@ -2750,6 +2993,13 @@ class MainWindow(QMainWindow):
         self.dashboard_message_input.setMaxLength(149)
         self.dashboard_message_input.returnPressed.connect(self._dashboard_send)
         dash_message.addWidget(self.dashboard_message_input, 1)
+        self.dashboard_paperclip_button = QPushButton()
+        self.dashboard_paperclip_button.setIcon(QIcon(str(Path(__file__).resolve().parent.parent / "icons" / "paperclip.svg")))
+        self.dashboard_paperclip_button.setIconSize(QPixmap(24, 24).size())
+        self.dashboard_paperclip_button.setFixedSize(42, 30)
+        self.dashboard_paperclip_button.setToolTip(ui_text("Bild hochladen"))
+        self.dashboard_paperclip_button.clicked.connect(self._select_picrd_image)
+        dash_message.addWidget(self.dashboard_paperclip_button)
         dashboard_quick = QPushButton(ui_text("⚡ Schnelltexte"))
         dashboard_quick.setToolTip(ui_text("Schnelltext auswählen oder bearbeiten"))
         dashboard_quick.clicked.connect(self._open_quick_texts)
@@ -3326,10 +3576,61 @@ class MainWindow(QMainWindow):
                 self.dashboard_chat_title.setText(title)
         else:
             self.dashboard_chat_view.set_all_html(
-                self._render_blocks(self._filter_blocks(list(self.message_cache.values())))
+                self._render_blocks(
+                    self._filter_blocks(list(self.message_cache.values())),
+                    preview_seen=set(),
+                )
             )
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
+
+    def _select_picrd_image(self):
+        """Select an image and upload it directly to picrd in the background."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            ui_text("Bild auswählen"),
+            str(Path.home()),
+            "Bilder (*.png *.jpg *.jpeg *.webp *.gif);;Alle Dateien (*)",
+        )
+        if not path:
+            return
+
+        target = (
+            self.dashboard_message_input
+            if getattr(self, "layout_mode", "classic") == "dashboard"
+            else self.message_input
+        )
+        self._picrd_target_input = target
+        self._picrd_set_buttons_enabled(False)
+        self.status.setText(ui_text("Bild wird hochgeladen …"))
+        self._picrd_uploader.upload(path)
+
+    def _picrd_set_buttons_enabled(self, enabled):
+        for name in ("paperclip_button", "dashboard_paperclip_button"):
+            button = getattr(self, name, None)
+            if button is not None:
+                button.setEnabled(bool(enabled))
+
+    def _picrd_upload_finished(self, url):
+        self._picrd_set_buttons_enabled(True)
+        target = getattr(self, "_picrd_target_input", None)
+        if target is None:
+            target = self.dashboard_message_input if (
+                getattr(self, "layout_mode", "classic") == "dashboard"
+                and hasattr(self, "dashboard_message_input")
+            ) else self.message_input
+        current = target.text().strip()
+        if url not in current:
+            new_text = (current + " " + url).strip() if current else url
+            target.setText(new_text[:149])
+            target.setCursorPosition(len(target.text()))
+        target.setFocus()
+        self.status.setText(ui_text("Bild-Link eingefügt."))
+
+    def _picrd_upload_error(self, message):
+        self._picrd_set_buttons_enabled(True)
+        self.status.setText(ui_text("Bild-Upload fehlgeschlagen."))
+        QMessageBox.warning(self, ui_text("Bild-Upload"), str(message))
 
     def _dashboard_send(self):
         text = self.dashboard_message_input.text().strip()
@@ -4766,7 +5067,8 @@ class MainWindow(QMainWindow):
             <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands, Français, Español und Svenska</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
 <h3>💾 Datensicherung und ♻️ Wiederherstellung</h3><p>Über <b>Datei → Datensicherung erstellen …</b> können die persönlichen MeshCom-Guru-Daten aus <code>~/.MeshCom</code> als ZIP-Datei gesichert werden. Mit <b>Datei → Datensicherung wiederherstellen …</b> kann eine zuvor erstellte Sicherung zurückgespielt werden. Nicht im Backup enthaltene Dateien werden nicht gelöscht.</p><p>Nach einer Wiederherstellung werden die Daten auch in der laufenden Anwendung übernommen. Beim anschließenden Neustart bleibt der restaurierte Backup-Stand erhalten.</p>
 <h3>🔄 Nach Updates suchen</h3><p>Über <b>Hilfe → Nach Update suchen …</b> kann die installierte Version mit der aktuellen GitHub-Release verglichen werden. Bei einer neueren Version wird ein Hinweis mit Link zur GitHub-Release angezeigt. MeshCom-Guru lädt Updates nicht automatisch herunter und installiert sie nicht automatisch.</p>
-                        <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+                                    <h3>🖼️ Bilder und Bildvorschau im Chat</h3><p>Mit der <b>Büroklammer</b> können Bilder direkt über <b>Picrd</b> hochgeladen werden. Der erzeugte Picrd-Link kann anschließend im MeshCom-Chat gesendet werden.</p><p>Wenn ein Chat-Link auf ein Bild verweist, versucht MeshCom-Guru automatisch eine <b>Bildvorschau</b> direkt im Chat anzuzeigen. Normale Internetlinks ohne Bild bleiben normale anklickbare Links. Die Vorschau wird im Hintergrund geladen und bei späteren Chat-Aktualisierungen nicht mehrfach angezeigt.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
@@ -4788,7 +5090,8 @@ class MainWindow(QMainWindow):
             <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The choice is saved, and the built-in guide follows the selected language.</p>
 <h3>💾 Backup and ♻️ Restore</h3><p>Use <b>File → Create backup …</b> to save the personal MeshCom-Guru data from <code>~/.MeshCom</code> as a ZIP file. Use <b>File → Restore backup …</b> to restore a previously created backup. Files that are not included in the backup are not deleted.</p><p>After a restore, the restored data is also applied to the running application. During the following restart, the restored backup state is preserved.</p>
 <h3>🔄 Check for updates</h3><p>Use <b>Help → Check for updates …</b> to compare the installed version with the current GitHub release. If a newer version is available, MeshCom-Guru shows a notice with a link to the GitHub release. MeshCom-Guru does not download or install updates automatically.</p>
-                        <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
+                                    <h3>🖼️ Images and image previews in chat</h3><p>Use the <b>paperclip</b> to upload images directly via <b>Picrd</b>. The resulting Picrd link can then be sent in a MeshCom chat.</p><p>If a chat link points to an image, MeshCom-Guru automatically tries to show an <b>image preview</b> directly in the chat. Normal internet links without an image remain normal clickable links. The preview is loaded in the background and is not inserted repeatedly during later chat refreshes.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
@@ -4809,6 +5112,7 @@ class MainWindow(QMainWindow):
             <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. Anche questa guida segue la lingua selezionata.</p>
             <h3>💾 Backup e ♻️ Ripristino</h3><p>Con <b>File → Crea backup …</b> puoi salvare i dati personali di MeshCom-Guru da <code>~/.MeshCom</code> in un file ZIP. Con <b>File → Ripristina backup …</b> puoi ripristinare un backup creato in precedenza. I file non inclusi nel backup non vengono eliminati.</p><p>Dopo il ripristino, i dati vengono applicati anche all'applicazione in esecuzione. Al riavvio successivo il contenuto ripristinato viene mantenuto.</p>
             <h3>🔄 Controlla aggiornamenti</h3><p>Con <b>Aiuto → Cerca aggiornamenti …</b> puoi confrontare la versione installata con la release GitHub corrente. Se è disponibile una versione più recente, MeshCom-Guru mostra un avviso con il link alla release GitHub. Gli aggiornamenti non vengono scaricati o installati automaticamente.</p>
+                        <h3>🖼️ Immagini e anteprime nel chat</h3><p>Usa la <b>graffetta</b> per caricare direttamente le immagini tramite <b>Picrd</b>. Il link Picrd generato può quindi essere inviato in una chat MeshCom.</p><p>Se un link nella chat conduce a un'immagine, MeshCom-Guru tenta automaticamente di mostrare una <b>anteprima dell'immagine</b> direttamente nella chat. I normali link Internet senza immagini rimangono normali link cliccabili. L'anteprima viene caricata in background e non viene inserita più volte durante i successivi aggiornamenti della chat.</p>
             <h3>Installazione</h3><p><b>Linux:</b> estrarre <code>MeshCom</code> e avviare <code>./run_linux.sh</code>. <b>Windows:</b> avviare <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>.</p>
             """,
             "nl": f"""
@@ -4830,6 +5134,7 @@ class MainWindow(QMainWindow):
             <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De ingebouwde handleiding volgt de gekozen taal.</p>
             <h3>💾 Back-up en ♻️ Herstellen</h3><p>Gebruik <b>Bestand → Back-up maken …</b> om de persoonlijke MeshCom-Guru-gegevens uit <code>~/.MeshCom</code> als ZIP-bestand op te slaan. Met <b>Bestand → Back-up herstellen …</b> kun je een eerder gemaakte back-up terugzetten. Bestanden die niet in de back-up staan worden niet verwijderd.</p><p>Na herstel worden de teruggezette gegevens ook in de actieve toepassing overgenomen. Bij de daaropvolgende herstart blijft de herstelde back-up behouden.</p>
             <h3>🔄 Naar updates zoeken</h3><p>Via <b>Help → Naar updates zoeken …</b> kun je de geïnstalleerde versie vergelijken met de huidige GitHub-release. Als een nieuwere versie beschikbaar is, toont MeshCom-Guru een melding met een link naar de GitHub-release. Updates worden niet automatisch gedownload of geïnstalleerd.</p>
+                        <h3>🖼️ Afbeeldingen en afbeeldingsvoorbeelden in de chat</h3><p>Gebruik de <b>paperclip</b> om afbeeldingen rechtstreeks via <b>Picrd</b> te uploaden. De aangemaakte Picrd-link kan daarna in een MeshCom-chat worden verzonden.</p><p>Als een link in de chat naar een afbeelding verwijst, probeert MeshCom-Guru automatisch een <b>afbeeldingsvoorbeeld</b> direct in de chat te tonen. Normale internetlinks zonder afbeelding blijven gewone aanklikbare links. Het voorbeeld wordt op de achtergrond geladen en wordt bij latere chatverversingen niet opnieuw ingevoegd.</p>
             <h3>Installatie</h3><p><b>Linux:</b> pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>.</p>
             """,
             "fr": f"""
@@ -4851,7 +5156,8 @@ class MainWindow(QMainWindow):
             <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le guide intégré suit également la langue sélectionnée.</p>
 <h3>💾 Sauvegarde et ♻️ restauration</h3><p>Utilisez <b>Fichier → Créer une sauvegarde …</b> pour enregistrer les données personnelles de MeshCom-Guru depuis <code>~/.MeshCom</code> dans un fichier ZIP. Avec <b>Fichier → Restaurer une sauvegarde …</b>, vous pouvez restaurer une sauvegarde précédente. Les fichiers qui ne figurent pas dans la sauvegarde ne sont pas supprimés.</p><p>Après la restauration, les données restaurées sont également appliquées à l'application en cours d'exécution. Lors du redémarrage suivant, l'état restauré est conservé.</p>
 <h3>🔄 Rechercher les mises à jour</h3><p>Avec <b>Aide → Rechercher les mises à jour …</b>, vous pouvez comparer la version installée avec la release GitHub actuelle. Si une version plus récente est disponible, MeshCom-Guru affiche un message avec un lien vers la release GitHub. Les mises à jour ne sont ni téléchargées ni installées automatiquement.</p>
-                        <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
+                                    <h3>🖼️ Images et aperçus d’images dans le chat</h3><p>Utilisez la <b>trombone</b> pour envoyer directement des images via <b>Picrd</b>. Le lien Picrd généré peut ensuite être envoyé dans un chat MeshCom.</p><p>Si un lien dans le chat pointe vers une image, MeshCom-Guru essaie automatiquement d’afficher un <b>aperçu de l’image</b> directement dans le chat. Les liens Internet normaux sans image restent des liens cliquables classiques. L’aperçu est chargé en arrière-plan et n’est pas inséré plusieurs fois lors des actualisations suivantes du chat.</p>
+            <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
             """,
             "es": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guía rápida</h3>
@@ -4893,6 +5199,7 @@ class MainWindow(QMainWindow):
             <h3>💾 Copia de seguridad y ♻️ Restauración</h3>
             <p>Mediante <b>Archivo → Crear copia de seguridad …</b> puedes guardar los datos personales de MeshCom-Guru de <code>~/.MeshCom</code> como archivo ZIP. Con <b>Archivo → Restaurar copia de seguridad …</b> puedes restaurar una copia existente. Los archivos que no forman parte de la copia no se eliminan.</p>
             <h3>🔄 Buscar actualizaciones</h3><p>Mediante <b>Ayuda → Buscar actualizaciones …</b> puedes comparar la versión instalada con la versión actual de GitHub. Si hay una versión más reciente, MeshCom-Guru muestra un aviso con un enlace a la release de GitHub. Las actualizaciones no se descargan ni instalan automáticamente.</p>
+                        <h3>🖼️ Imágenes y vistas previas en el chat</h3><p>Usa el <b>clip</b> para subir imágenes directamente mediante <b>Picrd</b>. El enlace de Picrd generado se puede enviar después en un chat de MeshCom.</p><p>Si un enlace del chat apunta a una imagen, MeshCom-Guru intenta mostrar automáticamente una <b>vista previa de la imagen</b> directamente en el chat. Los enlaces normales de Internet sin imagen siguen siendo enlaces en los que se puede hacer clic. La vista previa se carga en segundo plano y no se inserta varias veces durante las actualizaciones posteriores del chat.</p>
             <h3>Instalación</h3><p><b>ZIP de Linux:</b> extrae la carpeta <code>MeshCom</code> y ejecuta <code>./run_linux.sh</code>. <b>Windows:</b> ejecuta <code>run_windows.bat</code>. <b>Debian:</b> instalación en <code>/usr/share/MeshCom</code>; los ajustes personales permanecen en <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "sv": f"""
@@ -4935,6 +5242,7 @@ class MainWindow(QMainWindow):
             <h3>💾 Säkerhetskopiering och ♻️ Återställning</h3>
             <p>Via <b>Arkiv → Skapa säkerhetskopia …</b> kan MeshCom-Gurus personliga data från <code>~/.MeshCom</code> sparas som en ZIP-fil. Via <b>Arkiv → Återställ säkerhetskopia …</b> kan en tidigare säkerhetskopia återställas. Filer som inte ingår i säkerhetskopian raderas inte.</p>
             <h3>🔄 Sök efter uppdateringar</h3><p>Via <b>Hjälp → Sök efter uppdateringar …</b> kan den installerade versionen jämföras med den aktuella GitHub-releasen. Om en nyare version finns visar MeshCom-Guru ett meddelande med länk till GitHub-releasen. Uppdateringar laddas inte ner eller installeras automatiskt.</p>
+                        <h3>🖼️ Bilder och bildförhandsvisningar i chatten</h3><p>Använd <b>gemet</b> för att ladda upp bilder direkt via <b>Picrd</b>. Den skapade Picrd-länken kan sedan skickas i en MeshCom-chatt.</p><p>Om en länk i chatten leder till en bild försöker MeshCom-Guru automatiskt visa en <b>bildförhandsvisning</b> direkt i chatten. Vanliga internetlänkar utan bild förblir vanliga klickbara länkar. Förhandsvisningen laddas i bakgrunden och läggs inte in flera gånger vid senare uppdateringar av chatten.</p>
             <h3>Installation</h3><p><b>Linux ZIP:</b> packa upp mappen <code>MeshCom</code> och kör <code>./run_linux.sh</code>. <b>Windows:</b> kör <code>run_windows.bat</code>. <b>Debian:</b> installation i <code>/usr/share/MeshCom</code>; personliga inställningar finns kvar i <code>~/.MeshCom/settings.ini</code>.</p>
             """,
         }
@@ -5690,7 +5998,74 @@ class MainWindow(QMainWindow):
         return participants[0] if participants else ""
 
     @classmethod
-    def _make_clickable(cls, block):
+    def _make_clickable(cls, block, preview_seen=None, all_mode=False):
+        # A single message can contain the same URL more than once (for example
+        # after HTML/link normalization).  Never render the same image preview
+        # more than once inside that message.  Normal links themselves remain
+        # untouched and fully clickable.
+        if preview_seen is None:
+            preview_seen = set()
+
+        def image_preview_once(url):
+            key = str(url or "").strip()
+            if not key or key in preview_seen:
+                return ""
+
+            # In "Alle" the message document is rebuilt on the regular refresh.
+            # The image download may finish between two refreshes.  Without a
+            # persistent key, the same message would then gain a second preview.
+            # Remember the exact message-block + URL pair only after a preview
+            # was actually produced.  This does NOT remove or deduplicate any
+            # messages; it only suppresses a duplicate image preview for the
+            # same message.
+            stable_preview_key = None
+            if all_mode:
+                normalized_block = re.sub(r"\s+", " ", html.unescape(str(block or ""))).strip()
+                stable_preview_key = hashlib.sha1(
+                    (normalized_block + "\x1f" + key).encode("utf-8", errors="ignore")
+                ).hexdigest()
+                if stable_preview_key in cls._ALL_IMAGE_PREVIEW_RENDERED:
+                    return ""
+
+            # Mark the source URL first so the same link can never produce two
+            # previews during one complete "Alle" render.  There is a second
+            # layer below for image-content deduplication: two Picrd/page URLs
+            # can resolve to the exact same cached image even though their source
+            # URLs differ.  That situation used to make the same picture appear
+            # again on a later refresh of "Alle".
+            preview_seen.add(key)
+            preview = _chat_image_preview_html(key, getattr(cls, "chat_link_color", "#062f6f"))
+            if not preview:
+                return ""
+
+            if stable_preview_key is not None:
+                cls._ALL_IMAGE_PREVIEW_RENDERED.add(stable_preview_key)
+                # Keep the registry bounded during long-running Raspberry Pi
+                # sessions.  Old entries are only a preview bookkeeping detail.
+                if len(cls._ALL_IMAGE_PREVIEW_RENDERED) > 1200:
+                    cls._ALL_IMAGE_PREVIEW_RENDERED = set(
+                        list(cls._ALL_IMAGE_PREVIEW_RENDERED)[-600:]
+                    )
+
+            # Only the consolidated "Alle" renderer shares one preview_seen set
+            # across all message blocks.  If a cached preview is available, use
+            # its file content as a stable second deduplication key.  Normal room
+            # and private chats pass a fresh set per message and therefore keep
+            # their existing behaviour.
+            try:
+                with _CHAT_IMAGE_LOCK:
+                    cached_path = _CHAT_IMAGE_CACHE.get(key)
+                if cached_path:
+                    digest = hashlib.sha256(Path(cached_path).read_bytes()).hexdigest()
+                    image_key = "__image_content__:" + digest
+                    if image_key in preview_seen:
+                        return ""
+                    preview_seen.add(image_key)
+            except Exception:
+                # Preview display must never be affected by cache/hash errors.
+                pass
+            return preview
+
         # Dashboard-Links mit Rufzeichen werden auf interne MeshCom-Links umgebogen.
         # Danach werden zusätzlich noch plain-text-Rufzeichen anklickbar gemacht.
         protected = []
@@ -5717,7 +6092,26 @@ class MainWindow(QMainWindow):
                 return "".join(parts)
 
             converted = link_callsigns(inner)
-            protected.append(converted)
+            href_match = re.search(r'href\s*=\s*["\']([^"\']+)', match.group(1) or "", re.IGNORECASE)
+            href = html.unescape(href_match.group(1)).strip() if href_match else ""
+
+            # IMPORTANT: Keep existing internet anchors intact.  The old
+            # renderer accidentally discarded the original <a href=...> and
+            # therefore made links in "Alle" unclickable.
+            if re.match(r"^https?://", href, re.IGNORECASE):
+                preview = image_preview_once(href)
+                safe_href = html.escape(href, quote=True)
+                protected.append(
+                    preview
+                    + f'<a href="{safe_href}">'
+                    + converted
+                    + '</a>'
+                )
+            else:
+                # MeshCom callsign anchors are intentionally rebuilt from the
+                # visible callsign(s), preserving their existing internal
+                # behaviour.
+                protected.append(converted)
             return f"@@MESHCOM_ANCHOR_{len(protected)-1}@@"
 
         block = re.sub(r'<a\b([^>]*)>(.*?)</a>', protect_anchor, block, flags=re.IGNORECASE | re.DOTALL)
@@ -5740,7 +6134,19 @@ class MainWindow(QMainWindow):
                 raw = raw[:-1]
             if not raw:
                 return match.group(0)
+
             safe_url = html.escape(raw, quote=True)
+            preview = image_preview_once(raw)
+
+            # If the target is a real image, show a compact preview and keep
+            # the original URL underneath. If it is not an image, the old
+            # clickable-link rendering remains exactly as before.
+            if preview:
+                return (
+                    preview
+                    + f'<a href="{safe_url}" style="color:{getattr(cls, "chat_link_color", "#062f6f")};">'
+                    f'{html.escape(raw)}</a>{html.escape(trailing)}'
+                )
             return f'<a href="{safe_url}">{html.escape(raw)}</a>{html.escape(trailing)}'
 
         parts = re.split(r"(<[^>]+>)", block)
@@ -5859,12 +6265,24 @@ class MainWindow(QMainWindow):
             self.update_messages()
 
 
-    def _render_blocks(self, blocks):
+    def _render_blocks(self, blocks, preview_seen=None, all_mode=False):
         if not blocks:
             return "<html><body><p><b>Keine Nachrichten.</b></p></body></html>"
+        # For the consolidated "Alle" view, use one preview registry for the
+        # complete render pass.  The same message can occur more than once in
+        # the merged room stream; an image URL must still produce only one
+        # preview in that view.  Callers for normal room/private renders can
+        # provide their own registry (or leave this None for the old per-block
+        # behaviour).
+        if preview_seen is None:
+            preview_seen = None
         rendered = []
         for block in blocks:
-            content = self._make_clickable(block)
+            content = self._make_clickable(
+                block,
+                preview_seen=preview_seen if preview_seen is not None else set(),
+                all_mode=all_mode,
+            )
             # Nur bei einer tatsächlich eigenen Textnachricht einen Status
             # anhängen. POS-/Koordinatenblöcke bleiben 1:1 unangetastet.
             ack_html = ""
@@ -6949,7 +7367,13 @@ renderStations(initialStations);
                         f"💬 Raum #{key[1]}" if key[0] == "room" else f"👤 Privat – {key[1]}"
                     )
         else:
-            rendered = self._render_blocks(blocks)
+            # In "Alle" the merged stream can contain the same underlying
+            # message/link more than once.  Keep one preview registry for the
+            # entire render pass so an identical image is displayed only once.
+            all_preview_seen = set() if key[0] == "all" else None
+            rendered = self._render_blocks(
+                blocks, preview_seen=all_preview_seen, all_mode=(key[0] == "all")
+            )
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
             changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
             self.tab_hashes[key] = digest

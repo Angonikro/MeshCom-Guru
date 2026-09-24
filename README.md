@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.3.95**
+**Aktuelle Version: 0.3.96**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -18,6 +11,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Räume und private Nachrichten
 - Node-Informationen
 - Kartenanzeige mit Positionsdaten
+- **Karten-Verbindungen:** tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte angezeigt werden.
 - Anzeige eigener Positionsdaten
 - integriertes Menü **Hilfe**
 - integrierte **Anleitung**
@@ -27,47 +21,31 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
 - **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
-- **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
-- **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
-- **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+- **Bildvorschau für Picrd-Links:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
 
 ### Dokumentation
 
-Die PDF-Handbücher sind auf v0.3.95 aktualisiert. Die Ergänzung beschreibt die neue Kartenfunktion **Verbindungen** und die sieben unterstützten Sprachen:
+Die PDF-Handbücher enthalten die aktuellen Ergänzungen zur **Picrd-Bildvorschau** und zu den **Karten-Verbindungen** sowie die sieben unterstützten Sprachen:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.95_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.95_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.95_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.95_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.95_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.95_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.95_SV.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.96_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.96_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.96_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.96_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.96_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
 
-## Version 0.3.95
+## Version 0.3.96
 
-### Neu in v0.3.95 – Karten-Verbindungen
+### Neu in v0.3.96 – Picrd-Bildvorschau
 
-- 🔗 **Verbindungen:** Auf der Karte können tatsächlich empfangene MeshCom-Pfade als Linien dargestellt werden.
-- 📡 **Direkt gehört:** Eine direkte lokale LoRa-Verbindung wird nur dann dargestellt, wenn die eigene Station den Node tatsächlich empfangen hat.
-- 🛡️ **Keine erfundenen Verbindungen:** Position, Entfernung oder vermutete Funkreichweite erzeugen keine Linie.
-- 🖱️ **Node-Auswahl:** Bei aktivierter Verbindungsanzeige kann ein Node angeklickt werden, um seine erkannten Verbindungen hervorzuheben.
-- 📊 **Keine falschen RSSI/SNR-Werte:** Die Linien zeigen keine RSSI-/SNR-Werte pro Hop. Die Werte eines empfangenen Frames werden nicht einzelnen Teilstrecken zugeschrieben.
-- 🌍 **Klassische Karte und Dashboard:** Die Verbindungsanzeige steht in beiden Kartenansichten zur Verfügung.
-- 🌐 **Mehrsprachig:** Die neuen Karten-Schaltflächen und die integrierte Anleitung folgen Deutsch, English, Italiano, Nederlands, Français, Español und Svenska.
-- 🧹 **Debug entfernt:** Die experimentelle Debug-Ansicht und der temporäre Rohdaten-Logger sind nicht Bestandteil des Releases.
-
-## Version 0.3.94
-
-### Neu in v0.3.94 – „Alle“ folgt dem Monitor-Empfangsstrom
-
-- 📡 **Ein Empfangsstrom:** „Alle“ übernimmt denselben bereits verarbeiteten UDP-Datenstrom wie der Monitor.
-- 📨 **Keine UDP/WebService-Doppelung:** Eine MSG wird nicht mehr parallel aus UDP und WebService in „Alle“ eingetragen.
-- 📍 **POS sichtbar:** Positionsdaten werden ebenfalls in „Alle“ angezeigt, wenn der Raumfilter ausgeschaltet ist.
-- 🌡️ **TEL sichtbar:** Telemetrie-/Statusdaten werden ebenfalls in „Alle“ übernommen.
-- ✓ **ACK sichtbar:** ACK-Einträge bleiben Teil desselben Monitor-Empfangsstroms.
-- 🔎 **Raumfilter:** Bei aktiviertem Raumfilter können nicht raumgebundene POS/TEL-Daten ausgeblendet werden.
-- 🛡️ **Monitor unverändert:** Der bestehende UDP-, MH-, Karten- und Monitorpfad bleibt erhalten.
-- 📦 **Release:** Der GitHub-Stand ist auf v0.3.94 aktualisiert; das ZIP beginnt mit `MeshCom/`.
+- 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.
+- 🔗 **Original-Link bleibt erhalten:** Ein Klick auf den Link öffnet weiterhin die ursprüngliche Adresse im Standard-Webbrowser.
+- 🌐 **Normale Internetlinks:** Links ohne Bildziel werden wie bisher als anklickbare Links dargestellt.
+- 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Bildvorschauen werden bei späteren Chat-Aktualisierungen nicht erneut eingefügt.
+- 📡 **Nachrichtenweg unverändert:** Empfang, Senden, Räume, Private Chats und „Alle“ bleiben funktional unverändert.
+- 🌐 **Mehrsprachig:** Die neue Funktion ist in der integrierten Anleitung in Deutsch, English, Italiano, Nederlands, Français, Español und Svenska dokumentiert.
+- 📄 **PDF-Handbücher:** Alle sieben Handbücher enthalten die Ergänzung zu v0.3.96.
 
 # Sprache / Language
 
@@ -123,9 +101,11 @@ MeshCom-Nachrichten dürfen maximal **149 Zeichen** enthalten. Das Nachrichtenfe
 
 Damit ist sofort sichtbar, wie viele Zeichen noch zur Verfügung stehen.
 
-## Internetlinks im Chat
+## Internetlinks und Bildvorschau im Chat
 
 Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Links dargestellt. Ein Klick auf einen Link mit `http://` oder `https://` öffnet die Adresse im Standard-Webbrowser des Systems.
+
+**Picrd-Bildlinks** werden zusätzlich geprüft. Wenn das Linkziel ein Bild bereitstellt, zeigt MeshCom-Guru eine kleine Bildvorschau direkt im Chat. Der ursprüngliche Link bleibt unter der Vorschau anklickbar. Links ohne Bildziel werden weiterhin ganz normal dargestellt. Bereits angezeigte Vorschauen werden bei späteren Chat-Aktualisierungen nicht doppelt eingefügt.
 
 ## Chat-Export
 
@@ -477,5 +457,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
