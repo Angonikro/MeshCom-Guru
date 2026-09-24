@@ -94,5 +94,14 @@
   "angezeigt": "angezeigt",
   "gespeichert": "gespeichert",
   "Raum oder Ziel, z. B. 262 oder DL9ABC-1": "Raum oder Ziel, z. B. 262 oder DL9ABC-1",
-  "Raum oder Ziel": "Raum oder Ziel"
+  "Raum oder Ziel": "Raum oder Ziel",
+  "Verbindungen": "Verbindungen",
+  "Legende": "Legende",
+  "Aus": "Aus",
+  "Ein": "Ein",
+  "Verbindung(en)": "Verbindung(en)",
+  "von": "von",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.",
+  "MeshCom-Pfad": "MeshCom-Pfad",
+  "Direkt gehört": "Direkt gehört"
 }

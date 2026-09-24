@@ -1,11 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-<g fill="none" stroke="#1677ff" stroke-linecap="round" stroke-linejoin="round">
-<path stroke-width="8" d="M64 108V52"/>
-<path stroke-width="8" d="M42 108h44"/>
-<path stroke-width="7" d="M64 52c-18 0-32-14-32-32"/>
-<path stroke-width="7" d="M64 52c18 0 32-14 32-32"/>
-<path stroke-width="7" d="M64 38c-10 0-18-8-18-18"/>
-<path stroke-width="7" d="M64 38c10 0 18-8 18-18"/>
-<circle cx="64" cy="52" r="6" fill="#1677ff" stroke="none"/>
-</g>
+  <g fill="none" stroke="#20a7ff" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Classic radio tower, matching the selected design #1 -->
+    <path stroke-width="7" d="M64 48L43 111h42z"/>
+    <path stroke-width="5" d="M50 90h28"/>
+    <path stroke-width="5" d="M55 75h18"/>
+    <path stroke-width="5" d="M59 61h10"/>
+    <path stroke-width="6" d="M64 48V38"/>
+    <circle cx="64" cy="33" r="6" fill="#20a7ff" stroke="none"/>
+    <!-- Three classic radio-wave arcs on each side -->
+    <path stroke-width="6" d="M47 44c-8-7-8-19 0-26"/>
+    <path stroke-width="6" d="M38 50c-12-11-12-27 0-38"/>
+    <path stroke-width="6" d="M29 57c-16-15-16-37 0-52"/>
+    <path stroke-width="6" d="M81 44c8-7 8-19 0-26"/>
+    <path stroke-width="6" d="M90 50c12-11 12-27 0-38"/>
+    <path stroke-width="6" d="M99 57c16-15 16-37 0-52"/>
+  </g>
 </svg>

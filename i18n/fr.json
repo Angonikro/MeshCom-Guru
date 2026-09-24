@@ -281,5 +281,14 @@
   "⚙ Einstellungen speichern": "⚙ Enregistrer les paramètres",
   "angezeigt": "affichés",
   "gespeichert": "enregistrés",
-  "Raum oder Ziel": "Salle ou destinataire"
+  "Raum oder Ziel": "Salle ou destinataire",
+  "Verbindungen": "Connexions",
+  "Legende": "Légende",
+  "Aus": "Désactivé",
+  "Ein": "Activé",
+  "Verbindung(en)": "connexion(s)",
+  "von": "de",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Les lignes montrent les chemins MeshCom réellement reçus ou les réceptions LoRa locales directes.",
+  "MeshCom-Pfad": "Chemin MeshCom",
+  "Direkt gehört": "Reçu directement"
 }

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.3.95 – Karten-Verbindungen
+
+- 🔗 **Karten-Verbindungen:** Tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte dargestellt werden.
+- 📡 **Direkte LoRa-Verbindung:** Eine direkte Verbindung zur eigenen Station wird nur bei tatsächlichem lokalem LoRa-Empfang erkannt.
+- 🛡️ **Konservative Erkennung:** Es werden keine Verbindungen aus Position, Entfernung oder vermuteter Funkreichweite erzeugt.
+- 🖱️ **Node-Auswahl:** Bei aktivierter Verbindungsanzeige hebt ein Klick auf einen Node dessen erkannten Verbindungen hervor.
+- 🗺️ **Beide Kartenansichten:** Die Funktion ist in der klassischen Karte und im Dashboard verfügbar.
+- 🌐 **Übersetzungen:** „Verbindungen“, „Legende“ und die zugehörigen Kartenhinweise sind in allen sieben unterstützten Sprachen verfügbar.
+- 📖 **Anleitung:** Die integrierte Anleitung wurde in allen sieben Sprachen um die Karten-Verbindungen ergänzt.
+- 📄 **PDF-Handbücher:** Alle sieben PDF-Handbücher wurden auf v0.3.95 aktualisiert.
+- 🧹 **Release bereinigt:** Die experimentelle Verbindungs-Debug-Ansicht und der Rohdaten-Logger sind nicht im Release enthalten.
+- 📊 **RSSI/SNR:** Die Kartenlinien zeigen bewusst keine RSSI-/SNR-Werte pro Hop, da EXTUDP nur den Empfangswert des gesamten Frames liefert.
+
 ## v0.3.94 – „Alle“ folgt dem Monitor-Empfangsstrom
 
 - 📡 **Ein Empfangsstrom:** „Alle“ übernimmt jetzt denselben bereits verarbeiteten UDP-Datenstrom wie der Monitor.
@@ -25,8 +38,6 @@
 - 📝 **Dokumentation:** README und GitHub-Release-Dokumentation auf v0.3.93 aktualisiert.
 - 🛠️ **Stabilität:** Nachrichten-, Empfangs-, „Alle“-, Monitor-, Karten- und Weltweit-Verarbeitung wurden durch diese Übersetzungsänderungen nicht verändert.
 
-# MeshCom-Guru – Changelog
-
 ## v0.3.92 – Langzeitstabilität von „Alle“
 
 - 📨 **„Alle“-Langzeit-Fix:** Neue empfangene Raum-Nachrichten bleiben auch nach mehreren Stunden in „Alle“ sichtbar.
@@ -39,8 +50,6 @@
 - 🧹 **No-Messages-Fix:** Die WebService-Meldung **„No messages available.“** wird nicht mehr als normale Chatnachricht übernommen oder im lokalen Nachrichtenpuffer gespeichert.
 - 🌐 Die entsprechende Statusmeldung wird auch in den vorhandenen Sprachvarianten erkannt.
 - 🛠️ **Stabilität:** Der Empfangs- und Chatablauf bleibt ansonsten unverändert.
-# CHANGELOG
-
 ## v0.3.90 – Backup/Restore und Update-Prüfung
 
 - 💾 **Backup:** Die persönlichen MeshCom-Guru-Daten aus `~/.MeshCom` können jetzt als ZIP-Sicherung gespeichert werden.
@@ -102,8 +111,6 @@
 - 🔘 Größe und Anordnung der Raum-Buttons bleiben erhalten.
 - 🖱️ Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
 - 🌐 Die bestehende WebKitGTK-Integration für Weltweit bleibt erhalten.
-
-# CHANGELOG
 
 ## v0.3.84
 - 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden.

@@ -449,5 +449,14 @@
   "Rufzeichen:": "Anropssignal:",
   "angezeigt": "visade",
   "gespeichert": "sparade",
-  "Raum oder Ziel": "Rum eller mål"
+  "Raum oder Ziel": "Rum eller mål",
+  "Verbindungen": "Anslutningar",
+  "Legende": "Teckenförklaring",
+  "Aus": "Av",
+  "Ein": "På",
+  "Verbindung(en)": "anslutning(ar)",
+  "von": "från",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Linjer visar faktiskt mottagna MeshCom-vägar eller direkta lokala LoRa-mottagningar.",
+  "MeshCom-Pfad": "MeshCom-sökväg",
+  "Direkt gehört": "Hörd direkt"
 }

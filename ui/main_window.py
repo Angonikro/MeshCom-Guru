@@ -614,6 +614,12 @@ class MainWindow(QMainWindow):
         # Zeitpunkt, zu dem eine Station zuletzt mit Positionsdaten gehört wurde.
         self.station_last_heard = {}
         self.station_last_heard_signature = {}
+        # Observed MeshCom connections for the map overlay.
+        # Only explicit relay/source paths and direct local LoRa reception
+        # create edges. No geographic or RSSI/SNR inference is used.
+        self.map_connections = {}
+        self.map_connection_events = []
+        self.map_connections_enabled = False
         self.udp_position_blocks = []
         self.udp_socket = None
         self.udp_thread = None
@@ -1291,6 +1297,104 @@ class MainWindow(QMainWindow):
         self.mh_stations.clear()
         self._render_mh()
 
+    @staticmethod
+    def _callsigns_from_path(value):
+        """Extract plausible callsigns from MeshCom route/path text."""
+        text = str(value or "").upper()
+        found = []
+        for token in re.split(r"[^A-Z0-9-]+", text):
+            token = token.strip("-")
+            if token and CALLSIGN_RE.fullmatch(token) and token not in found:
+                found.append(token)
+        return found
+
+    def _record_map_connection(self, a, b, source="observed"):
+        """Remember one evidence-based map edge."""
+        a = str(a or "").strip().upper()
+        b = str(b or "").strip().upper()
+        if not a or not b or a == b:
+            return
+        key = "|".join(sorted((a, b)))
+        now = datetime.now().strftime("%H:%M:%S")
+        row = self.map_connections.setdefault(key, {
+            "a": min(a, b), "b": max(a, b),
+            "last_seen": now, "first_seen": now,
+            "source": source, "count": 0,
+        })
+        row["last_seen"] = now
+        row["source"] = source
+        row["count"] = int(row.get("count", 0) or 0) + 1
+
+    def _connection_path_candidates(self, packet):
+        """Return explicit relay/path candidates exposed by EXTUDP."""
+        candidates = []
+        keys = (
+            "route", "path", "relay", "relays", "relay_path", "source_path",
+            "rpath", "via", "hops_path", "digipeater_path",
+        )
+        for key in keys:
+            value = packet.get(key, "")
+            if isinstance(value, (list, tuple)):
+                values = []
+                for item in value:
+                    values.extend(self._callsigns_from_path(item))
+            else:
+                values = self._callsigns_from_path(value)
+            if len(values) >= 2:
+                candidates.append((key, values))
+
+        src_values = self._callsigns_from_path(packet.get("src", ""))
+        if len(src_values) >= 2:
+            candidates.insert(0, ("src", src_values))
+        return candidates
+
+    def _update_map_connection_from_packet(self, packet):
+        """Learn only connections supported by actual received MeshCom data."""
+        if not isinstance(packet, dict):
+            return
+
+        src_type = str(packet.get("src_type", packet.get("source_type", "")) or "").strip().lower()
+        src_raw = packet.get("src", "")
+        src = self._udp_callsign(src_raw)
+        explicit_paths = self._connection_path_candidates(packet)
+        detected = []
+
+        for field, calls in explicit_paths:
+            for a, b in zip(calls, calls[1:]):
+                self._record_map_connection(a, b, f"Pfad:{field}")
+                detected.append(f"{a} → {b}")
+
+        # A packet without an explicit path is a real direct reception only
+        # when it was received locally via LoRa.
+        if not explicit_paths and src and src_type == "lora":
+            own = str(self.own_callsign or "").strip().upper()
+            if own and src.upper() != own:
+                self._record_map_connection(own, src, "Direkt gehört")
+                detected.append(f"{own} → {src}")
+
+        if detected:
+            event = {
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "src": str(src_raw or "-"),
+                "src_type": src_type or "-",
+                "detected": detected,
+            }
+            self.map_connection_events.append(event)
+            self.map_connection_events = self.map_connection_events[-100:]
+
+            try:
+                self._update_map()
+            except Exception:
+                pass
+
+    def _map_connection_payload(self, stations):
+        known = {str(s.get("callsign", "")).upper() for s in stations if s.get("callsign")}
+        payload = []
+        for row in self.map_connections.values():
+            if row.get("a") in known and row.get("b") in known:
+                payload.append(dict(row))
+        return payload
+
     def _handle_udp_packet(self, packet):
         status = packet.get("_status") if isinstance(packet, dict) else None
         if status:
@@ -1300,6 +1404,7 @@ class MainWindow(QMainWindow):
             return
         self._monitor_add_packet(packet)
         self._update_mh_from_packet(packet)
+        self._update_map_connection_from_packet(packet)
         ptype = str(packet.get("type", packet.get("packet_type", ""))).lower().strip()
         if ptype in {"tel", "tele", "telemetry", "status"}:
             self.telemetry_count += 1
@@ -3281,8 +3386,10 @@ class MainWindow(QMainWindow):
         if not self.dashboard_map_ready:
             return
         station_json = json.dumps(self.dashboard_map_pending, ensure_ascii=False)
+        connection_json = json.dumps(self._map_connection_payload(self.dashboard_map_pending), ensure_ascii=False)
         self.dashboard_map_view.page().runJavaScript(
-            f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+            f"if (typeof window.updateStations === 'function') window.updateStations({station_json}); "
+            f"if (typeof window.updateConnections === 'function') window.updateConnections({connection_json});"
         )
 
     def _dashboard_worldwide_load_finished(self, ok):
@@ -4335,6 +4442,31 @@ class MainWindow(QMainWindow):
             self.dashboard_mh_table.setHorizontalHeaderLabels([
                 ui_text("Rufzeichen"), ui_text("Entfernung"), "RSSI", "SNR"
             ])
+        # Map overlay labels are rendered inside Leaflet's HTML page. Update
+        # them in-place on language changes without reloading the map.
+        try:
+            map_labels = {
+                "connections": ui_text("Verbindungen"),
+                "legend": ui_text("Legende"),
+                "off": ui_text("Aus"),
+                "on": ui_text("Ein"),
+                "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+                "connection_count": ui_text("Verbindung(en)"),
+                "from": ui_text("von"),
+                "mesh_path": ui_text("MeshCom-Pfad"),
+                "direct_heard": ui_text("Direkt gehört"),
+            }
+            labels_json = json.dumps(map_labels, ensure_ascii=False)
+            for view, ready in (
+                (getattr(self, "map_view", None), getattr(self, "_map_ready", False)),
+                (getattr(self, "dashboard_map_view", None), getattr(self, "dashboard_map_ready", False)),
+            ):
+                if view is not None and ready:
+                    view.page().runJavaScript(
+                        f"if (typeof window.updateMapLanguage === 'function') window.updateMapLanguage({labels_json});"
+                    )
+        except Exception:
+            pass
 
     def save_all_settings(self):
         # Nur im Dashboard werden die sichtbaren Dashboard-Felder als
@@ -4620,7 +4752,11 @@ class MainWindow(QMainWindow):
             <p><b>Statistik</b> zeigt die laufenden Sitzungszähler für Nachrichten, Nodes, Positionen, Telemetrie, private Nachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
             <h3>🗺 Karte und 🌐 Weltweit</h3>
             <p>Die OSM-/Leaflet-Karte zeigt Positionsdaten und Stationen. Der Tab <b>🌐 Weltweit</b> bzw. die Weltweit-Ansicht im Dashboard öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.</p>
-            <h3>🌤 Wetterdaten</h3>
+                        <h3>🔗 Karten-Verbindungen</h3>
+            <p>Mit <b>🔗 Verbindungen</b> können auf der Karte tatsächlich empfangene MeshCom-Verbindungen und explizite Pfade als Linien eingeblendet werden. Ein Klick auf einen Node hebt dessen erkannte Verbindungen hervor.</p>
+            <p>Die Linien werden nur aus empfangenen MeshCom-Pfadinformationen oder einer tatsächlich lokal gehörten direkten LoRa-Verbindung erzeugt. Die Anzeige erfindet keine Verbindungen aus Entfernung, Position oder vermuteten Funkstrecken.</p>
+            <p><b>Wichtig:</b> Die Linien zeigen keine RSSI- oder SNR-Werte pro einzelner Teilstrecke. Die Werte eines empfangenen Frames beschreiben nur den Empfang dieses Frames an der eigenen Station.</p>
+<h3>🌤 Wetterdaten</h3>
             <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Wetter kann aktualisiert und an das aktuell ausgewählte Ziel gesendet werden.</p>
             <h3>⚡ Schnelltexte und 😊 Emojis</h3>
             <p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
@@ -4641,7 +4777,11 @@ class MainWindow(QMainWindow):
             <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
             <h3>📡 Monitor, 📋 Stations / MH and 📊 Statistics</h3><p><b>Monitor</b> shows MeshCom UDP packets on <b>port 1799</b> with type, callsign, target, RSSI, SNR and information. The information column remains readable and can be scrolled when necessary.</p><p><b>Stations / MH</b> shows recently heard stations with callsign, distance, RSSI and SNR without an unnecessary horizontal scrollbar.</p><p><b>Statistics</b> shows live session counters for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
             <h3>🗺 Map and 🌐 Worldwide</h3><p>The OSM/Leaflet map displays positions and stations. The <b>Worldwide</b> view opens the public MeshCom activity page of ÖVSV and automatically selects <b>ACTIVITY</b>. The embedded website handles its own updates; MeshCom-Guru does not add a 15-second refresh.</p>
-            <h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
+                        <h3>🔗 Map connections</h3>
+            <p>Use <b>🔗 Connections</b> to display actually received MeshCom connections and explicit paths as lines on the map. Clicking a node highlights its detected connections.</p>
+            <p>Lines are created only from received MeshCom path information or an actually locally heard direct LoRa reception. The display does not invent connections from distance, position, or assumed radio links.</p>
+            <p><b>Important:</b> The lines do not show RSSI or SNR values for individual path segments. The values of a received frame describe only reception of that frame at your own station.</p>
+<h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
             <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
             <h3>Node Info</h3><p><b>Open Node Info</b> displays information from the connected MeshCom WebService.</p>
@@ -4659,7 +4799,11 @@ class MainWindow(QMainWindow):
             <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH e 📊 Statistiche</h3><p>Il <b>Monitor</b> mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b> con tipo, nominativo, destinazione, RSSI, SNR e informazioni. La colonna informazioni può essere fatta scorrere.</p><p><b>Stations / MH</b> mostra le stazioni ascoltate recentemente con nominativo, distanza, RSSI e SNR senza una barra orizzontale inutile. Le <b>Statistiche</b> mostrano i contatori della sessione.</p>
             <h3>🗺 Mappa e 🌐 Mondiale</h3><p>La mappa OSM/Leaflet mostra posizioni e stazioni. La vista <b>Mondiale</b> apre l'attività pubblica MeshCom e seleziona automaticamente <b>ACTIVITY</b>. Il sito integrato gestisce i propri aggiornamenti; non viene aggiunto un refresh di 15 secondi.</p>
-            <h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
+                        <h3>🔗 Connessioni sulla mappa</h3>
+            <p>Con <b>🔗 Connessioni</b> puoi visualizzare sulla mappa come linee le connessioni MeshCom effettivamente ricevute e i percorsi espliciti. Facendo clic su un nodo vengono evidenziate le sue connessioni rilevate.</p>
+            <p>Le linee vengono create solo da informazioni di percorso MeshCom ricevute o da una ricezione LoRa diretta effettivamente ascoltata dalla stazione locale. Non vengono inventate connessioni in base a distanza, posizione o collegamenti radio presunti.</p>
+            <p><b>Importante:</b> le linee non mostrano valori RSSI o SNR per i singoli tratti del percorso. I valori di un frame ricevuto descrivono solo la ricezione di quel frame presso la propria stazione.</p>
+<h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
             <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
             <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. Anche questa guida segue la lingua selezionata.</p>
@@ -4676,7 +4820,11 @@ class MainWindow(QMainWindow):
             <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH en 📊 Statistieken</h3><p>De <b>Monitor</b> toont MeshCom-UDP-pakketten op <b>poort 1799</b> met type, roepnaam, doel, RSSI, SNR en informatie. De informatiekolom kan worden gescrold.</p><p><b>Stations / MH</b> toont recent gehoorde stations met roepnaam, afstand, RSSI en SNR zonder onnodige horizontale scrollbar. <b>Statistieken</b> tonen de actuele sessietellers.</p>
             <h3>🗺 Kaart en 🌐 Wereldwijd</h3><p>De OSM/Leaflet-kaart toont posities en stations. <b>Wereldwijd</b> opent de openbare MeshCom Activity-pagina en selecteert automatisch <b>ACTIVITY</b>. De website beheert zijn eigen updates; MeshCom-Guru voegt geen refresh van 15 seconden toe.</p>
-            <h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
+                        <h3>🔗 Verbindingen op de kaart</h3>
+            <p>Met <b>🔗 Verbindingen</b> kun je daadwerkelijk ontvangen MeshCom-verbindingen en expliciete paden als lijnen op de kaart tonen. Klik op een node om de herkende verbindingen ervan te markeren.</p>
+            <p>Lijnen worden alleen gemaakt op basis van ontvangen MeshCom-padgegevens of een daadwerkelijk lokaal ontvangen directe LoRa-verbinding. Er worden geen verbindingen afgeleid uit afstand, positie of veronderstelde radioverbindingen.</p>
+            <p><b>Belangrijk:</b> De lijnen tonen geen RSSI- of SNR-waarden per afzonderlijk deel van het pad. De waarden van een ontvangen frame beschrijven alleen de ontvangst van dat frame bij het eigen station.</p>
+<h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
             <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
             <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
             <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De ingebouwde handleiding volgt de gekozen taal.</p>
@@ -4693,7 +4841,11 @@ class MainWindow(QMainWindow):
             <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
             <h3>📡 Moniteur, 📋 Stations / MH et 📊 Statistiques</h3><p>Le <b>Moniteur</b> affiche les paquets UDP MeshCom sur le <b>port 1799</b> avec type, indicatif, destination, RSSI, SNR et informations. La colonne d'informations peut être parcourue.</p><p><b>Stations / MH</b> affiche les stations entendues récemment avec indicatif, distance, RSSI et SNR sans barre de défilement horizontale inutile. Les <b>Statistiques</b> affichent les compteurs de session.</p>
             <h3>🗺 Carte et 🌐 Monde entier</h3><p>La carte OSM/Leaflet affiche les positions et stations. <b>Monde entier</b> ouvre la page publique d'activité MeshCom et sélectionne automatiquement <b>ACTIVITY</b>. Le site intégré gère ses propres mises à jour ; MeshCom-Guru n'ajoute pas de rafraîchissement de 15 secondes.</p>
-            <h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
+                        <h3>🔗 Connexions sur la carte</h3>
+            <p>Avec <b>🔗 Connexions</b>, vous pouvez afficher sur la carte les connexions MeshCom réellement reçues et les chemins explicites sous forme de lignes. Un clic sur un nœud met en évidence ses connexions détectées.</p>
+            <p>Les lignes sont créées uniquement à partir des informations de chemin MeshCom reçues ou d'une réception LoRa directe réellement entendue par la station locale. Aucune connexion n'est déduite de la distance, de la position ou de liaisons radio supposées.</p>
+            <p><b>Important :</b> les lignes n'affichent pas de valeurs RSSI ou SNR pour chaque segment du chemin. Les valeurs d'une trame reçue décrivent uniquement sa réception par votre propre station.</p>
+<h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
             <h3>🎨 Couleurs du chat et 🔊 Son</h3><p>Les couleurs du chat, des indicatifs/liens cliquables, le son, le volume et le thème clair/sombre sont configurables dans les paramètres.</p>
             <h3>Infos du nœud</h3><p><b>Infos du nœud</b> affiche les informations du WebService MeshCom connecté.</p>
             <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le guide intégré suit également la langue sélectionnée.</p>
@@ -4726,7 +4878,11 @@ class MainWindow(QMainWindow):
             <p><b>Estadísticas</b> muestra los contadores de sesión de mensajes, nodos, posiciones, telemetría, mensajes privados, entradas del monitor y mensajes por sala.</p>
             <h3>🗺 Mapa y 🌐 Mundial</h3>
             <p>El mapa OSM/Leaflet muestra posiciones y estaciones. La vista <b>Mundial</b> abre la página pública de actividad de MeshCom del ÖVSV y selecciona automáticamente <b>ACTIVITY</b>. La página integrada gestiona sus propias actualizaciones; MeshCom-Guru no añade una actualización cada 15 segundos.</p>
-            <h3>🌤 Tiempo</h3>
+                        <h3>🔗 Conexiones del mapa</h3>
+            <p>Con <b>🔗 Conexiones</b> puedes mostrar en el mapa las conexiones MeshCom realmente recibidas y las rutas explícitas mediante líneas. Al hacer clic en un nodo se resaltan sus conexiones detectadas.</p>
+            <p>Las líneas solo se crean a partir de información de ruta MeshCom recibida o de una recepción LoRa directa realmente escuchada por la estación local. No se inventan conexiones a partir de distancia, posición o enlaces de radio supuestos.</p>
+            <p><b>Importante:</b> las líneas no muestran valores RSSI o SNR para cada tramo individual de la ruta. Los valores de una trama recibida describen únicamente la recepción de esa trama en la propia estación.</p>
+<h3>🌤 Tiempo</h3>
             <p>La información WX muestra temperatura, humedad, QFE y QNH cuando el WebService proporciona estos valores. El tiempo puede actualizarse y enviarse al destino seleccionado.</p>
             <h3>⚡ Textos rápidos y 😊 Emojis</h3>
             <p>Los textos rápidos se pueden insertar, editar, añadir y eliminar. Insertar un texto rápido no lo envía automáticamente. El selector de emojis inserta el emoji seleccionado en la posición del cursor.</p>
@@ -4764,7 +4920,11 @@ class MainWindow(QMainWindow):
             <p><b>Statistik</b> visar aktuella sessionsräknare för meddelanden, noder, positioner, telemetri, privata meddelanden, monitorposter och meddelanden per rum.</p>
             <h3>🗺 Karta och 🌐 Världen</h3>
             <p>OSM/Leaflet-kartan visar positioner och stationer. Världsvyn öppnar MeshComs offentliga aktivitetssida från ÖVSV och väljer automatiskt <b>ACTIVITY</b>. Den integrerade webbsidan sköter sina egna uppdateringar; MeshCom-Guru använder ingen extra uppdatering var 15:e sekund.</p>
-            <h3>🌤 Väder</h3>
+                        <h3>🔗 Anslutningar på kartan</h3>
+            <p>Med <b>🔗 Anslutningar</b> kan du visa faktiskt mottagna MeshCom-anslutningar och uttryckliga vägar som linjer på kartan. Klicka på en nod för att markera dess identifierade anslutningar.</p>
+            <p>Linjer skapas endast från mottagen MeshCom-väginformation eller en direkt LoRa-mottagning som faktiskt har hörts lokalt. Inga anslutningar skapas utifrån avstånd, position eller antagna radiolänkar.</p>
+            <p><b>Viktigt:</b> Linjerna visar inte RSSI- eller SNR-värden för enskilda delsträckor. Värdena för en mottagen ram beskriver endast mottagningen av den ramen vid den egna stationen.</p>
+<h3>🌤 Väder</h3>
             <p>WX-informationen visar temperatur, luftfuktighet, QFE och QNH när WebService levererar dessa värden. Vädret kan uppdateras och skickas till det valda målet.</p>
             <h3>⚡ Snabbtexter och 😊 Emojis</h3>
             <p>Snabbtexter kan infogas, redigeras, läggas till och tas bort. Att infoga en snabbtext skickar den inte automatiskt. Emoji-väljaren infogar vald emoji vid markörens position.</p>
@@ -5986,39 +6146,139 @@ class MainWindow(QMainWindow):
     def _map_html(self, stations):
         import json
         station_json = json.dumps(stations, ensure_ascii=False)
-        html_page = """<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>html,body,#map{height:100%;margin:0}</style></head>
-<body><div id='map'></div><script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script><script>
+        connection_json = json.dumps(self._map_connection_payload(stations), ensure_ascii=False)
+
+        labels = {
+            "connections": ui_text("Verbindungen"),
+            "legend": ui_text("Legende"),
+            "off": ui_text("Aus"),
+            "on": ui_text("Ein"),
+            "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+            "connection_count": ui_text("Verbindung(en)"),
+            "from": ui_text("von"),
+            "mesh_path": ui_text("MeshCom-Pfad"),
+            "direct_heard": ui_text("Direkt gehört"),
+        }
+        labels_json = json.dumps(labels, ensure_ascii=False)
+
+        html_page = r"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>
+html,body,#map{height:100%;margin:0}
+#mapControls{position:absolute;z-index:1000;top:10px;right:10px;background:rgba(20,30,42,.94);padding:7px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.35);font:13px sans-serif;color:#fff}
+#mapControls button{border:0;border-radius:7px;padding:7px 11px;background:#26384b;color:#fff;cursor:pointer;margin-right:3px}
+#mapControls button.active{background:#1677d2}
+#connectionInfo{margin-top:5px;color:#c8d4df;font-size:11px}
+.leaflet-popup-content{font-size:13px}
+</style></head>
+<body><div id='map'></div>
+<div id='mapControls'>
+<button id='connectionsBtn' onclick='toggleConnections()'></button>
+<button onclick='showLegend()'></button>
+<div id='connectionInfo'></div>
+</div>
+<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script><script>
 const initialStations=__STATIONS__;
+const initialConnections=__CONNECTIONS__;
+let mapLabels=__LABELS__;
 const map=L.map('map').setView([51,10],6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap-Mitwirkende'}).addTo(map);
 const markerLayer=L.layerGroup().addTo(map);
+const connectionLayer=L.layerGroup().addTo(map);
 let firstRender=true;
-function esc(v){return String(v).replace(/[&<>]/g,'');}
+let currentStations=[];
+let currentConnections=initialConnections||[];
+let connectionsVisible=false;
+let selectedCallsign='';
+
+function esc(v){return String(v??'').replace(/[&<>]/g,'');}
 function formatDistance(km){
   if(km===null || km===undefined || !isFinite(km)) return '';
-  if(km < 1) return Math.round(km*1000)+' m';
+  if(km<1) return Math.round(km*1000)+' m';
   return km.toFixed(1)+' km';
 }
+function stationByCall(c){
+  return currentStations.find(s=>String(s.callsign).toUpperCase()===String(c).toUpperCase());
+}
+function updateControls(){
+  const btn=document.getElementById('connectionsBtn');
+  const buttons=document.querySelectorAll('#mapControls button');
+  if(btn) btn.textContent='🔗 '+mapLabels.connections;
+  if(buttons[1]) buttons[1].textContent='☷ '+mapLabels.legend;
+  const info=document.getElementById('connectionInfo');
+  if(info) info.textContent=connectionsVisible ? (currentConnections.length+' '+mapLabels.connection_count) : mapLabels.off;
+  if(btn) btn.classList.toggle('active',connectionsVisible);
+}
+function showLegend(){
+  alert(mapLabels.legend_text);
+}
+function drawConnections(){
+  connectionLayer.clearLayers();
+  if(!connectionsVisible){ updateControls(); return; }
+  let count=0;
+  currentConnections.forEach(c=>{
+    const a=stationByCall(c.a),b=stationByCall(c.b);
+    if(!a||!b) return;
+    const selected=!selectedCallsign ||
+      String(c.a).toUpperCase()===selectedCallsign ||
+      String(c.b).toUpperCase()===selectedCallsign;
+    if(!selected) return;
+    const line=L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{
+      color:'#3388ff',weight:selectedCallsign?5:3,opacity:selectedCallsign?.9:.72
+    });
+    const rawSource=String(c.source||'');
+    const sourceLabel = rawSource === 'Direkt gehört' ? mapLabels.direct_heard :
+      (rawSource.indexOf('Pfad:') === 0 ? mapLabels.mesh_path : rawSource);
+    line.bindTooltip('<b>'+esc(c.a)+' ↔ '+esc(c.b)+'</b><br>'+esc(sourceLabel||''));
+    line.addTo(connectionLayer);
+    count++;
+  });
+  const info=document.getElementById('connectionInfo');
+  if(info) info.textContent=count+' '+mapLabels.connection_count+(selectedCallsign?' '+mapLabels.from+' '+esc(selectedCallsign):'');
+  updateControls();
+}
+function selectNode(c){
+  selectedCallsign=String(c||'').toUpperCase();
+  drawConnections();
+}
+function toggleConnections(){
+  connectionsVisible=!connectionsVisible;
+  if(!connectionsVisible) selectedCallsign='';
+  drawConnections();
+}
 function renderStations(stations){
+  currentStations=stations||[];
   const hadStations=markerLayer.getLayers().length>0;
   markerLayer.clearLayers();
-  stations.forEach(s=>{const m=L.marker([s.lat,s.lon]).addTo(markerLayer);const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
+  currentStations.forEach(s=>{
+    const m=L.marker([s.lat,s.lon]).addTo(markerLayer);
+    const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
     const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
     const distanceText=distance && !s.own ? '<br><b>Entfernung:</b> '+esc(distance) : '';
-    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+'<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
+    m.on('click',()=>{if(connectionsVisible)selectNode(s.callsign);});
+    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+
+      '<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+
+      (s.own?'<br><b>Eigene Station</b>':'')+
+      (connectionsVisible?'<br><br>🔗':''));
   });
   setTimeout(()=>map.invalidateSize(),50);
   if(firstRender && !hadStations){
-    const bounds=stations.map(s=>[s.lat,s.lon]);
+    const bounds=currentStations.map(s=>[s.lat,s.lon]);
     if(bounds.length===1) map.setView(bounds[0],10);
     else if(bounds.length>1) map.fitBounds(bounds,{padding:[30,30]});
   }
   firstRender=false;
+  drawConnections();
 }
 window.updateStations=function(stations){renderStations(stations||[]);};
-renderStations(initialStations);</script></body></html>"""
-        return html_page.replace('__STATIONS__', station_json)
+window.updateConnections=function(connections){currentConnections=connections||[];drawConnections();};
+window.updateMapLanguage=function(labels){mapLabels=labels||mapLabels;updateControls();drawConnections();};
+updateControls();
+renderStations(initialStations);
+</script></body></html>"""
+        return (html_page
+                .replace('__STATIONS__', station_json)
+                .replace('__CONNECTIONS__', connection_json)
+                .replace('__LABELS__', labels_json))
 
     def _map_load_finished(self, ok):
         self._map_ready = bool(ok)
@@ -6038,8 +6298,10 @@ renderStations(initialStations);</script></body></html>"""
         if classic_available and self._map_ready:
             import json
             station_json = json.dumps(self._map_pending_stations, ensure_ascii=False)
+            connection_json = json.dumps(self._map_connection_payload(self._map_pending_stations), ensure_ascii=False)
             self.map_view.page().runJavaScript(
-                f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+                f"if (typeof window.updateStations === 'function') window.updateStations({station_json}); "
+                f"if (typeof window.updateConnections === 'function') window.updateConnections({connection_json});"
             )
 
         if hasattr(self, "dashboard_map_view"):

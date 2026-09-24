@@ -1,31 +1,21 @@
-# MeshCom-Guru v0.3.94
+# MeshCom-Guru v0.3.95
 
-## Änderungen in v0.3.94
+## Karten-Verbindungen
 
-- 🇪🇸 Spanische Benutzeroberfläche einschließlich integrierter Anleitung.
-- 🇸🇪 Schwedische Benutzeroberfläche einschließlich integrierter Anleitung.
-- 📖 Anleitung folgt zuverlässig der ausgewählten Sprache.
-- 📡 Monitor-Zähler und dynamische Anzeigen werden beim Sprachwechsel korrekt übersetzt.
-- 🗺️ Karten-Tab und 🌐 Weltweit-Tab werden beim Sprachwechsel zuverlässig aktualisiert.
-- 🛰️ GPS- und Raum/Ziel-Beschriftungen sind in allen sieben Sprachen berücksichtigt.
-- 📡 „Alle“ verwendet jetzt denselben bereits verarbeiteten UDP-Empfangsstrom wie der Monitor.
-- 📨 UDP/WebService-Doppelungen werden dadurch in „Alle“ vermieden.
-- 📍 POS, TEL und ACK werden ebenfalls übernommen, wenn der Raumfilter ausgeschaltet ist.
-- 🛡️ Der bestehende Monitor-/MH-/Kartenpfad bleibt erhalten.
+- 🔗 Tatsächlich empfangene MeshCom-Pfade werden auf der Karte als Linien dargestellt.
+- 📡 Direkte lokale LoRa-Empfänge können als direkte Verbindung zur eigenen Station angezeigt werden.
+- 🛡️ Keine Verbindungen aus Position, Entfernung oder vermuteter Funkreichweite.
+- 🖱️ Klick auf einen Node hebt dessen erkannten Verbindungen hervor.
+- 🗺️ Funktioniert in klassischer Karte und Dashboard-Karte.
+- ❌ Keine RSSI-/SNR-Anzeige an den Linien.
+- ❌ Kein experimentelles Debug-Fenster und kein Rohdaten-Logger im Release.
+- 🌐 Neue Karten-Schaltflächen und Hinweise sind in Deutsch, English, Italiano, Nederlands, Français, Español und Svenska übersetzt.
+- 📖 Integrierte Anleitung und alle sieben PDF-Handbücher wurden auf v0.3.95 aktualisiert.
 
 ## Debian-Paket
 
-Das Debian-Paket `MeshCom-Guru_v0.3.94_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
-
-Für die Weltweit-Ansicht wird unter Linux/Raspberry Pi WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
-
-```bash
-chmod +x install_webkitgtk.sh
-./install_webkitgtk.sh
-```
+`MeshCom-Guru_v0.3.95_all.deb` verwendet Architektur `all`, installiert nach `/usr/share/MeshCom` und enthält Desktop-Eintrag und Icon.
 
 ## GitHub-ZIP
 
-Das ZIP `MeshCom-Guru_v0.3.94_GITHUB.zip` enthält den vollständigen Projektstand. Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
-
-Die integrierte Anleitung ist mehrsprachig und folgt der in MeshCom-Guru ausgewählten Sprache.
+Beim Entpacken entsteht direkt der Ordner `MeshCom/`.

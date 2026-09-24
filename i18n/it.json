@@ -280,5 +280,14 @@
   "⚙ Einstellungen speichern": "⚙ Salva impostazioni",
   "angezeigt": "visualizzati",
   "gespeichert": "salvati",
-  "Raum oder Ziel": "Stanza o Destinatario"
+  "Raum oder Ziel": "Stanza o Destinatario",
+  "Verbindungen": "Connessioni",
+  "Legende": "Legenda",
+  "Aus": "Disattivato",
+  "Ein": "Attivato",
+  "Verbindung(en)": "connessione/i",
+  "von": "da",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Le linee mostrano percorsi MeshCom effettivamente ricevuti o ricezioni LoRa locali dirette.",
+  "MeshCom-Pfad": "Percorso MeshCom",
+  "Direkt gehört": "Ricevuto direttamente"
 }

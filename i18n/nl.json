@@ -280,5 +280,14 @@
   "⚙ Einstellungen speichern": "⚙ Instellingen opslaan",
   "angezeigt": "weergegeven",
   "gespeichert": "opgeslagen",
-  "Raum oder Ziel": "Ruimte of doel"
+  "Raum oder Ziel": "Ruimte of doel",
+  "Verbindungen": "Verbindingen",
+  "Legende": "Legenda",
+  "Aus": "Uit",
+  "Ein": "Aan",
+  "Verbindung(en)": "verbinding(en)",
+  "von": "van",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Lijnen tonen daadwerkelijk ontvangen MeshCom-paden of directe lokale LoRa-ontvangsten.",
+  "MeshCom-Pfad": "MeshCom-pad",
+  "Direkt gehört": "Direct gehoord"
 }

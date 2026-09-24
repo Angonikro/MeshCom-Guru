@@ -1,14 +1,9 @@
 # MeshCom-Guru
 
+**Aktuelle Version: 0.3.95**
+
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -31,15 +26,28 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Die ausführlichen PDF-Handbücher aus v0.3.93 liegen weiterhin unverändert im Ordner `docs/`. Die v0.3.94-Änderung betrifft die Empfangs-/„Alle“-Logik und erfordert keine neue Handbuchfassung:
+Die PDF-Handbücher sind auf v0.3.95 aktualisiert. Die Ergänzung beschreibt die neue Kartenfunktion **Verbindungen** und die sieben unterstützten Sprachen:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.93_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.93_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.93_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.93_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.93_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.93_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.93_SV.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.95_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.95_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.95_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.95_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.95_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.95_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.95_SV.pdf`
+
+## Version 0.3.95
+
+### Neu in v0.3.95 – Karten-Verbindungen
+
+- 🔗 **Verbindungen:** Auf der Karte können tatsächlich empfangene MeshCom-Pfade als Linien dargestellt werden.
+- 📡 **Direkt gehört:** Eine direkte lokale LoRa-Verbindung wird nur dann dargestellt, wenn die eigene Station den Node tatsächlich empfangen hat.
+- 🛡️ **Keine erfundenen Verbindungen:** Position, Entfernung oder vermutete Funkreichweite erzeugen keine Linie.
+- 🖱️ **Node-Auswahl:** Bei aktivierter Verbindungsanzeige kann ein Node angeklickt werden, um seine erkannten Verbindungen hervorzuheben.
+- 📊 **Keine falschen RSSI/SNR-Werte:** Die Linien zeigen keine RSSI-/SNR-Werte pro Hop. Die Werte eines empfangenen Frames werden nicht einzelnen Teilstrecken zugeschrieben.
+- 🌍 **Klassische Karte und Dashboard:** Die Verbindungsanzeige steht in beiden Kartenansichten zur Verfügung.
+- 🌐 **Mehrsprachig:** Die neuen Karten-Schaltflächen und die integrierte Anleitung folgen Deutsch, English, Italiano, Nederlands, Français, Español und Svenska.
+- 🧹 **Debug entfernt:** Die experimentelle Debug-Ansicht und der temporäre Rohdaten-Logger sind nicht Bestandteil des Releases.
 
 ## Version 0.3.94
 
@@ -462,5 +470,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

@@ -67,5 +67,14 @@
   "angezeigt": "displayed",
   "gespeichert": "saved",
   "Raum oder Ziel, z. B. 262 oder DL9ABC-1": "Room or target, e.g. 262 or DL9ABC-1",
-  "Raum oder Ziel": "Room or Target"
+  "Raum oder Ziel": "Room or Target",
+  "Verbindungen": "Connections",
+  "Legende": "Legend",
+  "Aus": "Off",
+  "Ein": "On",
+  "Verbindung(en)": "connection(s)",
+  "von": "from",
+  "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Lines show actually received MeshCom paths or direct local LoRa receptions.",
+  "MeshCom-Pfad": "MeshCom path",
+  "Direkt gehört": "Heard directly"
 }
