@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.3.97 – Polnische Sprache
+
+- 🇵🇱 **Polnische Benutzeroberfläche:** Polski als achte Sprache in die bestehende Sprachumschaltung aufgenommen.
+- 🔄 **Gespeicherte Sprache:** `pl` wird wie die bisherigen Sprachen in `~/.MeshCom/settings.ini` gespeichert und beim Neustart wiederhergestellt.
+- 📖 **Integrierte Anleitung:** Die komplette Hilfe/Anleitung wurde um eine polnische Version ergänzt.
+- 📄 **PDF-Handbuch:** Neues polnisches Benutzerhandbuch `MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`.
+- 🛡️ **Stabilitätsprinzip:** Der bestehende Nachrichten-, Empfangs-, Sende-, Raum-, Monitor-, Karten-, Weltweit- und Picrd-Codepfad wurde für die Sprachergänzung nicht verändert.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
+- 🔄 **Sofortige Sprachumschaltung:** Die Dashboard-Beschriftung „Hotspot IP“ wird beim Wechsel auf Polnisch jetzt sofort aktualisiert; ein Neustart ist dafür nicht mehr erforderlich.
+
+
 ## v0.3.96 – Picrd-Bildvorschau
 
 - 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.

@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
         self._skip_settings_write_on_close = False
 
         settings = load_settings()
-        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
+        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         set_language(self.language)
         # Let Qt translate its own standard context menus (Undo/Copy/Paste/...).
         # This is safer than intercepting ContextMenu events with a global
@@ -1888,7 +1888,7 @@ class MainWindow(QMainWindow):
         """
         settings = load_settings()
         try:
-            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
+            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
             set_language(self.language)
             if hasattr(self, "ip_input"):
                 self.ip_input.setText(settings.get("ip", ""))
@@ -2801,7 +2801,12 @@ class MainWindow(QMainWindow):
         dashboard_disconnect.setEnabled(False)
         dash_header_layout.addWidget(dashboard_disconnect)
 
-        dash_header_layout.addWidget(QLabel(ui_text("Hotspot IP:")))
+        # Keep the source translation key stable so the label changes
+        # immediately when the language is switched.  An anonymous QLabel
+        # containing an already translated string cannot always be mapped
+        # back reliably because the text also contains the colon.
+        self.dashboard_hotspot_label = QLabel(ui_text("Hotspot IP") + ":")
+        dash_header_layout.addWidget(self.dashboard_hotspot_label)
         self.dashboard_hotspot_input = QLineEdit(self.ip_input.text())
         self.dashboard_hotspot_input.setPlaceholderText("http://192.168.x.x")
         self.dashboard_hotspot_input.setMinimumWidth(170)
@@ -4468,7 +4473,7 @@ class MainWindow(QMainWindow):
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
         section["chat_link_color"] = self.chat_link_color
-        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
+        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
@@ -4509,8 +4514,9 @@ class MainWindow(QMainWindow):
         combo.addItem(tr("french"), "fr")
         combo.addItem(tr("spanish"), "es")
         combo.addItem(tr("swedish"), "sv")
+        combo.addItem(tr("polish"), "pl")
         current = getattr(self, "language", "de")
-        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4, "es": 5, "sv": 6}.get(current, 0))
+        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4, "es": 5, "sv": 6, "pl": 7}.get(current, 0))
         layout.addWidget(label)
         layout.addWidget(combo)
         button = QPushButton("OK")
@@ -4540,7 +4546,7 @@ class MainWindow(QMainWindow):
 
     def _set_ui_language(self, language):
         """Save and immediately apply the selected UI language."""
-        language = language if language in ("de", "en", "it", "nl", "fr", "es", "sv") else "de"
+        language = language if language in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         self.language = language
         set_language(language)
         self._apply_qt_translation(language)
@@ -4578,6 +4584,11 @@ class MainWindow(QMainWindow):
             tip = widget.toolTip()
             if tip:
                 widget.setToolTip(ui_text(tip))
+
+        # Dashboard: keep the hotspot label tied to its original source key.
+        # This makes the language change immediate; no restart is required.
+        if hasattr(self, "dashboard_hotspot_label"):
+            self.dashboard_hotspot_label.setText(ui_text("Hotspot IP") + ":")
 
         # Combo-box labels/items
         for combo in self.findChildren(QComboBox):
@@ -5020,6 +5031,7 @@ class MainWindow(QMainWindow):
             "fr": "MeshCom-Guru – Guide utilisateur",
             "es": "MeshCom-Guru – Guía de usuario",
             "sv": "MeshCom-Guru – Användarhandbok",
+            "pl": "MeshCom-Guru – Instrukcja użytkownika",
         }
         dialog.setWindowTitle(titles.get(lang, titles["de"]))
         dialog.resize(860, 720)
@@ -5244,6 +5256,43 @@ class MainWindow(QMainWindow):
             <h3>🔄 Sök efter uppdateringar</h3><p>Via <b>Hjälp → Sök efter uppdateringar …</b> kan den installerade versionen jämföras med den aktuella GitHub-releasen. Om en nyare version finns visar MeshCom-Guru ett meddelande med länk till GitHub-releasen. Uppdateringar laddas inte ner eller installeras automatiskt.</p>
                         <h3>🖼️ Bilder och bildförhandsvisningar i chatten</h3><p>Använd <b>gemet</b> för att ladda upp bilder direkt via <b>Picrd</b>. Den skapade Picrd-länken kan sedan skickas i en MeshCom-chatt.</p><p>Om en länk i chatten leder till en bild försöker MeshCom-Guru automatiskt visa en <b>bildförhandsvisning</b> direkt i chatten. Vanliga internetlänkar utan bild förblir vanliga klickbara länkar. Förhandsvisningen laddas i bakgrunden och läggs inte in flera gånger vid senare uppdateringar av chatten.</p>
             <h3>Installation</h3><p><b>Linux ZIP:</b> packa upp mappen <code>MeshCom</code> och kör <code>./run_linux.sh</code>. <b>Windows:</b> kör <code>run_windows.bat</code>. <b>Debian:</b> installation i <code>/usr/share/MeshCom</code>; personliga inställningar finns kvar i <code>~/.MeshCom/settings.ini</code>.</p>
+            """,
+            "pl": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Skrócona instrukcja</h3>
+            <h3>🎛 Widok: Klasyczny lub Panel</h3>
+            <p>W <b>Ustawienia → Widok</b> można przełączać między widokiem <b>Klasycznym</b> a <b>Panelem</b>. Oba widoki korzystają z tych samych danych i funkcji MeshCom.</p>
+            <h3>💬 Czaty pokoi i 👤 czaty prywatne</h3>
+            <p>Można zapisać do <b>pięciu pokoi</b>. Pokoje są dostępne jako osobne czaty. Widok <b>Wszystkie</b> pokazuje wiadomości zgodnie z ustawieniami filtra. Czaty prywatne są oddzielone od czatów pokoi.</p>
+            <p><b>Kliknięcie znaku wywoławczego:</b> otwiera menu z czatem prywatnym i stroną QRZ.com. Przy otwieraniu QRZ używany jest podstawowy znak wywoławczy.</p>
+            <h3>Połączenie i ustawienia</h3>
+            <p><b>IP hotspotu:</b> wpisz adres IP MeshCom-WebService. W <b>Własna stacja / GPS</b> można podać własny znak wywoławczy oraz opcjonalnie współrzędne.</p>
+            <p>Ustawienia osobiste są zapisywane w <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Połącz / Rozłącz i automatyczne ponowne połączenie</h3>
+            <p>Przycisk <b>Połącz</b> nawiązuje połączenie z MeshCom-WebService. Po ręcznym połączeniu automatyczne ponowne łączenie jest aktywne. <b>Rozłącz</b> wyłącza automatyczne ponowne łączenie.</p>
+            <h3>Wysyłanie wiadomości</h3>
+            <p>W Panelu wiadomość można wysłać klawiszem <b>Enter</b>. Wiadomości mają limit <b>149 znaków</b>; licznik pokazuje aktualną długość.</p>
+            <h3>📡 Monitor, 📋 Stacje / MH i 📊 Statystyki</h3>
+            <p><b>Monitor</b> pokazuje pakiety MeshCom UDP na <b>porcie 1799</b> wraz z typem, znakiem wywoławczym, celem, RSSI, SNR i informacją.</p>
+            <p><b>Stacje / MH</b> pokazuje ostatnio słyszane stacje wraz ze znakiem wywoławczym, odległością, RSSI i SNR. <b>Statystyki</b> pokazują liczniki wiadomości, węzłów, pozycji, telemetrii, wiadomości prywatnych i wpisów monitora.</p>
+            <h3>🗺 Mapa i 🌐 Świat</h3>
+            <p>Mapa OSM/Leaflet pokazuje pozycje stacji. Widok <b>🌐 Świat</b> otwiera publiczną stronę aktywności MeshCom ÖVSV. Strona obsługuje własne odświeżanie; MeshCom-Guru nie dodaje dodatkowego odświeżania co 15 sekund.</p>
+            <h3>🔗 Połączenia na mapie</h3>
+            <p>Opcja <b>🔗 Połączenia</b> pokazuje rzeczywiście odebrane ścieżki MeshCom i bezpośrednie lokalne odbiory LoRa jako linie. Linie nie są tworzone na podstawie samej odległości, pozycji ani przypuszczalnego zasięgu radiowego.</p>
+            <h3>🌤 Pogoda</h3>
+            <p>Dane WX mogą zawierać temperaturę, wilgotność, QFE i QNH. Dane można odświeżyć i wysłać do wybranego celu.</p>
+            <h3>⚡ Szybkie teksty i 😊 Emoji</h3>
+            <p>Szybkie teksty można wstawiać, edytować, dodawać i usuwać. Wstawienie tekstu nie wysyła go automatycznie. Selektor emoji wstawia wybrane emoji w miejscu kursora.</p>
+            <h3>🎨 Kolory czatu i 🔊 dźwięk</h3>
+            <p>W ustawieniach można zmieniać tło czatu, kolor tekstu widoku „Wszystkie”, kolor klikalnych znaków wywoławczych i łączy internetowych, a także dźwięk, głośność i motyw jasny/ciemny.</p>
+            <h3>🌐 Język</h3>
+            <p>Interfejs obsługuje <b>Deutsch, English, Italiano, Nederlands, Français, Español, Svenska i Polski</b>. Wybrany język jest zapisywany, a ta wbudowana instrukcja jest wyświetlana w wybranym języku.</p>
+            <h3>💾 Kopia zapasowa i ♻️ przywracanie</h3>
+            <p>Przez <b>Plik → Utwórz kopię zapasową …</b> można zapisać osobiste dane MeshCom-Guru z <code>~/.MeshCom</code> jako plik ZIP. Funkcja przywracania odtwarza wcześniejszą kopię bez usuwania innych plików.</p>
+            <h3>🔄 Sprawdzanie aktualizacji</h3>
+            <p>Przez <b>Pomoc → Sprawdź aktualizacje …</b> można porównać zainstalowaną wersję z bieżącym wydaniem GitHub. Program nie pobiera ani nie instaluje aktualizacji automatycznie.</p>
+            <h3>🖼️ Obrazy i podgląd Picrd</h3>
+            <p>Za pomocą <b>spinacza</b> można przesłać obraz przez Picrd. Jeśli wiadomość zawiera link prowadzący do obrazu, MeshCom-Guru próbuje pokazać podgląd bezpośrednio w czacie. Zwykłe linki internetowe pozostają klikalne.</p>
+            <h3>Instalacja</h3><p><b>Linux ZIP:</b> rozpakuj folder <code>MeshCom</code> i uruchom <code>./run_linux.sh</code>. <b>Windows:</b> uruchom <code>run_windows.bat</code>. <b>Debian:</b> program jest instalowany w <code>/usr/share/MeshCom</code>, a ustawienia osobiste pozostają w <code>~/.MeshCom/settings.ini</code>.</p>
             """,
         }
         view.setHtml(guides.get(lang, guides["de"]))

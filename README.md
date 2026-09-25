@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.3.96**
+**Aktuelle Version: 0.3.97**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -32,7 +25,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Die PDF-Handbücher enthalten die aktuellen Ergänzungen zur **Picrd-Bildvorschau** und zu den **Karten-Verbindungen** sowie die sieben unterstützten Sprachen:
+Im Release sind sieben bestehende PDF-Handbücher (v0.3.96) sowie das neue polnische PDF-Handbuch v0.3.97 enthalten:
 
 - 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.96_DE.pdf`
 - 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.96_EN.pdf`
@@ -41,6 +34,15 @@ Die PDF-Handbücher enthalten die aktuellen Ergänzungen zur **Picrd-Bildvorscha
 - 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.96_FR.pdf`
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+
+## Version 0.3.97 – Polnische Sprache
+
+- 🇵🇱 **Polnische Benutzeroberfläche:** Polski ergänzt und in die bestehende Sprachumschaltung integriert.
+- 📖 **Integrierte Anleitung:** Die Hilfe/Anleitung ist auch vollständig auf Polnisch verfügbar.
+- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`.
+- 🛡️ **Bestehende Funktionen unverändert:** Empfang, Senden, Räume, Private Chats, „Alle“, Monitor, MH, Karte, Weltweit, Picrd-Vorschau und Update-Prüfung wurden nicht durch einen neuen Nachrichtenweg ersetzt.
+- 🧩 **Sprachmechanismus:** Polnisch ist Teil der normalen gespeicherten Spracheinstellung in `~/.MeshCom/settings.ini`.
 
 ## Version 0.3.96
 
@@ -51,12 +53,12 @@ Die PDF-Handbücher enthalten die aktuellen Ergänzungen zur **Picrd-Bildvorscha
 - 🌐 **Normale Internetlinks:** Links ohne Bildziel werden wie bisher als anklickbare Links dargestellt.
 - 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Bildvorschauen werden bei späteren Chat-Aktualisierungen nicht erneut eingefügt.
 - 📡 **Nachrichtenweg unverändert:** Empfang, Senden, Räume, Private Chats und „Alle“ bleiben funktional unverändert.
-- 🌐 **Mehrsprachig:** Die neue Funktion ist in der integrierten Anleitung in Deutsch, English, Italiano, Nederlands, Français, Español und Svenska dokumentiert.
+- 🌐 **Mehrsprachig:** Die neue Funktion ist in der integrierten Anleitung in Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski dokumentiert.
 - 📄 **PDF-Handbücher:** Alle sieben Handbücher enthalten die Ergänzung zu v0.3.96.
 
 # Sprache / Language
 
-Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch, English, Italiano, Nederlands, Français, Español und Svenska** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
+Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
 
 Die Benutzeroberfläche wird übersetzt; empfangene Nachrichten, Rufzeichen, Raum- und Zielnummern sowie persönliche Inhalte bleiben unverändert. Die integrierte **Hilfe → Anleitung** folgt der gewählten Sprache.
 
@@ -306,7 +308,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.94**
+**Version 0.3.97**
 
 **By Goldisoft 2026**
 
@@ -446,7 +448,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.94**  
+**MeshCom-Guru v0.3.97**  
 **By Goldisoft 2026**
 
 
@@ -464,5 +466,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

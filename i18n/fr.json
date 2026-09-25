@@ -291,5 +291,6 @@
   "Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Les lignes montrent les chemins MeshCom réellement reçus ou les réceptions LoRa locales directes.",
   "MeshCom-Pfad": "Chemin MeshCom",
   "Direkt gehört": "Reçu directement",
-  "Bild hochladen": "Télécharger une image"
+  "Bild hochladen": "Télécharger une image",
+  "polish": "Polonais"
 }
