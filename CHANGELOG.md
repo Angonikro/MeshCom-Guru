@@ -1,3 +1,13 @@
+## v0.3.99 – Performance-Optimierung
+
+- ⚡ **GUI-Performance:** Unnötige vollständige Aktualisierungen der Oberfläche wurden reduziert.
+- 🗺️ **Karte:** Marker werden nur noch neu aufgebaut, wenn sich die Kartendaten tatsächlich geändert haben. Dadurch wird insbesondere beim Zoomen und Verschieben der Karte weniger Arbeit erzeugt.
+- 💬 **„Alle“:** Das vollständige `QTextBrowser`-Dokument wird nur noch bei geänderten Daten neu aufgebaut.
+- 📊 **Statistik:** Die Anzeige wird nur noch aktualisiert, wenn sich die zugrunde liegenden Werte geändert haben.
+- 🔄 **Refresh-Optimierung:** Doppelte bzw. unnötige Aktualisierungsdurchläufe wurden entfernt.
+- 🛡️ **Bestehende Funktionen:** Empfang, Senden, Räume, Private Chats, Monitor, MH, Karte, Weltweit, Wetter, Picrd-Vorschau sowie der v0.3.98-Mitternachts-Fix bleiben erhalten.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
 ## v0.3.98 – Final – Stabilitäts- und Mitternachts-Fix
 
 - 🔄 „Alle“ wird beim Tab-Wechsel ausschließlich aus dem eigenen `monitor_all_rows`-Live-Puffer aufgebaut.

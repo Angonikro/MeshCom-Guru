@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.3.98**
+**Aktuelle Version: 0.3.99**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,16 @@ Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italien
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+
+## Version 0.3.99 – Performance-Optimierung
+
+- ⚡ **Flüssigere Oberfläche:** Unnötige vollständige Aktualisierungen der Kartenansicht wurden reduziert.
+- 🗺️ **Karte:** Marker werden nicht mehr bei jedem 5-Sekunden-Refresh vollständig gelöscht und neu aufgebaut, wenn sich die Kartendaten nicht geändert haben.
+- 💬 **„Alle“:** Das komplette Chat-Dokument wird nicht mehr bei jedem Refresh neu erzeugt, wenn keine neuen Daten vorliegen.
+- 📊 **Statistik:** Unveränderte Statistikdaten werden nicht mehr unnötig neu dargestellt.
+- 🔄 **Weniger doppelte Aktualisierungen:** Überflüssige zweite Refresh-Durchläufe für Karte und Statistik wurden entfernt.
+- 🛡️ **Funktionen erhalten:** Empfang, Senden, Räume, Private Chats, Monitor, MH, Karte, Weltweit, Wetter, Picrd-Vorschau und die bisherigen Stabilitätsfixes bleiben erhalten.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
 
 ## Version 0.3.98 – Final
 
@@ -328,7 +331,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.98**
+**Version 0.3.99**
 
 **By Goldisoft 2026**
 
@@ -468,7 +471,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.98**  
+**MeshCom-Guru v0.3.99**  
 **By Goldisoft 2026**
 
 
@@ -486,5 +489,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

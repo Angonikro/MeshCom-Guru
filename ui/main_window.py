@@ -582,6 +582,12 @@ class ChatView(QScrollArea):
         self._all_mode = True
         self._bubble_mode = False
         self._all_message_views = []
+        # Keep the latest rendered document so the shared Dashboard chat
+        # can switch back to "Alle" even when the content itself did not
+        # change. The performance optimization below intentionally skips
+        # redundant QTextBrowser rebuilds, but a view switch still needs
+        # to restore the correct visible content.
+        self._all_html_text = str(html_text)
 
         container = QWidget()
         container.setStyleSheet(f"background: {self.chat_background};")
@@ -953,6 +959,10 @@ class MainWindow(QMainWindow):
         self.worldwide_watchdog_timer = QTimer(self)
         self.worldwide_watchdog_timer.timeout.connect(self._worldwide_watchdog_tick)
         self.worldwide_watchdog_timer.start(15000)
+
+        # Performance: Karten nur bei tatsächlich geänderten sichtbaren Daten
+        # an Leaflet/JavaScript übertragen.
+        self._last_map_render_signature = None
 
         # Keine automatische Verbindung beim Programmstart.
         # Der Benutzer entscheidet mit "Verbinden", wann der WebService abgefragt wird.
@@ -1500,6 +1510,14 @@ class MainWindow(QMainWindow):
             room = self._room_from_block(block)
             room_key = room if room else "Alle"
             room_counts[room_key] = room_counts.get(room_key, 0) + 1
+
+        statistics_signature = (
+            message_count, node_count, position_count, telemetry_count,
+            monitor_count, private_count, tuple(sorted(room_counts.items()))
+        )
+        if statistics_signature == getattr(self, "_last_statistics_signature", None):
+            return
+        self._last_statistics_signature = statistics_signature
 
         self.statistics_summary.setText(
             f"{ui_text('Nachrichten:')} <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
@@ -3607,6 +3625,15 @@ class MainWindow(QMainWindow):
             # Dashboard-Chat darf hier niemals der alte WebService-Cache
             # angezeigt werden.
             self._refresh_all_live_view()
+            # The 5-second refresh is optimized to skip identical HTML. That
+            # is correct for the already visible All-tab, but this shared
+            # Dashboard view may currently still show a room/private chat.
+            # Restore the current All document on an actual view switch.
+            all_view = self.tabs.widget(self.tab_keys.get(("all", "all"), -1))
+            if (isinstance(all_view, ChatView) and
+                    hasattr(self, "dashboard_chat_view") and
+                    hasattr(all_view, "_all_html_text")):
+                self.dashboard_chat_view.set_all_html(all_view._all_html_text)
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
 
@@ -6835,8 +6862,30 @@ renderStations(initialStations);
             own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
             stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0})
-        # Die Karte wird nicht neu geladen. Die Stationsdaten werden jedoch
-        # gepuffert, bis Leaflet/JavaScript nach setHtml() vollständig bereit ist.
+        # Die Karte wird nicht neu geladen. Ein 5-Sekunden-Refresh darf aber
+        # auch nicht die komplette Leaflet-Marker-Schicht neu erzeugen.
+        # Das wäre beim Zoomen und während der Texteingabe deutlich spürbar.
+        map_connections = self._map_connection_payload(stations)
+        map_signature = (
+            classic_map_available,
+            dashboard_map_available,
+            tuple(
+                (
+                    str(item.get("callsign", "")),
+                    item.get("lat"), item.get("lon"),
+                    str(item.get("last_heard", "")),
+                    item.get("distance_km"), bool(item.get("own", False)),
+                )
+                for item in stations
+            ),
+            tuple(
+                (str(item.get("a", "")), str(item.get("b", "")), str(item.get("source", "")))
+                for item in map_connections
+            ),
+        )
+        if map_signature == getattr(self, "_last_map_render_signature", None):
+            return
+        self._last_map_render_signature = map_signature
         self._push_map_stations(stations)
 
     # ---------- Verbindung ----------
@@ -6952,7 +7001,6 @@ renderStations(initialStations);
                         if heard:
                             self.station_last_heard[key] = heard
             self._update_map()
-            self._update_statistics()
 
             self._ensure_room_tabs()
             # Der HTTP-Nachrichtenstrom bleibt für Chat/Privatnachrichten zuständig.
@@ -7054,10 +7102,8 @@ renderStations(initialStations);
             # erhalten, darf aber den Live-Bestand von „Alle“ nicht ersetzen.
             self._refresh_all_live_view()
 
-            # Kartenmarker sind unabhängig vom Raumfilter. Die bereits
-            # gespeicherten station_positions werden nach jeder Chat-/Filter-
-            # Aktualisierung erneut an Classic und Dashboard gepusht.
-            self._update_map()
+            # Die Kartenmarker wurden bereits nach der Positionsverarbeitung
+            # aktualisiert. Kein zweiter Leaflet-Push im selben Refresh-Zyklus.
 
             if self.filter_enabled.isChecked():
                 rooms = self._rooms()
@@ -7437,21 +7483,20 @@ renderStations(initialStations);
                 blocks, preview_seen=all_preview_seen, all_mode=(key[0] == "all")
             )
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
-            changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
+            old_all_digest = self.tab_hashes.get(key, "")
+            changed = old_all_digest not in ("", digest) and old_all_digest != digest
             self.tab_hashes[key] = digest
             if key[0] == "all":
-                view.set_all_html(rendered)
-                # Dashboard shows the exact same rendered Alle chat.  This
-                # deliberately reuses the established renderer instead of
-                # creating a second, simplified message parser.
-                # Nur wenn im Dashboard tatsächlich „Alle“ ausgewählt ist,
-                # darf der regelmäßige Nachrichten-Refresh dessen Inhalt setzen.
-                # Bei Raum/Privat darf ein Hintergrund-Refresh den aktuell
-                # ausgewählten Chat nicht wieder auf „Alle“ zurücksetzen.
-                if (hasattr(self, "dashboard_chat_view") and
-                        getattr(self, "dashboard_current_key", ("all", "all")) == ("all", "all")):
-
-                    self.dashboard_chat_view.set_all_html(rendered)
+                # Das vollständige QTextBrowser-Dokument nur bei einer echten
+                # Änderung neu erzeugen. Ein unnötiges set_all_html() alle
+                # fünf Sekunden blockiert den GUI-Thread und macht sich beim
+                # Tippen/Scrollen als kurzer Hänger bemerkbar.
+                if old_all_digest != digest:
+                    view.set_all_html(rendered)
+                    # Dashboard erhält dieselbe Aktualisierung nur bei Änderung.
+                    if (hasattr(self, "dashboard_chat_view") and
+                            getattr(self, "dashboard_current_key", ("all", "all")) == ("all", "all")):
+                        self.dashboard_chat_view.set_all_html(rendered)
             else:
                 view.setHtml(rendered)
         # ChatView keeps the current scroll position during refreshes and only

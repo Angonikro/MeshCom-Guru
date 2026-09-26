@@ -1,4 +1,12 @@
-# MeshCom-Guru v0.3.98 – FINAL
+# MeshCom-Guru v0.3.99 – Performance-Optimierung
+
+## Performance-Optimierung
+
+- ⚡ Unnötige vollständige GUI-Aktualisierungen wurden reduziert.
+- 🗺️ Kartenmarker werden nur bei geänderten Kartendaten neu aufgebaut.
+- 💬 „Alle“ baut das Chat-Dokument nur noch bei tatsächlich geänderten Daten neu auf.
+- 📊 Statistik wird nur bei geänderten Werten neu dargestellt.
+- 🔄 Überflüssige doppelte Refresh-Durchläufe wurden entfernt.
 
 ## Stabilitäts- und Mitternachts-Fix
 
@@ -14,7 +22,7 @@
 - 🌡️ Wetter-/TEL-Daten müssen beim Wechsel zu „Alle“ nicht auf einen zusätzlichen Refresh warten.
 - 📤 Eigene gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
 
-## Weitere Funktionen des finalen v0.3.98-Stands
+## Weitere Funktionen des finalen v0.3.99-Stands
 
 - 🇵🇱 Polnische Benutzeroberfläche und integrierte Anleitung.
 - 🖼️ Picrd-Bildvorschau mit anklickbarem Original-Link.
@@ -27,5 +35,5 @@
 
 Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
 
-**Version:** 0.3.98  
-**Status:** Final
+**Version:** 0.3.99  
+**Status:** Performance-Release
