@@ -1,3 +1,15 @@
+## v0.3.98 – Final – Stabilitäts- und Mitternachts-Fix
+
+- 🔄 „Alle“ wird beim Tab-Wechsel ausschließlich aus dem eigenen `monitor_all_rows`-Live-Puffer aufgebaut.
+- 🚫 Beim Wechsel Raum → „Alle“ wird nicht mehr der alte WebService-/Nachrichten-Cache als Zwischenstand angezeigt.
+- ⚡ Empfangene MSG/POS/TEL/ACK-Daten werden direkt in den „Alle“-Puffer übernommen und sofort dargestellt.
+- 🌡️ Wetter-/TEL-Daten müssen beim Wechsel zu „Alle“ nicht mehr auf den nächsten 5-Sekunden-Refresh warten.
+- 📤 Eigene gesendete Nachrichten werden ebenfalls direkt in den „Alle“-Puffer übernommen.
+- 🛡️ Der bestehende Monitor-/UDP-Empfang bleibt von der „Alle“-Darstellung getrennt.
+- 🕛 **Mitternachts-Fix:** Die zeitliche Verarbeitung funktioniert auch beim Übergang über 00:00 Uhr korrekt und hängt nicht mehr ausschließlich von der Uhrzeit ab.
+- 🧪 **Langzeittest:** Der finale v0.3.98-Stand lief über 12 Stunden ohne erneutes Auftreten des zuvor beobachteten Fehlers.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
 # CHANGELOG
 
 ## v0.3.97 – Polnische Sprache

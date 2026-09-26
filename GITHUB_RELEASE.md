@@ -1,22 +1,31 @@
-# MeshCom-Guru v0.3.97
+# MeshCom-Guru v0.3.98 – FINAL
 
-## Polnische Sprache
+## Stabilitäts- und Mitternachts-Fix
 
-- 🇵🇱 Polski ist jetzt als achte Benutzeroberflächensprache verfügbar.
-- 📖 Die integrierte Anleitung steht ebenfalls auf Polnisch zur Verfügung.
-- 📄 Das polnische PDF-Handbuch ist im Ordner `docs/` enthalten.
-- 🔄 Die Dashboard-Beschriftung „Hotspot IP“ wird beim Sprachwechsel jetzt sofort aktualisiert; ein Neustart ist nicht mehr erforderlich.
+- 🕛 Die zeitliche Verarbeitung bleibt auch beim Übergang über **00:00 Uhr** korrekt.
+- 🧪 Der finale Stand wurde **12 Stunden im Dauerbetrieb** getestet, ohne dass der zuvor beobachtete Fehler erneut auftrat.
+- 🛡️ Die bestehende Monitor-/UDP-Verarbeitung bleibt unverändert getrennt von der Darstellung in „Alle“.
 
-## Picrd-Bildvorschau
+## „Alle“ – eigener Live-Datenbereich
 
-- 🖼️ Bildlinks werden im Chat erkannt und als kleine Vorschau angezeigt.
-- 🔗 Der ursprüngliche Link bleibt anklickbar und öffnet die Quelle im Standard-Webbrowser.
-- 🌐 Normale Internetlinks ohne Bildziel bleiben unverändert anklickbar.
-- 🔄 Bereits angezeigte Vorschauen werden bei späteren Chat-Aktualisierungen nicht doppelt eingefügt.
-- 📡 Der bestehende Nachrichten- und Empfangsweg bleibt unverändert.
-- 🌐 Die integrierte Anleitung steht in Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski zur Verfügung.
-- 📄 Das neue polnische PDF-Handbuch ergänzt die sieben bereits enthaltenen PDF-Handbücher.
+- 🔄 „Alle“ wird beim Tab-Wechsel ausschließlich aus dem eigenen `monitor_all_rows`-Live-Puffer aufgebaut.
+- 🚫 Beim Wechsel Raum → „Alle“ wird kein alter WebService-/Nachrichten-Cache als Zwischenstand angezeigt.
+- ⚡ MSG/POS/TEL/ACK-Daten werden direkt in den „Alle“-Puffer übernommen.
+- 🌡️ Wetter-/TEL-Daten müssen beim Wechsel zu „Alle“ nicht auf einen zusätzlichen Refresh warten.
+- 📤 Eigene gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
+
+## Weitere Funktionen des finalen v0.3.98-Stands
+
+- 🇵🇱 Polnische Benutzeroberfläche und integrierte Anleitung.
+- 🖼️ Picrd-Bildvorschau mit anklickbarem Original-Link.
+- 🔗 Normale Internetlinks bleiben anklickbar.
+- 🗺️ Karten-Verbindungen aus tatsächlich empfangenen MeshCom-Pfaden.
+- 🌐 Mehrsprachige Benutzeroberfläche.
+- 🧹 Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
 
 ## GitHub-ZIP
 
 Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
+
+**Version:** 0.3.98  
+**Status:** Final

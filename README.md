@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.3.97**
+**Aktuelle Version: 0.3.98**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -32,7 +25,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind sieben bestehende PDF-Handbücher (v0.3.96) sowie das neue polnische PDF-Handbuch v0.3.97 enthalten:
+Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italienisch-, niederländisch-, französisch-, spanisch- und schwedischsprachigen Handbücher stammen aus v0.3.96; das polnische Handbuch aus v0.3.97:
 
 - 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.96_DE.pdf`
 - 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.96_EN.pdf`
@@ -42,6 +35,19 @@ Im Release sind sieben bestehende PDF-Handbücher (v0.3.96) sowie das neue polni
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+
+## Version 0.3.98 – Final
+
+- 🔄 **„Alle“ mit eigenem Live-Datenbereich:** Beim Wechsel zu „Alle“ werden die aktuellen Daten direkt aus dem eigenen Live-Puffer aufgebaut.
+- ⚡ **Sofortige Darstellung:** Empfangene MSG/POS/TEL/ACK-Daten erscheinen ohne Warten auf einen zusätzlichen WebService-Refresh.
+- 🌡️ **Wetter-/TEL-Daten:** Beim Wechsel zu „Alle“ müssen aktuelle Telemetriedaten nicht mehr auf den nächsten Refresh warten.
+- 📤 **Eigene Nachrichten:** Gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
+- 🛡️ **Getrennter Empfangspfad:** Die bestehende Monitor-/UDP-Verarbeitung bleibt von der „Alle“-Darstellung getrennt.
+- 🇵🇱 **Polnisch:** Die in v0.3.97 ergänzte polnische Sprache bleibt Bestandteil des finalen Releases.
+- 🖼️ **Picrd-Vorschau:** Die in v0.3.96 eingeführte Bildvorschau bleibt Bestandteil des finalen Releases.
+- 🕛 **Mitternachts-Fix:** Die zeitliche Verarbeitung bleibt auch beim Wechsel über 00:00 Uhr korrekt und hängt nicht mehr allein von der Uhrzeit ab.
+- 🧪 **Langzeittest:** Der finale Stand wurde über 12 Stunden ohne erneutes Auftreten des zuvor beobachteten Fehlers getestet.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
 
 ## Version 0.3.97 – Polnische Sprache
 
@@ -315,7 +321,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.97**
+**Version 0.3.98**
 
 **By Goldisoft 2026**
 
@@ -455,7 +461,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.97**  
+**MeshCom-Guru v0.3.98**  
 **By Goldisoft 2026**
 
 
@@ -473,5 +479,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

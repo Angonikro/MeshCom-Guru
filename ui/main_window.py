@@ -1188,6 +1188,7 @@ class MainWindow(QMainWindow):
                         existing["rssi"] = str(rssi) if rssi != "" else existing.get("rssi", "-")
                         existing["snr"] = str(snr) if snr != "" else existing.get("snr", "-")
                         self._render_monitor()
+                        self._refresh_all_live_view()
                         return
 
         row = {
@@ -1207,6 +1208,28 @@ class MainWindow(QMainWindow):
         self.monitor_rows = self.monitor_rows[-500:]
         self.monitor_all_rows = self.monitor_all_rows[-500:]
         self._render_monitor()
+        self._refresh_all_live_view()
+
+    def _refresh_all_live_view(self):
+        """Render the dedicated live buffer of the 'Alle' view immediately.
+
+        'Alle' has its own monitor_all_rows buffer. Activating the tab must
+        never rebuild the view from the WebService/message_cache; that cache
+        is refreshed periodically and can show stale data before the live
+        TEL/MSG stream catches up.
+        """
+        if not hasattr(self, "tabs") or not hasattr(self, "monitor_all_rows"):
+            return
+        all_key = ("all", "all")
+        all_index = self._ensure_tab(all_key, tr("Alle"))
+        monitor_blocks = self._monitor_rows_to_all_blocks()
+        all_blocks = self._filter_blocks(monitor_blocks)
+        # Keep the live monitor reception order.  The rows carry only a
+        # HH:MM:SS display time; sorting by that value breaks at midnight
+        # because 00:xx would be placed before 23:xx from the previous day.
+        # monitor_all_rows is already chronological and is therefore the
+        # authoritative order for the live "Alle" view.
+        self._update_tab_content(all_key, all_index, all_blocks)
 
     def _monitor_rows_to_all_blocks(self):
         """Render the same received UDP packets as monitor-compatible blocks for 'Alle'.
@@ -3580,12 +3603,10 @@ class MainWindow(QMainWindow):
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(title)
         else:
-            self.dashboard_chat_view.set_all_html(
-                self._render_blocks(
-                    self._filter_blocks(list(self.message_cache.values())),
-                    preview_seen=set(),
-                )
-            )
+            # „Alle“ besitzt einen eigenen Live-Puffer. Beim Wechsel in den
+            # Dashboard-Chat darf hier niemals der alte WebService-Cache
+            # angezeigt werden.
+            self._refresh_all_live_view()
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
 
@@ -5648,6 +5669,7 @@ class MainWindow(QMainWindow):
             self.target_input.setText(key[1])
         elif key[0] == "all":
             self.target_input.clear()
+            self._refresh_all_live_view()
         view = self.tabs.widget(index)
         if isinstance(view, ChatView):
             view.scroll_to_bottom()
@@ -7027,19 +7049,10 @@ renderStations(initialStations);
             if hasattr(self, "dashboard_sidebar"):
                 self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
 
-            # Tab „Alle“ basiert bewusst ausschließlich auf dem bereits vom
-            # Monitor verarbeiteten UDP-Datenstrom. Dadurch gibt es keinen zweiten
-            # WebService-MSG-Pfad mehr, der dasselbe MeshCom-Paket ein zweites Mal
-            # in „Alle“ eintragen kann. MSG, POS, TEL und ACK kommen aus derselben
-            # Quelle wie im Monitor. Der Monitor-Filter selbst hat keinen Einfluss
-            # auf „Alle“; nur der Raumfilter darf den Gesamtstrom einschränken.
-            all_key = ("all", "all")
-            all_index = self._ensure_tab(all_key, "Alle")
-            monitor_blocks = self._monitor_rows_to_all_blocks()
-            all_blocks = self._filter_blocks(monitor_blocks)
-            all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
-
-            self._update_tab_content(all_key, all_index, all_blocks)
+            # „Alle“ wird zusätzlich über seinen eigenen Live-Puffer aktualisiert.
+            # Der periodische WebService-Refresh bleibt für die übrigen Chats
+            # erhalten, darf aber den Live-Bestand von „Alle“ nicht ersetzen.
+            self._refresh_all_live_view()
 
             # Kartenmarker sind unabhängig vom Raumfilter. Die bereits
             # gespeicherten station_positions werden nach jeder Chat-/Filter-
@@ -7587,6 +7600,7 @@ renderStations(initialStations);
         # Do not let the paused state prevent the send from being recorded.
         if not getattr(self, "monitor_paused", False):
             self._render_monitor()
+        self._refresh_all_live_view()
 
     def send(self):
         if not self.connected:
