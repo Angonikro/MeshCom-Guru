@@ -1,3 +1,11 @@
+## v0.4.1 – Vollständiger Mitternachts-Sortierfix
+
+- 🕛 **Chronologische Sortierung:** Lokaler Nachrichten-Cache und Chat-Export verwenden bei vollständigen Zeitstempeln Datum und Uhrzeit.
+- 🌙 **Übergang über 00:00 Uhr:** `23:xx` bleibt vor `00:xx` des folgenden Tages.
+- 🛡️ **Live-„Alle“ bleibt unverändert:** Der funktionierende Live-Datenpfad aus v0.4.0 wurde nicht verändert.
+- 🧩 **Legacy-Fallback:** Daten ohne Datum verwenden weiterhin die reine Uhrzeit als Sortier-Fallback.
+- 📖 **Dokumentation:** README und GitHub-Release-Dokumentation wurden vollständig auf v0.4.1 aktualisiert.
+
 ## v0.4.0 – Raum-Chat Bottom-Anchor Fix
 
 - 💬 **Raum-/Privat-Chat:** Die Nachrichten werden beim Wechsel zwischen gespeicherten Räumen wieder zuverlässig an der unteren Kante des Chatbereichs ausgerichtet.

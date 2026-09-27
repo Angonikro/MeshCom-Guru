@@ -252,7 +252,7 @@ def _chat_image_download(url):
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "MeshCom-Guru/0.3.95",
+                "User-Agent": "MeshCom-Guru/0.4.1",
                 "Accept": "image/avif,image/webp,image/apng,image/*,text/html,*/*;q=0.2",
             },
         )
@@ -288,7 +288,7 @@ def _chat_image_download(url):
                         image_req = urllib.request.Request(
                             image_url,
                             headers={
-                                "User-Agent": "MeshCom-Guru/0.3.95",
+                                "User-Agent": "MeshCom-Guru/0.4.1",
                                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.2",
                             },
                         )
@@ -6619,37 +6619,64 @@ class MainWindow(QMainWindow):
 
     @classmethod
     def _timestamp_from_block(cls, block):
-        """Return the timestamp carried by a MeshCom message/position card.
+        """Return the display time carried by a MeshCom message/position card.
 
-        Prefer the timestamp supplied by the WebService instead of the local
-        refresh time. This is important because the map refreshes repeatedly;
-        refreshing must never make every station appear to have been heard at
-        the same moment.
+        This method intentionally returns only the display value. Sorting uses
+        _timestamp_sort_key so a midnight transition cannot reverse messages.
         """
-        # HTML datetime/data attributes and <time datetime="...">.
-        attr_patterns = (
-            r'(?:data-(?:timestamp|time|datetime)|datetime|timestamp)\s*=\s*[\"\']([^\"\']+)',
-        )
-        for pattern in attr_patterns:
-            m = re.search(pattern, block, re.IGNORECASE)
-            if m:
-                value = html.unescape(m.group(1)).strip()
-                # ISO date/time -> local display format.
-                try:
-                    iso = value.replace('Z', '+00:00')
-                    dt = datetime.fromisoformat(iso)
-                    return dt.astimezone().strftime('%H:%M:%S')
-                except Exception:
-                    hm = re.search(r'\b([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b', value)
-                    if hm:
-                        return hm.group(0) if len(hm.group(0).split(':')) == 3 else hm.group(0) + ':00'
+        dt = cls._datetime_from_block(block)
+        if dt is not None:
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
+            return dt.strftime('%H:%M:%S')
 
         plain = cls._plain(block)
-        # Prefer a full date/time if present.
-        m = re.search(r'\b(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
+        m = re.search(r'\b([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
         if m:
             return f"{m.group(1)}:{m.group(2)}:{m.group(3) or '00'}"
         return ''
+
+    @classmethod
+    def _datetime_from_block(cls, block):
+        """Return the full timestamp from a message/position card when available."""
+        attr_pattern = r'(?:data-(?:timestamp|time|datetime)|datetime|timestamp)\s*=\s*[\"\']([^\"\']+)'
+        m = re.search(attr_pattern, block, re.IGNORECASE)
+        if m:
+            value = html.unescape(m.group(1)).strip()
+            try:
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except Exception:
+                pass
+
+        plain = cls._plain(block)
+        m = re.search(
+            r'\b(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2})[ T]+'
+            r'([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b',
+            plain,
+        )
+        if m:
+            date_text = m.group(1).replace('.', '-').replace('/', '-')
+            time_text = f"{m.group(2)}:{m.group(3)}:{m.group(4) or '00'}"
+            try:
+                return datetime.fromisoformat(f"{date_text} {time_text}")
+            except Exception:
+                pass
+        return None
+
+    @classmethod
+    def _timestamp_sort_key(cls, block):
+        """Return a chronological key, preserving correct order across midnight."""
+        dt = cls._datetime_from_block(block)
+        if dt is not None:
+            return (0, dt.timestamp())
+
+        # Legacy cards may contain only HH:MM:SS. Keep that as a fallback.
+        plain = cls._plain(block)
+        m = re.search(r'\b([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
+        if m:
+            seconds = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3) or 0)
+            return (1, seconds)
+        return (2, 0)
 
     @classmethod
     def _station_position_from_block(cls, block):
@@ -7036,7 +7063,7 @@ renderStations(initialStations);
 
             self._update_statistics()
             cached_blocks = list(self.message_cache.values())
-            cached_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
+            cached_blocks.sort(key=self._timestamp_sort_key)
 
             # Configured room tabs.
             for room in self._rooms():
@@ -7542,7 +7569,7 @@ renderStations(initialStations);
             blocks = self._filter_blocks(cached_blocks)
             title = "Alle Nachrichten"
 
-        blocks = sorted(blocks, key=lambda b: self._timestamp_from_block(b) or "99:99:99")
+        blocks = sorted(blocks, key=self._timestamp_sort_key)
         if not blocks:
             self.status.setText(ui_text("Keine Nachrichten zum Exportieren"))
             return

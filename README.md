@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.0**
+**Aktuelle Version: 0.4.1**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,13 @@ Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italien
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+
+## Version 0.4.1 – Vollständiger Mitternachts-Sortierfix
+
+- 🕛 **Mitternachts-Sortierung:** Gespeicherte Chat-Nachrichten und der Chat-Export werden bei vorhandenen vollständigen Zeitstempeln nach Datum **und** Uhrzeit sortiert.
+- 🔄 **00:00-Umsprung:** Nachrichten von `23:xx` und `00:xx` des Folgetages werden nicht mehr allein nach der Uhrzeit verglichen.
+- 🛡️ **Live-„Alle“ unverändert:** Der funktionierende Live-Empfangsweg von v0.4.0 wurde nicht verändert.
+- 🧩 **Rückwärtskompatibilität:** Ältere Karten ohne vollständiges Datum verwenden weiterhin die reine Uhrzeit als Fallback.
 
 ## Version 0.4.0 – Raum-Chat Bottom-Anchor Fix
 
@@ -345,7 +345,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.0**
+**Version 0.4.1**
 
 **By Goldisoft 2026**
 
@@ -485,7 +485,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.0**  
+**MeshCom-Guru v0.4.1**  
 **By Goldisoft 2026**
 
 
@@ -503,5 +503,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

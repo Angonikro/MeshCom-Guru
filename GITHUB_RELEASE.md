@@ -1,17 +1,17 @@
-# MeshCom-Guru v0.4.0 – Raum-Chat Bottom-Anchor Fix
+# MeshCom-Guru v0.4.1 – Vollständiger Mitternachts-Sortierfix
 
-## Raum-Chat Fix
+## Neuer Fix
 
-- 💬 Beim Wechsel zwischen gespeicherten Räumen werden die Nachrichten wieder zuverlässig an der unteren Kante des Chatbereichs ausgerichtet.
-- 🔄 Der problematische Wechsel **Raum 20 → Raum 262 → Raum 20** benötigt keinen zweiten Klick mehr, damit die letzte Nachricht unten steht.
-- 🛠️ Die Ursache wurde im Chat-Layout behoben: Der freie Layout-Bereich liegt jetzt oberhalb der Nachrichten statt darunter.
-- 🧪 Die Änderung wurde bewusst klein gehalten und baut direkt auf **v0.3.99** auf.
+- 🕛 Gespeicherte Chat-Nachrichten und der Chat-Export sortieren bei vorhandenen vollständigen Zeitstempeln jetzt nach Datum **und** Uhrzeit.
+- 🌙 Der Übergang über **00:00 Uhr** ist damit auch in diesen Nebenpfaden chronologisch korrekt.
+- 🛡️ Der funktionierende Live-„Alle“-Datenpfad aus v0.4.0 wurde nicht verändert.
+- 🧩 Alte Karten ohne vollständiges Datum verwenden weiterhin die reine Uhrzeit als Fallback.
 
-## Bestehende v0.3.99-Funktionen bleiben erhalten
+## Bestehende Funktionen bleiben erhalten
 
-- ⚡ Performance-Optimierungen für Karte, „Alle“ und Statistik.
-- 🕛 Mitternachts-Fix aus v0.3.98.
-- 💬 Räume und Private Chats.
+- 💬 Raum- und Private-Chats mit korrekter Bottom-Anker-Ausrichtung.
+- ⚡ Performance-Optimierungen aus v0.3.99.
+- 🕛 Mitternachts-Fix aus v0.3.98, jetzt auf die verbleibenden Sortierpfade erweitert.
 - 📊 Monitor und Stations/MH.
 - 🗺️ Karte und 🌐 Weltweit.
 - 🌦️ Wetter-/Telemetrie-Funktionen.
@@ -23,5 +23,9 @@
 
 Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
 
-**Version:** 0.4.0  
-**Status:** Test-/Release-Kandidat – nach positivem Praxistest für GitHub bereit.
+**Version:** 0.4.1  
+**Status:** Release
+
+## Debian-Paket
+
+Das Debian-Paket verwendet die Architektur `all` und installiert MeshCom-Guru unter `/usr/share/MeshCom-Guru`.
