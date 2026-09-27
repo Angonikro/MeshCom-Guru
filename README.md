@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.3.99**
+**Aktuelle Version: 0.4.0**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,13 @@ Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italien
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+
+## Version 0.4.0 – Raum-Chat Bottom-Anchor Fix
+
+- 💬 Raum-/Privat-Chats bleiben beim Wechsel zwischen gespeicherten Räumen zuverlässig unten ausgerichtet.
+- 🔄 Der Wechsel zwischen Räumen benötigt keinen zweiten Klick mehr, um die letzte Nachricht unten anzuzeigen.
+- 🛠️ Das Chat-Layout verwendet den freien Bereich oberhalb der Nachrichten statt unterhalb.
+- 🛡️ Die Performance-Optimierungen und Stabilitätsfixes aus v0.3.99 bleiben erhalten.
 
 ## Version 0.3.99 – Performance-Optimierung
 
@@ -338,7 +338,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.99**
+**Version 0.4.0**
 
 **By Goldisoft 2026**
 
@@ -478,7 +478,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.99**  
+**MeshCom-Guru v0.4.0**  
 **By Goldisoft 2026**
 
 
@@ -496,5 +496,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

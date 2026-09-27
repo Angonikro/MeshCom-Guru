@@ -1,3 +1,11 @@
+## v0.4.0 – Raum-Chat Bottom-Anchor Fix
+
+- 💬 **Raum-/Privat-Chat:** Die Nachrichten werden beim Wechsel zwischen gespeicherten Räumen wieder zuverlässig an der unteren Kante des Chatbereichs ausgerichtet.
+- 🔄 **Raumwechsel:** Der Wechsel z. B. **Raum 20 → Raum 262 → Raum 20** benötigt keinen zweiten Klick mehr, damit die letzte Nachricht korrekt unten steht.
+- 🛠️ **Ursachenbehebung:** Die Ausrichtung des Chat-Layouts wurde korrigiert. Der freie Layout-Bereich liegt jetzt oberhalb der Nachrichten statt darunter.
+- 🛡️ **Stabilitätsprinzip:** Nachrichteninhalt, Sortierung, Cache, Empfang, „Alle“-Logik und die v0.3.99-Performance-Optimierungen wurden nicht verändert.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
 ## v0.3.99 – Performance-Optimierung
 
 - ⚡ **GUI-Performance:** Unnötige vollständige Aktualisierungen der Oberfläche wurden reduziert.

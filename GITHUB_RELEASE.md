@@ -1,39 +1,27 @@
-# MeshCom-Guru v0.3.99 – Performance-Optimierung
+# MeshCom-Guru v0.4.0 – Raum-Chat Bottom-Anchor Fix
 
-## Performance-Optimierung
+## Raum-Chat Fix
 
-- ⚡ Unnötige vollständige GUI-Aktualisierungen wurden reduziert.
-- 🗺️ Kartenmarker werden nur bei geänderten Kartendaten neu aufgebaut.
-- 💬 „Alle“ baut das Chat-Dokument nur noch bei tatsächlich geänderten Daten neu auf.
-- 📊 Statistik wird nur bei geänderten Werten neu dargestellt.
-- 🔄 Überflüssige doppelte Refresh-Durchläufe wurden entfernt.
+- 💬 Beim Wechsel zwischen gespeicherten Räumen werden die Nachrichten wieder zuverlässig an der unteren Kante des Chatbereichs ausgerichtet.
+- 🔄 Der problematische Wechsel **Raum 20 → Raum 262 → Raum 20** benötigt keinen zweiten Klick mehr, damit die letzte Nachricht unten steht.
+- 🛠️ Die Ursache wurde im Chat-Layout behoben: Der freie Layout-Bereich liegt jetzt oberhalb der Nachrichten statt darunter.
+- 🧪 Die Änderung wurde bewusst klein gehalten und baut direkt auf **v0.3.99** auf.
 
-## Stabilitäts- und Mitternachts-Fix
+## Bestehende v0.3.99-Funktionen bleiben erhalten
 
-- 🕛 Die zeitliche Verarbeitung bleibt auch beim Übergang über **00:00 Uhr** korrekt.
-- 🧪 Der finale Stand wurde **12 Stunden im Dauerbetrieb** getestet, ohne dass der zuvor beobachtete Fehler erneut auftrat.
-- 🛡️ Die bestehende Monitor-/UDP-Verarbeitung bleibt unverändert getrennt von der Darstellung in „Alle“.
-
-## „Alle“ – eigener Live-Datenbereich
-
-- 🔄 „Alle“ wird beim Tab-Wechsel ausschließlich aus dem eigenen `monitor_all_rows`-Live-Puffer aufgebaut.
-- 🚫 Beim Wechsel Raum → „Alle“ wird kein alter WebService-/Nachrichten-Cache als Zwischenstand angezeigt.
-- ⚡ MSG/POS/TEL/ACK-Daten werden direkt in den „Alle“-Puffer übernommen.
-- 🌡️ Wetter-/TEL-Daten müssen beim Wechsel zu „Alle“ nicht auf einen zusätzlichen Refresh warten.
-- 📤 Eigene gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
-
-## Weitere Funktionen des finalen v0.3.99-Stands
-
-- 🇵🇱 Polnische Benutzeroberfläche und integrierte Anleitung.
-- 🖼️ Picrd-Bildvorschau mit anklickbarem Original-Link.
-- 🔗 Normale Internetlinks bleiben anklickbar.
-- 🗺️ Karten-Verbindungen aus tatsächlich empfangenen MeshCom-Pfaden.
-- 🌐 Mehrsprachige Benutzeroberfläche.
-- 🧹 Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+- ⚡ Performance-Optimierungen für Karte, „Alle“ und Statistik.
+- 🕛 Mitternachts-Fix aus v0.3.98.
+- 💬 Räume und Private Chats.
+- 📊 Monitor und Stations/MH.
+- 🗺️ Karte und 🌐 Weltweit.
+- 🌦️ Wetter-/Telemetrie-Funktionen.
+- 🖼️ Picrd-Bildvorschau und anklickbare Internetlinks.
+- 🇩🇪 🇬🇧 🇮🇹 🇳🇱 🇫🇷 🇪🇸 🇸🇪 🇵🇱 Mehrsprachige Oberfläche.
+- 🧹 Release ohne `__pycache__`-Ordner und `.pyc`-Dateien.
 
 ## GitHub-ZIP
 
 Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
 
-**Version:** 0.3.99  
-**Status:** Performance-Release
+**Version:** 0.4.0  
+**Status:** Test-/Release-Kandidat – nach positivem Praxistest für GitHub bereit.

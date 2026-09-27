@@ -677,6 +677,13 @@ class ChatView(QScrollArea):
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
         self._bubble_rows = []
+        # Bottom-anchor the chat content: the stretch belongs BEFORE the
+        # messages, not after them.  A trailing stretch creates an ever
+        # larger empty area below the last message when the container is
+        # taller than the message history.  With the stretch at the top,
+        # short histories sit on the bottom edge and long histories use the
+        # normal scrollbar all the way to the last message.
+        lay.addStretch(1)
         for item in self._bubble_items:
             row = QHBoxLayout()
             row.setContentsMargins(0, 0, 0, 0)
@@ -697,7 +704,6 @@ class ChatView(QScrollArea):
                 row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
                 row.addStretch(1)
             lay.addLayout(row)
-        lay.addStretch(1)
         self._bubble_container = container
         self._bubble_layout = lay
         self.setWidget(container)
