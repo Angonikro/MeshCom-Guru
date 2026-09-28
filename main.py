@@ -2,8 +2,7 @@ import os
 import sys
 
 # Raspberry-Pi-sichere QtWebEngine-Einstellung.
-# Nur Linux/Raspberry Pi verwendet die bisherigen Chromium-Abschaltungen.
-# Unter Windows darf QtWebEngine die vorhandene GPU/Vulkan-Unterstützung nutzen.
+# Unter Windows bleibt die vorhandene GPU/WebEngine-Konfiguration unangetastet.
 if sys.platform.startswith("linux"):
     os.environ.setdefault(
         "QTWEBENGINE_CHROMIUM_FLAGS",

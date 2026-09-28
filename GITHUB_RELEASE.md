@@ -1,26 +1,31 @@
-# MeshCom-Guru v0.3.90
+# MeshCom-Guru v0.4.1 – Vollständiger Mitternachts-Sortierfix
 
-## Änderungen in v0.3.90
+## Neuer Fix
 
-- 💾 **Backup:** Persönliche MeshCom-Guru-Daten aus `~/.MeshCom` können als ZIP-Datei gesichert werden.
-- ♻️ **Restore:** Sicherungen können wiederhergestellt und direkt in die laufende Anwendung übernommen werden.
-- 🔒 **Restore-Schutz:** Beim Neustart nach dem Restore wird ein Überschreiben der restaurierten Daten durch den vorherigen In-Memory-Zustand verhindert.
-- 🔄 **Update-Prüfung:** Die aktuelle GitHub-Release-Version kann geprüft werden; es erfolgt kein automatischer Download oder keine automatische Installation.
-- 🌐 **Übersetzungen:** Die neuen Funktionen sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
+- 🕛 Gespeicherte Chat-Nachrichten und der Chat-Export sortieren bei vorhandenen vollständigen Zeitstempeln jetzt nach Datum **und** Uhrzeit.
+- 🌙 Der Übergang über **00:00 Uhr** ist damit auch in diesen Nebenpfaden chronologisch korrekt.
+- 🛡️ Der funktionierende Live-„Alle“-Datenpfad aus v0.4.0 wurde nicht verändert.
+- 🧩 Alte Karten ohne vollständiges Datum verwenden weiterhin die reine Uhrzeit als Fallback.
 
-## Installation unter Linux / Raspberry Pi
+## Bestehende Funktionen bleiben erhalten
 
-Für die Weltweit-Ansicht wird WebKitGTK benötigt. Nach dem Entpacken einmal aus dem Projektordner ausführen:
+- 💬 Raum- und Private-Chats mit korrekter Bottom-Anker-Ausrichtung.
+- ⚡ Performance-Optimierungen aus v0.3.99.
+- 🕛 Mitternachts-Fix aus v0.3.98, jetzt auf die verbleibenden Sortierpfade erweitert.
+- 📊 Monitor und Stations/MH.
+- 🗺️ Karte und 🌐 Weltweit.
+- 🌦️ Wetter-/Telemetrie-Funktionen.
+- 🖼️ Picrd-Bildvorschau und anklickbare Internetlinks.
+- 🇩🇪 🇬🇧 🇮🇹 🇳🇱 🇫🇷 🇪🇸 🇸🇪 🇵🇱 Mehrsprachige Oberfläche.
+- 🧹 Release ohne `__pycache__`-Ordner und `.pyc`-Dateien.
 
-```bash
-chmod +x install_webkitgtk.sh
-./install_webkitgtk.sh
-```
+## GitHub-ZIP
 
-Danach die Python-Abhängigkeiten aus `requirements.txt` installieren und MeshCom-Guru über `run_linux.sh` oder `python3 main.py` starten.
+Beim Entpacken entsteht direkt der Ordner `MeshCom/`.
+
+**Version:** 0.4.1  
+**Status:** Release
 
 ## Debian-Paket
 
-Das Paket `MeshCom-Guru_v0.3.90_all.deb` installiert MeshCom-Guru unter `/usr/share/MeshCom`, legt den Startmenü-Eintrag einschließlich Icon an und verwendet Architektur `all`.
-
+Das Debian-Paket verwendet die Architektur `all` und installiert MeshCom-Guru unter `/usr/share/MeshCom-Guru`.

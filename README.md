@@ -1,14 +1,9 @@
 # MeshCom-Guru
 
+**Aktuelle Version: 0.4.1**
+
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -16,6 +11,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Räume und private Nachrichten
 - Node-Informationen
 - Kartenanzeige mit Positionsdaten
+- **Karten-Verbindungen:** tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte angezeigt werden.
 - Anzeige eigener Positionsdaten
 - integriertes Menü **Hilfe**
 - integrierte **Anleitung**
@@ -25,217 +21,81 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
 - **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
-- **Einheitliche Chat-Bubbles in den normalen Raum-Tabs:** gleiche Anordnung und Farbgebung wie im funktionierenden Privat-Chat.
-- **Eigene Nachrichten in Räumen:** rechts/grün; empfangene Nachrichten links/blau.
-- **Tab „Alle“:** bleibt von der neuen Raum-Bubble-Darstellung ausdrücklich ausgenommen.
+- **Bildvorschau für Picrd-Links:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
 
-## Version 0.3.90
+### Dokumentation
 
-### Neu in v0.3.90 – Backup/Restore und Update-Prüfung
+Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italienisch-, niederländisch-, französisch-, spanisch- und schwedischsprachigen Handbücher stammen aus v0.3.96; das polnische Handbuch aus v0.3.97:
 
-- 💾 **Backup:** Die persönlichen MeshCom-Guru-Daten aus `~/.MeshCom` können als ZIP-Datei gesichert werden.
-- ♻️ **Restore:** Eine Sicherung kann wiederhergestellt werden. Die wiederhergestellten Daten werden direkt in die laufende Anwendung übernommen und bleiben auch nach dem Neustart erhalten.
-- 🔒 **Sicherer Restore:** Beim Neustart nach einem Restore wird verhindert, dass ein vorheriger leerer In-Memory-Zustand die restaurierten Einstellungen überschreibt.
-- 🔄 **Nach Update suchen:** MeshCom-Guru kann die aktuelle GitHub-Release-Version prüfen und bei Bedarf auf die Release-Seite hinweisen. Es erfolgt keine automatische Installation.
-- 🌐 **Übersetzungen:** Backup, Restore und Update-Prüfung sind in Deutsch, English, Italiano, Nederlands und Français verfügbar.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Chat-, Monitor-, Dashboard-, Karten- und Weltweit-Verarbeitung bleibt unverändert.
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.96_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.96_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.96_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.96_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.96_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
 
-## Version 0.3.89
+## Version 0.4.1 – Vollständiger Mitternachts-Sortierfix
 
-### Neu in v0.3.89 – Via-/Privatnachrichten sauber unterscheiden
+- 🕛 **Mitternachts-Sortierung:** Gespeicherte Chat-Nachrichten und der Chat-Export werden bei vorhandenen vollständigen Zeitstempeln nach Datum **und** Uhrzeit sortiert.
+- 🔄 **00:00-Umsprung:** Nachrichten von `23:xx` und `00:xx` des Folgetages werden nicht mehr allein nach der Uhrzeit verglichen.
+- 🛡️ **Live-„Alle“ unverändert:** Der funktionierende Live-Empfangsweg von v0.4.0 wurde nicht verändert.
+- 🧩 **Rückwärtskompatibilität:** Ältere Karten ohne vollständiges Datum verwenden weiterhin die reine Uhrzeit als Fallback.
 
-- 📡 **Via-Nachrichten:** Die vollständige Zielangabe hinter `>` wird jetzt bei der Privatnachrichten-Erkennung berücksichtigt.
-- 💬 **Privat-Chat:** Ein Header wie `OE5HWN-12,DO2GG-1 > OE5XLM-12,232` wird nicht mehr fälschlich als reine Privatnachricht erkannt, weil nach dem Ziel-Rufzeichen noch die Raumangabe `,232` folgt.
-- 🧭 **Zielauswertung:** Die App prüft den Zielteil rechts vom `>` vollständig, bevor eine Nachricht einem Privat-Chat zugeordnet wird.
-- 🧩 **Stabilität:** Die bestehende Empfangs-, Monitor-, Raum-, Dashboard- und Chat-Verarbeitung bleibt ansonsten unverändert.
+## Version 0.4.0 – Raum-Chat Bottom-Anchor Fix
 
-## Version 0.3.88
+- 💬 Raum-/Privat-Chats bleiben beim Wechsel zwischen gespeicherten Räumen zuverlässig unten ausgerichtet.
+- 🔄 Der Wechsel zwischen Räumen benötigt keinen zweiten Klick mehr, um die letzte Nachricht unten anzuzeigen.
+- 🛠️ Das Chat-Layout verwendet den freien Bereich oberhalb der Nachrichten statt unterhalb.
+- 🛡️ Die Performance-Optimierungen und Stabilitätsfixes aus v0.3.99 bleiben erhalten.
 
-## Neu in v0.3.88 – Rufzeichen-Menü und QRZ-Verknüpfung
+## Version 0.3.99 – Performance-Optimierung
 
-- 📡 **Rufzeichen-Menü:** Rufzeichen können im Dashboard und in der klassischen Ansicht über das neue Kontextmenü direkt weiterverarbeitet werden.
-- 💬 **Privat Chat:** Über das Rufzeichen-Menü kann direkt ein privater Chat mit dem ausgewählten Rufzeichen geöffnet werden.
-- 💬 **@Rufzeichen:** Über den Menüpunkt `@Rufzeichen` wird das Rufzeichen als Erwähnung für das Nachrichtenfeld vorbereitet.
-- 🌐 **QRZ.com:** Über das Rufzeichen-Menü lässt sich die passende QRZ.com-Seite direkt im normalen Systembrowser öffnen.
-- 🔎 **QRZ-Rufzeichen:** Für QRZ.com wird automatisch nur das reine Rufzeichen verwendet. Beispiel: `DO1ABC-12` wird bei QRZ.com zu `DO1ABC`.
-- 🧩 **Stabilität:** Die neue Rufzeichenfunktion wurde ohne Eingriff in die bestehende Empfangs-, Monitor- und Chat-Verarbeitung umgesetzt.
+- ⚡ **Flüssigere Oberfläche:** Unnötige vollständige Aktualisierungen der Kartenansicht wurden reduziert.
+- 🗺️ **Karte:** Marker werden nicht mehr bei jedem 5-Sekunden-Refresh vollständig gelöscht und neu aufgebaut, wenn sich die Kartendaten nicht geändert haben.
+- 💬 **„Alle“:** Das komplette Chat-Dokument wird nicht mehr bei jedem Refresh neu erzeugt, wenn keine neuen Daten vorliegen.
+- 📊 **Statistik:** Unveränderte Statistikdaten werden nicht mehr unnötig neu dargestellt.
+- 🔄 **Weniger doppelte Aktualisierungen:** Überflüssige zweite Refresh-Durchläufe für Karte und Statistik wurden entfernt.
+- 🛡️ **Funktionen erhalten:** Empfang, Senden, Räume, Private Chats, Monitor, MH, Karte, Weltweit, Wetter, Picrd-Vorschau und die bisherigen Stabilitätsfixes bleiben erhalten.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
 
+## Version 0.3.98 – Final
 
-## Neu in v0.3.87 – Dashboard-Feinschliff und Monitor verbessert
+- 🔄 **„Alle“ mit eigenem Live-Datenbereich:** Beim Wechsel zu „Alle“ werden die aktuellen Daten direkt aus dem eigenen Live-Puffer aufgebaut.
+- ⚡ **Sofortige Darstellung:** Empfangene MSG/POS/TEL/ACK-Daten erscheinen ohne Warten auf einen zusätzlichen WebService-Refresh.
+- 🌡️ **Wetter-/TEL-Daten:** Beim Wechsel zu „Alle“ müssen aktuelle Telemetriedaten nicht mehr auf den nächsten Refresh warten.
+- 📤 **Eigene Nachrichten:** Gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
+- 🛡️ **Getrennter Empfangspfad:** Die bestehende Monitor-/UDP-Verarbeitung bleibt von der „Alle“-Darstellung getrennt.
+- 🇵🇱 **Polnisch:** Die in v0.3.97 ergänzte polnische Sprache bleibt Bestandteil des finalen Releases.
+- 🖼️ **Picrd-Vorschau:** Die in v0.3.96 eingeführte Bildvorschau bleibt Bestandteil des finalen Releases.
+- 🕛 **Mitternachts-Fix:** Die zeitliche Verarbeitung bleibt auch beim Wechsel über 00:00 Uhr korrekt und hängt nicht mehr allein von der Uhrzeit ab.
+- 🧪 **Langzeittest:** Der finale Stand wurde über 12 Stunden ohne erneutes Auftreten des zuvor beobachteten Fehlers getestet.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
 
-- 📊 **Statistik:** Das Statistikfeld im Dashboard ist jetzt auch bei vielen Einträgen scrollbar, sodass alle Werte und Raumstatistiken erreichbar bleiben.
-- 📡 **Monitor:** Die Schaltflächen **Pause** und **Leeren** wurden etwas verbreitert und besser an die übrigen Bedienelemente angepasst.
-- 🔎 **Monitor-Spalten:** **Rufzeichen** und **Ziel** haben jetzt dieselbe Breite, damit auch längere Rufzeichen und Ziele vollständig lesbar bleiben.
-- 🌐 **Übersetzungen:** Der Monitor-Filter **„Alle“** verwendet jetzt beim Sprachwechsel die passende Übersetzung in Deutsch, English, Italiano, Nederlands und Français.
-- 📻 **Räume:** Die Überschrift **„Räume“** bleibt vollständig sichtbar; der Button **„Raum hinzufügen“** wurde dafür fein angepasst, ohne die übrige Raumliste zu verändern.
-- ✨ **Kleine optische Verbesserungen:** Mehrere Monitor- und Dashboard-Bedienelemente wurden für eine bessere Lesbarkeit und ein einheitlicheres Erscheinungsbild fein abgestimmt.
+## Version 0.3.97 – Polnische Sprache
 
+- 🇵🇱 **Polnische Benutzeroberfläche:** Polski ergänzt und in die bestehende Sprachumschaltung integriert.
+- 📖 **Integrierte Anleitung:** Die Hilfe/Anleitung ist auch vollständig auf Polnisch verfügbar.
+- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`.
+- 🛡️ **Bestehende Funktionen unverändert:** Empfang, Senden, Räume, Private Chats, „Alle“, Monitor, MH, Karte, Weltweit, Picrd-Vorschau und Update-Prüfung wurden nicht durch einen neuen Nachrichtenweg ersetzt.
+- 🧩 **Sprachmechanismus:** Polnisch ist Teil der normalen gespeicherten Spracheinstellung in `~/.MeshCom/settings.ini`.
 
-## Neu in v0.3.86 – MH-Liste auf 250 Stationen erweitert
+## Version 0.3.96
 
-- 📡 **MH-Liste:** Es werden maximal **250 zuletzt gehörte Stationen** gespeichert und angezeigt.
-- 🧹 Beim Empfang einer 251. Station wird automatisch der **älteste MH-Eintrag entfernt**.
-- 🖥️ **Klassische Ansicht:** Die MH-Liste kann bis zu 250 Stationen enthalten.
-- 📊 **Dashboard:** Die Dashboard-MH-Liste übernimmt ebenfalls bis zu 250 Stationen.
-- ⚡ Dadurch bleibt die MH-Liste auch bei langer Laufzeit überschaubar und speicherschonend.
-- 🔄 Die Einträge werden nach dem tatsächlichen letzten Empfangszeitpunkt sortiert.
-- 📡 **Dashboard-Monitor:** Pause, Leeren, Filter, Suche und Auto-Scroll stehen jetzt direkt über dem Monitor zur Verfügung – wie in der klassischen Ansicht.
-- 🧹 **MH-Leeren:** Die Dashboard-MH-Liste kann direkt über einen **Leeren**-Button gelöscht werden.
-- 📊 **Statistik:** Die Dashboard-Statistik wird übersichtlich untereinander angezeigt.
-- 📡 **Telemetrie:** Die Statistik zählt zusätzlich die seit Programmstart empfangenen Telemetrie-Datensätze.
-- 🧩 **Layout:** Die vorhandenen Dashboard-Fenster behalten ihre bisherigen Größen und Positionen.
+### Neu in v0.3.96 – Picrd-Bildvorschau
 
-
-## Neu in v0.3.85 – Dashboard-Layout und Weltweit stabilisiert
-
-- 🖥️ **Dashboard-Layout angepasst:** Die Aufteilung entspricht jetzt dem festgelegten Referenzlayout.
-- 💬 **Chatbereich:** Der Chat wurde gegenüber der vorherigen Aufteilung verbreitert.
-- 🗺️ **Karte und 🌐 Weltweit:** Beide Bereiche wurden entsprechend etwas kompakter gehalten, damit der zusätzliche Platz dem Chat zur Verfügung steht.
-- 📻 **Räume:** **Räume** und **+ Raum hinzufügen** stehen direkt nebeneinander. Die Größe und Anordnung der Raum-Buttons bleiben unverändert.
-- 🌐 **Weltweit:** Die bestehende WebKitGTK-Integration bleibt erhalten.
-- 🖱️ **Mausrad:** Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
-
-## Neu in v0.3.84 – Nachrichtenanzeige und Monitor stabilisiert
-
-- 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden. Ein zweites „test“ wird dadurch nicht mehr als Duplikat verworfen.
-- 📡 **Monitor – eigene Sendungen:** Eine erfolgreich an den MeshCom-WebService übertragene eigene Nachricht wird sofort im Monitor gespeichert und angezeigt – unabhängig davon, ob später ein UDP-/MH-Echo über die Antenne zurückkommt.
-- 📡 **Eigenes Echo:** Kommt das eigene Echo später zurück, wird es mit der vorhandenen lokalen Sendung zusammengeführt und nicht doppelt angezeigt.
-- 🔎 **Exakte Zuordnung:** Beim Zusammenführen wird der exakte Nachrichtentext verwendet, damit unterschiedliche Nachrichten nicht versehentlich zusammengeführt werden.
-- ⏸️ **Monitor-Pause:** Eigene Sendungen werden auch während einer Monitor-Pause intern gespeichert.
-- 🧩 **Lange Laufzeit:** Wiederverwendete MsgIds können neue Nachrichten nicht mehr aus dem Chat verdrängen.
-- Die bestehende MH-/UDP-Empfangsverarbeitung bleibt unverändert.
-
-## Neu in v0.3.83 – Raum / Ziel bei „Alle“
-
-- 💬 **Dashboard: „Alle“ setzt das Sendeziel zurück:** Beim Wechsel aus einem Raum auf **Alle** wird das Feld **Raum / Ziel** jetzt sofort geleert. Der zuvor ausgewählte Raum bleibt dadurch nicht mehr als letztes Sendeziel stehen.
-- Klassische Ansicht und Dashboard verwenden beim Wechsel auf **Alle** dasselbe Verhalten.
-
-
-
-
-## Neu in v0.3.82 – Einstellungen speichern
-
-- **⚙️ Einstellungen speichern:** Beim Speichern der Einstellungen im **Dashboard** und in der **klassischen Ansicht** wird die bestehende MeshCom-Verbindung nicht mehr unnötig getrennt.
-- Die Verbindung bleibt online, anstatt durch das Speichern einen Disconnect mit anschließendem automatischen Reconnect auszulösen.
-- Die bereits funktionierenden Link-, Rufzeichen-, Dashboard- und Chat-Funktionen aus **v0.3.81** bleiben erhalten.
-
-## Neu in v0.3.81 – Links und Rufzeichen in Raum-Chats
-
-- **🌐 Weltweit:** Externe Internetlinks in der eingebetteten ÖVSV-Seite öffnen im normalen Systembrowser; die Weltweit-Seite bleibt eingebettet.
-- **🔗 Raum-Chats – Internetlinks:** Internetlinks in den Nachrichten der Räume sind wieder anklickbar und öffnen im normalen Systembrowser.
-- **📡 Raum-Chats – Rufzeichen:** Anklickbare Rufzeichen in den Räumen öffnen direkt den passenden privaten Chat.
-- **✕ Privatchats:** Private Chats im Dashboard besitzen einen sichtbaren X-Button zum Schließen.
-- **🔢 Zeichenzähler:** Das Dashboard-Nachrichtenfeld zeigt live `0/149` bis `149/149`.
-
-## Neu in v0.3.80 – WebKitGTK für Weltweit
-
-- **🌐 Weltweit direkt im Fenster:** Die echte ÖVSV-MeshCom-Webseite wird im Weltweit-Bereich über **WebKitGTK** eingebettet.
-- **Automatische Plattform-Erkennung:** MeshCom-Guru erkennt selbst, ob es unter **Linux** oder **Windows** läuft, und verwendet für **Weltweit** automatisch die passende Web-Technik: **WebKitGTK unter Linux/Raspberry Pi** und **QtWebEngine unter Windows**. Die OSM-Karte bleibt auf beiden Plattformen unverändert über QtWebEngine.
-- **ACTIVITY automatisch:** Beim Laden wird weiterhin automatisch die **ACTIVITY**-Ansicht ausgewählt.
-- **RAM-schonender Weltweit-Bereich:** Weltweit verwendet keinen eigenen QtWebEngine-/Chromium-Renderer mehr.
-- **OSM-Karte bleibt erhalten:** Die vorhandene OSM-/Leaflet-Karte läuft weiterhin über die bisherige QtWebEngine-Implementierung.
-- **Startgröße korrigiert:** Die Weltweit-Webseite wird direkt mit der verfügbaren Höhe angezeigt; der Splitter muss nicht mehr zuerst bewegt werden.
-- Für WebKitGTK ist unter Debian/Raspberry Pi einmal `./install_webkitgtk.sh` auszuführen.
-- **Übersetzungen aktualisiert:** Dashboard-, Monitor-, MH- und Wettertexte wurden in Deutsch, English, Italiano, Nederlands und Français ergänzt bzw. korrigiert.
-- **Temperaturanzeige:** Die Bezeichnung wird ohne den fehlerhaften zusätzlichen Buchstaben dargestellt. Beim Sprachwechsel werden die Wetterwerte aus den Rohdaten neu aufgebaut.
-
-## Automatische Web-Engine-Auswahl
-
-MeshCom-Guru erkennt die verwendete Plattform automatisch. Für den Tab **🌐 Weltweit** wird dadurch ohne manuelle Auswahl die passende Web-Engine verwendet:
-
-- **Linux / Raspberry Pi:** **WebKitGTK** – dadurch wird für Weltweit kein eigener QtWebEngine-/Chromium-Renderer verwendet.
-- **Windows:** **QtWebEngine** – die bisher bewährte Windows-Integration bleibt erhalten.
-- **Karte / OSM:** Die Kartenansicht verwendet weiterhin **QtWebEngine**.
-
-Der Benutzer muss die Plattform nicht selbst einstellen.
-
----
-
-## Neu in v0.3.79 – Emoji-Fix und Dashboard
-
-- **Emoji-Popup:** Das Fenster öffnet sich direkt über dem gedrückten Smiley-Symbol.
-
-### Emoji-Fix in v0.3.79
-- Der Emoji-Picker merkt sich jetzt das Nachrichtenfeld, das beim Öffnen aktiv war.
-- Dadurch werden keine alten Smileys aus dem anderen Nachrichtenfeld mehr eingefügt.
-- Nach der Auswahl bleibt der Cursor im richtigen Nachrichtenfeld.
-
-## Neu in v0.3.78 – Neues Dashboard
-
-Das **neue Dashboard** steht in v0.3.78 ganz im Mittelpunkt. Unter **Einstellungen → Darstellung** kann jederzeit zwischen **Dashboard** und **Klassisch** gewechselt werden. Beide Ansichten verwenden dieselben MeshCom-Daten und Funktionen.
-
-### Dashboard in v0.3.78
-- **Rufzeichen direkt im Dashboard:** Das eigene Rufzeichen kann jetzt oben in der ersten Reihe direkt eingegeben und gespeichert werden.
-- **Kompakte Kopfzeilen:** Raum/Ziel, Node Info, GPS und „Einstellungen speichern“ sind übersichtlich in der zweiten Reihe angeordnet.
-- **GPS-Schaltfläche nur einmal:** „GPS speichern“ erscheint im Dashboard nur noch an einer Stelle.
-- **GPS-Synchronisation:** Beim Wechsel von **Klassisch** zu **Dashboard** werden die aktuell eingegebenen GPS-Daten der klassischen Ansicht sofort ins Dashboard übernommen.
-
-- **Neues Dashboard-Design:** Übersichtliche Gesamtansicht mit Räumen, Alle, Privaten Chats, Karte, Weltweit, Monitor, Stations / MH und Statistik.
-- **Alle oben:** Die Ansicht **Alle** steht im Dashboard direkt unter dem Raumfilter.
-- **Stabile Chat-Bubbles:** Die Nachrichtenblasen bleiben beim Aktualisieren stabil und springen nicht unnötig.
-- **Ungelesene Chats:** Neue Nachrichten markieren Räume, **Alle** und Private Chats sichtbar.
-- **Private Chats:** Die Liste besitzt einen eigenen Scrollbereich, damit viele private Chats Karte, Weltweit und die unteren Bereiche nicht verdrängen.
-- **Karte:** Stations-/Positionsmarker bleiben auch im Dashboard erhalten.
-- **🌐 Weltweit:** Die MeshCom-Activity-Seite ist direkt im Dashboard eingebettet. Die Webseite übernimmt ihre eigene Aktualisierung; es gibt keinen zusätzlichen 15-Sekunden-Refresh.
-- **Weltweit-Selbstheilung:** Bei einem Renderer-Absturz oder einem länger anhaltenden Hänger wird die eingebettete Weltweit-Webseite automatisch wiederhergestellt.
-- **Klassisch-Fix:** Beim Wechsel zwischen Dashboard und Klassisch bleibt die OSM-Karte als QtWebEngine-Ansicht erhalten; Weltweit wird über WebKitGTK eingebettet.
-- **Monitor:** Lange Informationen und Nachrichten werden vollständig dargestellt und bei Bedarf umgebrochen; die Informationsspalte bleibt lesbar.
-- **Auto-Reconnect:** Nach einem unbeabsichtigten Verbindungsverlust wird automatisch erneut verbunden; die bisherige Onlinezeit läuft beim Reconnect weiter. Ein manuelles Trennen setzt die Onlinezeit bewusst zurück.
-- **Einstellungen speichern ohne Disconnect:** Das Speichern persönlicher Einstellungen trennt die bestehende MeshCom-Verbindung nicht mehr. Die Verbindung bleibt beim Speichern online.
-- **Wetter und GPS:** Wetterdaten, Wetter-Aktualisierung, Wetter-Senden und **GPS Eingabe** wurden in einer kompakten Dashboard-Zeile zusammengeführt.
-- **Mehrsprachigkeit:** Die neuen Dashboard-Bezeichnungen und Funktionen sind in Deutsch, English, Italiano, Nederlands und Français übersetzt.
-
-### Rufzeichenfarbe – Änderung in v0.3.72
-
-- Rufzeichen in den blauen Nachrichtenfeldern der normalen Räume und Privat-Chats werden dunkler dargestellt.
-- Der Tab „Alle“ bleibt von dieser Änderung ausgenommen.
-
-### MH-Liste – Korrektur in v0.3.71
-
-- Die MH-Liste übernimmt nur noch Stationen aus tatsächlich über LoRa empfangenen EXTUDP-Paketen (`src_type=lora` bzw. `node`).
-- UDP-/Gateway-Verkehr wird nicht mehr fälschlich als „gehörte“ Station in MH eingetragen.
-- Bei Relay-Pfaden wird ausschließlich das erste Rufzeichen als ursprünglicher Absender verwendet; weitere Rufzeichen sind Relay-Hops.
-
-
-### Neu in v0.3.70
-
-- Sichtbare Verbindungsanzeige oben im Fenster: **🟢 ONLINE** bzw. **🔴 OFFLINE**.
-- Anzeige, wie lange die aktuelle Verbindung bereits besteht (**Online seit HH:MM:SS**).
-- Datum und Uhrzeit in derselben gut lesbaren Größe wie der Online-Status.
-- Neuer fester Tab **📊 Statistik** ohne Schließen-X.
-- Statistikübersicht für Nachrichten und Räume.
-
-
-
-- Raum-Chats, Privat-Chats und Tab „Alle“
-- Bewusst geschlossene Privat-Tabs bleiben geschlossen, bis tatsächlich eine neue private Nachricht eintrifft.
-- Einheitliche Chat-Bubbles in normalen Raum-Tabs
-- Privat-Sendestatus: **⏳** bis zum echten Empfänger-ACK, danach **✓✓**
-- **⚡ Schnelltexte** mit Verwaltung und dauerhaftem Speichern
-- **😊 Emoji-Picker** mit 149-Zeichen-Limit
-- **📡 Monitor** für UDP 1799 mit ALLE / MSG / POS / TEL / ACK, Suche, Pause und Auto-Scroll
-- **📋 MH – Most Recently Heard** mit Rufzeichen, Entfernung, RSSI, SNR, Batterie und letztem Empfang
-- OSM-/Leaflet-Karte und Positionsdaten
-- Node Info
-- Wetterdaten / WX
-- Sound-Einstellungen und Hell-/Dunkel-Theme
-- Raumfilter für bis zu fünf Räume
-- persönliche Einstellungen unter `~/.MeshCom/settings.ini`
-- **Deutsch / English / Italiano / Nederlands / Français:** umschaltbare Benutzeroberfläche mit gespeicherter Spracheinstellung
-- **Chat-Farben:** gemeinsamer Chat-Hintergrund für alle Chat-Ansichten; separate Schriftfarbe für „Alle“
-- Standard für Chat-Farben: **schwarzer Hintergrund / weiße Schrift**
-- Übersetztes Qt-Kontextmenü für Eingabefelder (Kopieren, Einfügen, Ausschneiden, Löschen usw.)
-- Stabileres Beenden mit sauberem UDP-Shutdown
-- Chat-Bubbles werden bei einer oder wenigen Nachrichten am unteren Rand des Chatbereichs ausgerichtet; bei längeren Chats bleibt normales Scrollen erhalten
-- Beim manuellen Hochscrollen wird die gewählte Position nicht durch neue Nachrichten überschrieben
-- Sendererkennung in Raum- und Privat-Chats berücksichtigt den ursprünglichen Absender auch bei weitergeleiteten Nachrichten
-
----
-
+- 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.
+- 🔗 **Original-Link bleibt erhalten:** Ein Klick auf den Link öffnet weiterhin die ursprüngliche Adresse im Standard-Webbrowser.
+- 🌐 **Normale Internetlinks:** Links ohne Bildziel werden wie bisher als anklickbare Links dargestellt.
+- 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Bildvorschauen werden bei späteren Chat-Aktualisierungen nicht erneut eingefügt.
+- 📡 **Nachrichtenweg unverändert:** Empfang, Senden, Räume, Private Chats und „Alle“ bleiben funktional unverändert.
+- 🌐 **Mehrsprachig:** Die neue Funktion ist in der integrierten Anleitung in Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski dokumentiert.
+- 📄 **PDF-Handbücher:** Alle sieben Handbücher enthalten die Ergänzung zu v0.3.96.
 
 # Sprache / Language
 
-Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch, English, Italiano, Nederlands und Français** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
+Unter **Einstellungen → Sprache / Language …** kann zwischen **Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski** gewechselt werden. Die Auswahl wird in `~/.MeshCom/settings.ini` gespeichert und beim nächsten Start wieder verwendet.
 
 Die Benutzeroberfläche wird übersetzt; empfangene Nachrichten, Rufzeichen, Raum- und Zielnummern sowie persönliche Inhalte bleiben unverändert. Die integrierte **Hilfe → Anleitung** folgt der gewählten Sprache.
 
@@ -287,9 +147,11 @@ MeshCom-Nachrichten dürfen maximal **149 Zeichen** enthalten. Das Nachrichtenfe
 
 Damit ist sofort sichtbar, wie viele Zeichen noch zur Verfügung stehen.
 
-## Internetlinks im Chat
+## Internetlinks und Bildvorschau im Chat
 
 Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Links dargestellt. Ein Klick auf einen Link mit `http://` oder `https://` öffnet die Adresse im Standard-Webbrowser des Systems.
+
+**Picrd-Bildlinks** werden zusätzlich geprüft. Wenn das Linkziel ein Bild bereitstellt, zeigt MeshCom-Guru eine kleine Bildvorschau direkt im Chat. Der ursprüngliche Link bleibt unter der Vorschau anklickbar. Links ohne Bildziel werden weiterhin ganz normal dargestellt. Bereits angezeigte Vorschauen werden bei späteren Chat-Aktualisierungen nicht doppelt eingefügt.
 
 ## Chat-Export
 
@@ -483,7 +345,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.3.61**
+**Version 0.4.1**
 
 **By Goldisoft 2026**
 
@@ -623,7 +485,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.3.75**  
+**MeshCom-Guru v0.4.1**  
 **By Goldisoft 2026**
 
 
@@ -635,12 +497,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die aktuelle PDF-Anleitung liegt als `docs/MeshCom-Guru_Anleitung_v0.3.70.pdf` im Projekt.
-Ältere PDF-Versionen bleiben zur Dokumentationshistorie im Ordner `docs/` erhalten.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Ältere PDF-Versionen im Ordner `docs/` bleiben als Dokumentationshistorie erhalten.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

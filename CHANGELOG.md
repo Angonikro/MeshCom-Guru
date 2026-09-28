@@ -1,5 +1,114 @@
+## v0.4.1 – Vollständiger Mitternachts-Sortierfix
+
+- 🕛 **Chronologische Sortierung:** Lokaler Nachrichten-Cache und Chat-Export verwenden bei vollständigen Zeitstempeln Datum und Uhrzeit.
+- 🌙 **Übergang über 00:00 Uhr:** `23:xx` bleibt vor `00:xx` des folgenden Tages.
+- 🛡️ **Live-„Alle“ bleibt unverändert:** Der funktionierende Live-Datenpfad aus v0.4.0 wurde nicht verändert.
+- 🧩 **Legacy-Fallback:** Daten ohne Datum verwenden weiterhin die reine Uhrzeit als Sortier-Fallback.
+- 📖 **Dokumentation:** README und GitHub-Release-Dokumentation wurden vollständig auf v0.4.1 aktualisiert.
+
+## v0.4.0 – Raum-Chat Bottom-Anchor Fix
+
+- 💬 **Raum-/Privat-Chat:** Die Nachrichten werden beim Wechsel zwischen gespeicherten Räumen wieder zuverlässig an der unteren Kante des Chatbereichs ausgerichtet.
+- 🔄 **Raumwechsel:** Der Wechsel z. B. **Raum 20 → Raum 262 → Raum 20** benötigt keinen zweiten Klick mehr, damit die letzte Nachricht korrekt unten steht.
+- 🛠️ **Ursachenbehebung:** Die Ausrichtung des Chat-Layouts wurde korrigiert. Der freie Layout-Bereich liegt jetzt oberhalb der Nachrichten statt darunter.
+- 🛡️ **Stabilitätsprinzip:** Nachrichteninhalt, Sortierung, Cache, Empfang, „Alle“-Logik und die v0.3.99-Performance-Optimierungen wurden nicht verändert.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
+## v0.3.99 – Performance-Optimierung
+
+- ⚡ **GUI-Performance:** Unnötige vollständige Aktualisierungen der Oberfläche wurden reduziert.
+- 🗺️ **Karte:** Marker werden nur noch neu aufgebaut, wenn sich die Kartendaten tatsächlich geändert haben. Dadurch wird insbesondere beim Zoomen und Verschieben der Karte weniger Arbeit erzeugt.
+- 💬 **„Alle“:** Das vollständige `QTextBrowser`-Dokument wird nur noch bei geänderten Daten neu aufgebaut.
+- 📊 **Statistik:** Die Anzeige wird nur noch aktualisiert, wenn sich die zugrunde liegenden Werte geändert haben.
+- 🔄 **Refresh-Optimierung:** Doppelte bzw. unnötige Aktualisierungsdurchläufe wurden entfernt.
+- 🛡️ **Bestehende Funktionen:** Empfang, Senden, Räume, Private Chats, Monitor, MH, Karte, Weltweit, Wetter, Picrd-Vorschau sowie der v0.3.98-Mitternachts-Fix bleiben erhalten.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
+## v0.3.98 – Final – Stabilitäts- und Mitternachts-Fix
+
+- 🔄 „Alle“ wird beim Tab-Wechsel ausschließlich aus dem eigenen `monitor_all_rows`-Live-Puffer aufgebaut.
+- 🚫 Beim Wechsel Raum → „Alle“ wird nicht mehr der alte WebService-/Nachrichten-Cache als Zwischenstand angezeigt.
+- ⚡ Empfangene MSG/POS/TEL/ACK-Daten werden direkt in den „Alle“-Puffer übernommen und sofort dargestellt.
+- 🌡️ Wetter-/TEL-Daten müssen beim Wechsel zu „Alle“ nicht mehr auf den nächsten 5-Sekunden-Refresh warten.
+- 📤 Eigene gesendete Nachrichten werden ebenfalls direkt in den „Alle“-Puffer übernommen.
+- 🛡️ Der bestehende Monitor-/UDP-Empfang bleibt von der „Alle“-Darstellung getrennt.
+- 🕛 **Mitternachts-Fix:** Die zeitliche Verarbeitung funktioniert auch beim Übergang über 00:00 Uhr korrekt und hängt nicht mehr ausschließlich von der Uhrzeit ab.
+- 🧪 **Langzeittest:** Der finale v0.3.98-Stand lief über 12 Stunden ohne erneutes Auftreten des zuvor beobachteten Fehlers.
+- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im Release.
+
 # CHANGELOG
 
+## v0.3.97 – Polnische Sprache
+
+- 🇵🇱 **Polnische Benutzeroberfläche:** Polski als achte Sprache in die bestehende Sprachumschaltung aufgenommen.
+- 🔄 **Gespeicherte Sprache:** `pl` wird wie die bisherigen Sprachen in `~/.MeshCom/settings.ini` gespeichert und beim Neustart wiederhergestellt.
+- 📖 **Integrierte Anleitung:** Die komplette Hilfe/Anleitung wurde um eine polnische Version ergänzt.
+- 📄 **PDF-Handbuch:** Neues polnisches Benutzerhandbuch `MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`.
+- 🛡️ **Stabilitätsprinzip:** Der bestehende Nachrichten-, Empfangs-, Sende-, Raum-, Monitor-, Karten-, Weltweit- und Picrd-Codepfad wurde für die Sprachergänzung nicht verändert.
+- 🧹 **Release sauber gehalten:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
+- 🔄 **Sofortige Sprachumschaltung:** Die Dashboard-Beschriftung „Hotspot IP“ wird beim Wechsel auf Polnisch jetzt sofort aktualisiert; ein Neustart ist dafür nicht mehr erforderlich.
+
+
+## v0.3.96 – Picrd-Bildvorschau
+
+- 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.
+- 🔗 **Original-Link bleibt anklickbar:** Die ursprüngliche Adresse bleibt unter der Vorschau verfügbar und öffnet sich im Standard-Webbrowser.
+- 🌐 **Normale Internetlinks:** Links ohne Bildziel werden weiterhin wie bisher dargestellt.
+- 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Vorschauen werden auch nach späteren Chat-Aktualisierungen nicht erneut eingefügt.
+- 📡 **Bestehende Nachrichtenfunktionen bleiben erhalten:** Empfang, Senden, Räume, Private Chats, Monitor und „Alle“ wurden für die Vorschaufunktion nicht verändert.
+- 🌐 **Mehrsprachige Anleitung:** Die neue Funktion ist in Deutsch, English, Italiano, Nederlands, Français, Español und Svenska beschrieben.
+- 📄 **PDF-Handbücher:** Alle sieben PDF-Handbücher wurden um die v0.3.96-Funktionsbeschreibung ergänzt.
+
+## v0.3.95 – Karten-Verbindungen
+
+- 🔗 **Karten-Verbindungen:** Tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte dargestellt werden.
+- 📡 **Direkte LoRa-Verbindung:** Eine direkte Verbindung zur eigenen Station wird nur bei tatsächlichem lokalem LoRa-Empfang erkannt.
+- 🛡️ **Konservative Erkennung:** Es werden keine Verbindungen aus Position, Entfernung oder vermuteter Funkreichweite erzeugt.
+- 🖱️ **Node-Auswahl:** Bei aktivierter Verbindungsanzeige hebt ein Klick auf einen Node dessen erkannten Verbindungen hervor.
+- 🗺️ **Beide Kartenansichten:** Die Funktion ist in der klassischen Karte und im Dashboard verfügbar.
+- 🌐 **Übersetzungen:** „Verbindungen“, „Legende“ und die zugehörigen Kartenhinweise sind in allen sieben unterstützten Sprachen verfügbar.
+- 📖 **Anleitung:** Die integrierte Anleitung wurde in allen sieben Sprachen um die Karten-Verbindungen ergänzt.
+- 📄 **PDF-Handbücher:** Alle sieben PDF-Handbücher wurden auf v0.3.95 aktualisiert.
+- 🧹 **Release bereinigt:** Die experimentelle Verbindungs-Debug-Ansicht und der Rohdaten-Logger sind nicht im Release enthalten.
+- 📊 **RSSI/SNR:** Die Kartenlinien zeigen bewusst keine RSSI-/SNR-Werte pro Hop, da EXTUDP nur den Empfangswert des gesamten Frames liefert.
+
+## v0.3.94 – „Alle“ folgt dem Monitor-Empfangsstrom
+
+- 📡 **Ein Empfangsstrom:** „Alle“ übernimmt jetzt denselben bereits verarbeiteten UDP-Datenstrom wie der Monitor.
+- 📨 **Keine UDP/WebService-Doppelung:** Eine MSG wird nicht mehr parallel aus UDP und WebService in „Alle“ eingetragen.
+- 📍 **POS sichtbar:** Positionsdaten werden ebenfalls in „Alle“ angezeigt, wenn der Raumfilter ausgeschaltet ist.
+- 🌡️ **TEL sichtbar:** Telemetrie-/Statusdaten werden ebenfalls in „Alle“ übernommen.
+- ✓ **ACK sichtbar:** ACK-Einträge bleiben Teil desselben Monitor-Empfangsstroms.
+- 🔎 **Raumfilter:** Bei aktiviertem Raumfilter bleiben nur passende Raum-/Direktnachrichten bzw. globale Ziele sichtbar; nicht raumgebundene POS/TEL-Daten können damit ausgeblendet werden.
+- 🛡️ **Monitor unverändert:** Die bestehende UDP-, MH-, Karten- und Monitorverarbeitung wurde nicht durch einen zweiten Empfangspfad ersetzt.
+
+
+## v0.3.93 – Spanisch und Schwedisch
+
+- 🇪🇸 **Spanische Benutzeroberfläche:** Spanisch ergänzt, einschließlich der integrierten Anleitung.
+- 🇸🇪 **Schwedische Benutzeroberfläche:** Schwedisch ergänzt, einschließlich der integrierten Anleitung.
+- 🔄 **Sprachumschaltung:** Spanisch und Schwedisch werden sofort angewendet und nach einem Neustart korrekt wiederhergestellt.
+- 📡 **Monitor:** Dynamische Zähler wie „8 angezeigt · 8 gespeichert“ werden jetzt vollständig übersetzt.
+- 🖥️ **Klassische Ansicht:** Einstellungen, GPS, Filter, Wetter, Nachrichten und Bedienelemente werden beim Sprachwechsel korrekt aktualisiert.
+- 🗺️ **Karte:** Der Karten-Tab wird unabhängig von seiner vorherigen Sprache zuverlässig neu übersetzt.
+- 💬 **„Alle“:** Der Dashboard-Eintrag „Alle“ wird beim Sprachwechsel ebenfalls zuverlässig aktualisiert.
+- 🧭 **GPS:** GPS-Beschriftungen und zugehörige Eingabefelder sind in allen unterstützten Sprachen berücksichtigt.
+- 🌐 **Weltweit:** Der klassische Weltweit-Tab wird beim Sprachwechsel jetzt zuverlässig über das Widget aktualisiert.
+- 📝 **Dokumentation:** README und GitHub-Release-Dokumentation auf v0.3.93 aktualisiert.
+- 🛠️ **Stabilität:** Nachrichten-, Empfangs-, „Alle“-, Monitor-, Karten- und Weltweit-Verarbeitung wurden durch diese Übersetzungsänderungen nicht verändert.
+
+## v0.3.92 – Langzeitstabilität von „Alle“
+
+- 📨 **„Alle“-Langzeit-Fix:** Neue empfangene Raum-Nachrichten bleiben auch nach mehreren Stunden in „Alle“ sichtbar.
+- 📡 **Gezielter Fallback:** Der zusätzliche Empfangspfad ist auf „Alle“ begrenzt und greift nicht in Privat-Chats oder die normalen Raum-Tabs ein.
+- 🛡️ **Weltweit/Monitor/Karte:** Diese Bereiche und ihre bestehende Verarbeitung bleiben unverändert.
+- 🧩 **Stabilität:** Die bestehende Nachrichten- und Sendelogik bleibt erhalten.
+
+## v0.3.91 – „No messages available.“ nicht mehr als Chatnachricht
+
+- 🧹 **No-Messages-Fix:** Die WebService-Meldung **„No messages available.“** wird nicht mehr als normale Chatnachricht übernommen oder im lokalen Nachrichtenpuffer gespeichert.
+- 🌐 Die entsprechende Statusmeldung wird auch in den vorhandenen Sprachvarianten erkannt.
+- 🛠️ **Stabilität:** Der Empfangs- und Chatablauf bleibt ansonsten unverändert.
 ## v0.3.90 – Backup/Restore und Update-Prüfung
 
 - 💾 **Backup:** Die persönlichen MeshCom-Guru-Daten aus `~/.MeshCom` können jetzt als ZIP-Sicherung gespeichert werden.
@@ -61,8 +170,6 @@
 - 🔘 Größe und Anordnung der Raum-Buttons bleiben erhalten.
 - 🖱️ Die funktionierende GTK-Capture-Mausradbehandlung für Weltweit bleibt erhalten.
 - 🌐 Die bestehende WebKitGTK-Integration für Weltweit bleibt erhalten.
-
-# CHANGELOG
 
 ## v0.3.84
 - 💬 **„Alle“ – gleiche Nachricht mehrfach möglich:** Zwei Nachrichten vom gleichen Rufzeichen mit identischem Text werden anhand des Zeitstempels unterschieden.

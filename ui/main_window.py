@@ -10,6 +10,9 @@ import json
 import socket
 import threading
 import time
+import urllib.request
+import urllib.error
+from urllib.parse import urljoin
 from datetime import datetime
 from pathlib import Path
 
@@ -64,6 +67,7 @@ from core.meshcom import MeshCom
 from core.settings import SETTINGS_FILE, load_settings
 from core.backup_restore import create_backup, restore_backup
 from core.update_checker import UpdateChecker
+from ui.picrd_uploader import PicrdUploader
 from version import VERSION
 
 # WebKitGTK is used only on Linux. Windows keeps the proven QtWebEngine
@@ -141,6 +145,223 @@ def _meshcom_extract_coordinates(raw):
 
 
 from i18n import tr, set_language, ui_text
+
+# ---------------------------------------------------------------------------
+# Chat image previews
+# ---------------------------------------------------------------------------
+_CHAT_IMAGE_CACHE = {}
+_CHAT_IMAGE_PENDING = set()
+_CHAT_IMAGE_LOCK = threading.Lock()
+_CHAT_IMAGE_CACHE_DIR = Path.home() / ".MeshCom" / "chat_image_cache"
+_CHAT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
+_CHAT_IMAGE_TIMEOUT = 7
+
+# The preview cache is intentionally bounded.  Without cleanup, every image
+# preview received in chat would remain on disk forever and ~/.MeshCom would
+# grow continuously on long-running Raspberry Pi installations.
+_CHAT_IMAGE_CACHE_MAX_FILES = 50
+_CHAT_IMAGE_CACHE_MAX_TOTAL_BYTES = 50 * 1024 * 1024
+
+
+def _cleanup_chat_image_cache():
+    """Keep the on-disk chat preview cache bounded by age/size.
+
+    The newest files are kept.  Cleanup errors are deliberately ignored so
+    that a cache problem can never affect normal chat operation.
+    """
+    try:
+        if not _CHAT_IMAGE_CACHE_DIR.is_dir():
+            return
+
+        files = [
+            p for p in _CHAT_IMAGE_CACHE_DIR.iterdir()
+            if p.is_file() and p.suffix == ".img"
+        ]
+        if not files:
+            return
+
+        # Newest first.  mtime is updated when a cached file is created.
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        kept = []
+        total = 0
+        for path in files:
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+
+            if (
+                len(kept) < _CHAT_IMAGE_CACHE_MAX_FILES
+                and total + size <= _CHAT_IMAGE_CACHE_MAX_TOTAL_BYTES
+            ):
+                kept.append(path)
+                total += size
+            else:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+
+                # Do not leave an in-memory URL -> path entry pointing to a
+                # file that cleanup has just removed.
+                with _CHAT_IMAGE_LOCK:
+                    for cached_url, cached_path in list(_CHAT_IMAGE_CACHE.items()):
+                        if cached_path == str(path):
+                            _CHAT_IMAGE_CACHE.pop(cached_url, None)
+    except Exception:
+        pass
+
+
+# Clean an existing cache once when the application starts.  This also trims
+# caches created by older versions of MeshCom-Guru.
+_cleanup_chat_image_cache()
+
+
+def _chat_image_cache_file(url):
+    digest = hashlib.sha256(str(url).encode("utf-8", errors="ignore")).hexdigest()
+    return _CHAT_IMAGE_CACHE_DIR / f"{digest}.img"
+
+
+def _chat_image_download(url):
+    """Resolve a chat URL and cache an actual image target in the background.
+
+    The target may either be a direct image URL (Content-Type: image/*) or a
+    normal HTML page which exposes its main image through og:image/twitter:image
+    or a usable <img src=...>.  The chat itself is never blocked by the network
+    request and non-image pages are simply ignored.
+    """
+    url = str(url or "").strip()
+    if not re.match(r"^https?://", url, re.I):
+        return
+    with _CHAT_IMAGE_LOCK:
+        if url in _CHAT_IMAGE_CACHE or url in _CHAT_IMAGE_PENDING:
+            return
+        _CHAT_IMAGE_PENDING.add(url)
+
+    def load_image(data):
+        if not data or len(data) > _CHAT_IMAGE_MAX_BYTES:
+            return None
+        from PySide6.QtGui import QImage
+        image = QImage()
+        if not image.loadFromData(data):
+            return None
+        return image
+
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "MeshCom-Guru/0.4.1",
+                "Accept": "image/avif,image/webp,image/apng,image/*,text/html,*/*;q=0.2",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=_CHAT_IMAGE_TIMEOUT) as response:
+            content_type = str(response.headers.get("Content-Type", "")).lower()
+            data = response.read(_CHAT_IMAGE_MAX_BYTES + 1)
+            image = None
+
+            if content_type.startswith("image/"):
+                image = load_image(data)
+            elif "text/html" in content_type or data.lstrip().lower().startswith((b"<!doctype html", b"<html", b"<head")):
+                # Many image-sharing services use a short page URL rather than
+                # exposing the image directly. Look for the page's canonical
+                # preview image without pulling in another HTML engine.
+                text = data.decode("utf-8", errors="ignore")
+                candidates = []
+                for pattern in (
+                    r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+content=["\']([^"\']+)',
+                    r'<meta[^>]+name=["\']twitter:image(?::src)?["\'][^>]+content=["\']([^"\']+)',
+                    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image(?::secure_url)?["\']',
+                    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image(?::src)?["\']',
+                    r'<img[^>]+src=["\']([^"\']+)',
+                ):
+                    for m in re.finditer(pattern, text, re.I):
+                        candidates.append(m.group(1))
+
+                # Prefer absolute URLs, but also support relative image paths.
+                for candidate in candidates[:12]:
+                    image_url = urljoin(url, html.unescape(candidate.strip()))
+                    if not re.match(r"^https?://", image_url, re.I):
+                        continue
+                    try:
+                        image_req = urllib.request.Request(
+                            image_url,
+                            headers={
+                                "User-Agent": "MeshCom-Guru/0.4.1",
+                                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.2",
+                            },
+                        )
+                        with urllib.request.urlopen(image_req, timeout=_CHAT_IMAGE_TIMEOUT) as image_response:
+                            image_data = image_response.read(_CHAT_IMAGE_MAX_BYTES + 1)
+                            image = load_image(image_data)
+                            if image is not None:
+                                break
+                    except Exception:
+                        continue
+
+            if image is None:
+                return
+
+            _CHAT_IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            path = _chat_image_cache_file(url)
+            if not image.save(str(path), "PNG"):
+                return
+
+            with _CHAT_IMAGE_LOCK:
+                _CHAT_IMAGE_CACHE[url] = str(path)
+
+            # Keep long-running installations from accumulating preview files.
+            _cleanup_chat_image_cache()
+    except Exception:
+        pass
+    finally:
+        with _CHAT_IMAGE_LOCK:
+            _CHAT_IMAGE_PENDING.discard(url)
+
+
+def _chat_image_preview_html(url, link_color):
+    """Return a cached preview or an empty string while it downloads."""
+    url = str(url or "").strip()
+    with _CHAT_IMAGE_LOCK:
+        cached = _CHAT_IMAGE_CACHE.get(url)
+
+    if cached and not Path(cached).is_file():
+        with _CHAT_IMAGE_LOCK:
+            _CHAT_IMAGE_CACHE.pop(url, None)
+        cached = None
+
+    if not cached:
+        path = _chat_image_cache_file(url)
+        if path.is_file():
+            cached = str(path)
+            with _CHAT_IMAGE_LOCK:
+                _CHAT_IMAGE_CACHE[url] = cached
+
+    if not cached:
+        threading.Thread(
+            target=_chat_image_download,
+            args=(url,),
+            daemon=True,
+            name="MeshComChatImage",
+        ).start()
+        return ""
+
+    try:
+        # Keep previews deliberately small so a large photo cannot blow up the
+        # chat layout or Raspberry Pi memory usage.
+        src = QUrl.fromLocalFile(cached).toString()
+        safe_url = html.escape(url, quote=True)
+        return (
+            f'<div style="margin-top:5px;margin-bottom:3px;">'
+            f'<a href="{safe_url}">'
+            f'<img src="{src}" width="260" '
+            f'style="border-radius:8px;border:1px solid #667;"/></a>'
+            f'</div>'
+        )
+    except Exception:
+        return ""
+
 
 class BubbleWidget(QWidget):
     """Compact WhatsApp-style message bubble with a small inward tail."""
@@ -276,6 +497,7 @@ class ChatView(QScrollArea):
         self.chat_background = self._normalize_color(background)
         self.chat_text_color = self._normalize_color(text)
         self.chat_link_color = self._normalize_color(link or self.chat_link_color)
+        ChatView.chat_link_color = self.chat_link_color
         self._apply_scroll_style()
         self._apply_html_style()
         if hasattr(self, "_bubble_container"):
@@ -360,6 +582,12 @@ class ChatView(QScrollArea):
         self._all_mode = True
         self._bubble_mode = False
         self._all_message_views = []
+        # Keep the latest rendered document so the shared Dashboard chat
+        # can switch back to "Alle" even when the content itself did not
+        # change. The performance optimization below intentionally skips
+        # redundant QTextBrowser rebuilds, but a view switch still needs
+        # to restore the correct visible content.
+        self._all_html_text = str(html_text)
 
         container = QWidget()
         container.setStyleSheet(f"background: {self.chat_background};")
@@ -449,6 +677,13 @@ class ChatView(QScrollArea):
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
         self._bubble_rows = []
+        # Bottom-anchor the chat content: the stretch belongs BEFORE the
+        # messages, not after them.  A trailing stretch creates an ever
+        # larger empty area below the last message when the container is
+        # taller than the message history.  With the stretch at the top,
+        # short histories sit on the bottom edge and long histories use the
+        # normal scrollbar all the way to the last message.
+        lay.addStretch(1)
         for item in self._bubble_items:
             row = QHBoxLayout()
             row.setContentsMargins(0, 0, 0, 0)
@@ -469,7 +704,6 @@ class ChatView(QScrollArea):
                 row.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
                 row.addStretch(1)
             lay.addLayout(row)
-        lay.addStretch(1)
         self._bubble_container = container
         self._bubble_layout = lay
         self.setWidget(container)
@@ -517,6 +751,13 @@ class ChatView(QScrollArea):
 
 
 class MainWindow(QMainWindow):
+    # Tracks previews that were already rendered for the exact same message
+    # block in the consolidated "Alle" view.  This survives the 5-second
+    # refresh and therefore prevents an asynchronously cached image from
+    # appearing a second time later.  It is intentionally used ONLY for
+    # image previews; the underlying message list is never changed.
+    _ALL_IMAGE_PREVIEW_RENDERED = set()
+
     # MH-Liste: maximal 250 zuletzt gehörte Stationen im Speicher.
     MH_MAX_STATIONS = 250
     udpPacketReceived = Signal(dict)
@@ -544,7 +785,7 @@ class MainWindow(QMainWindow):
         self._skip_settings_write_on_close = False
 
         settings = load_settings()
-        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+        self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         set_language(self.language)
         # Let Qt translate its own standard context menus (Undo/Copy/Paste/...).
         # This is safer than intercepting ContextMenu events with a global
@@ -555,6 +796,7 @@ class MainWindow(QMainWindow):
         self.chat_background = self._normalize_chat_color(settings.get("chat_background", "#101722"))
         self.chat_text_color = self._normalize_chat_color(settings.get("chat_text_color", "#e6edf3"))
         self.chat_link_color = self._normalize_chat_color(settings.get("chat_link_color", "#062f6f"))
+        ChatView.chat_link_color = self.chat_link_color
         self._all_chat_views = []
         self.current_theme = settings.get("theme", "dark").strip().lower()
         self.layout_mode = settings.get("layout_mode", "classic").strip().lower()
@@ -614,6 +856,12 @@ class MainWindow(QMainWindow):
         # Zeitpunkt, zu dem eine Station zuletzt mit Positionsdaten gehört wurde.
         self.station_last_heard = {}
         self.station_last_heard_signature = {}
+        # Observed MeshCom connections for the map overlay.
+        # Only explicit relay/source paths and direct local LoRa reception
+        # create edges. No geographic or RSSI/SNR inference is used.
+        self.map_connections = {}
+        self.map_connection_events = []
+        self.map_connections_enabled = False
         self.udp_position_blocks = []
         self.udp_socket = None
         self.udp_thread = None
@@ -622,6 +870,9 @@ class MainWindow(QMainWindow):
         self.udp_status = "UDP: wird gestartet …"
         # Monitor: reine Anzeige des bereits empfangenen UDP-Datenstroms.
         self.monitor_rows = []
+        # Eigener Gesamtpuffer für „Alle“: exakt dieselben UDP-Pakete wie der Monitor,
+        # einschließlich MSG/POS/TEL/ACK. Er ist vom Monitor-Filter unabhängig.
+        self.monitor_all_rows = []
         # Session counter for received telemetry packets. Kept separately from
         # the monitor buffer so clearing the monitor does not erase the statistic.
         self.telemetry_count = 0
@@ -714,6 +965,10 @@ class MainWindow(QMainWindow):
         self.worldwide_watchdog_timer = QTimer(self)
         self.worldwide_watchdog_timer.timeout.connect(self._worldwide_watchdog_tick)
         self.worldwide_watchdog_timer.start(15000)
+
+        # Performance: Karten nur bei tatsächlich geänderten sichtbaren Daten
+        # an Leaflet/JavaScript übertragen.
+        self._last_map_render_signature = None
 
         # Keine automatische Verbindung beim Programmstart.
         # Der Benutzer entscheidet mit "Verbinden", wann der WebService abgefragt wird.
@@ -949,9 +1204,10 @@ class MainWindow(QMainWindow):
                         existing["rssi"] = str(rssi) if rssi != "" else existing.get("rssi", "-")
                         existing["snr"] = str(snr) if snr != "" else existing.get("snr", "-")
                         self._render_monitor()
+                        self._refresh_all_live_view()
                         return
 
-        self.monitor_rows.append({
+        row = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": ptype,
             "src": str(src),
@@ -959,9 +1215,87 @@ class MainWindow(QMainWindow):
             "rssi": str(rssi) if rssi != "" else "-",
             "snr": str(snr) if snr != "" else "-",
             "detail": detail,
-        })
+        }
+        # Dasselbe Row-Objekt wird in beiden Puffern verwendet. Wenn das
+        # EXTUDP-Echo einer eigenen Nachricht später den Monitor-Eintrag
+        # ergänzt, ist „Alle“ automatisch ebenfalls auf dem gleichen Stand.
+        self.monitor_rows.append(row)
+        self.monitor_all_rows.append(row)
         self.monitor_rows = self.monitor_rows[-500:]
+        self.monitor_all_rows = self.monitor_all_rows[-500:]
         self._render_monitor()
+        self._refresh_all_live_view()
+
+    def _refresh_all_live_view(self):
+        """Render the dedicated live buffer of the 'Alle' view immediately.
+
+        'Alle' has its own monitor_all_rows buffer. Activating the tab must
+        never rebuild the view from the WebService/message_cache; that cache
+        is refreshed periodically and can show stale data before the live
+        TEL/MSG stream catches up.
+        """
+        if not hasattr(self, "tabs") or not hasattr(self, "monitor_all_rows"):
+            return
+        all_key = ("all", "all")
+        all_index = self._ensure_tab(all_key, tr("Alle"))
+        monitor_blocks = self._monitor_rows_to_all_blocks()
+        all_blocks = self._filter_blocks(monitor_blocks)
+        # Keep the live monitor reception order.  The rows carry only a
+        # HH:MM:SS display time; sorting by that value breaks at midnight
+        # because 00:xx would be placed before 23:xx from the previous day.
+        # monitor_all_rows is already chronological and is therefore the
+        # authoritative order for the live "Alle" view.
+        self._update_tab_content(all_key, all_index, all_blocks)
+
+    def _monitor_rows_to_all_blocks(self):
+        """Render the same received UDP packets as monitor-compatible blocks for 'Alle'.
+
+        „Alle“ uses this stream instead of the parallel WebService message stream.
+        This is deliberate: one physical MeshCom packet must have one source of
+        truth, while POS/TEL/ACK remain visible when the room filter is off.
+        """
+        blocks = []
+        for row in list(self.monitor_all_rows):
+            if not isinstance(row, dict):
+                continue
+            ptype = str(row.get("type", "UDP") or "UDP").upper()
+            src = str(row.get("src", "-") or "-")
+            dst = str(row.get("dst", "-") or "-")
+            stamp = str(row.get("time", "") or "")
+            detail = str(row.get("detail", "") or "")
+            rssi = str(row.get("rssi", "-") or "-")
+            snr = str(row.get("snr", "-") or "-")
+
+            # Numeric room / global / direct destination is kept in the header
+            # so the existing room-filter parser can work unchanged. POS/TEL
+            # packets normally have no room target and therefore disappear when
+            # the user enables the room filter.
+            target = dst if dst else "-"
+            header = f"{html.escape(src)}&gt;{html.escape(target)}"
+            safe_time = html.escape(stamp)
+
+            body = detail
+            if ptype == "MSG":
+                body = re.sub(r"^#\d{1,6}\s*", "", body).strip() or "Nachricht"
+            elif ptype == "POS":
+                body = detail or "Position"
+            elif ptype == "TEL":
+                body = detail or "Telemetry"
+            elif ptype == "ACK":
+                body = detail or "ACK"
+
+            meta = f"RSSI: {html.escape(rssi)} | SNR: {html.escape(snr)} | Typ: {html.escape(ptype)}"
+            block = (
+                '<div class="monitor-derived" data-monitor-row="1" '
+                f'data-monitor-type="{html.escape(ptype)}">'
+                f'<div>{header}</div>'
+                f'<div>{safe_time}</div>'
+                f'<div>{self._make_clickable(html.escape(body))}</div>'
+                f'<div>{meta}</div>'
+                '</div>'
+            )
+            blocks.append(block)
+        return blocks
 
     def _render_monitor(self):
         if not hasattr(self, "monitor_table"):
@@ -991,7 +1325,7 @@ class MainWindow(QMainWindow):
             for col in (4, 5):
                 self.monitor_table.item(row_index, col).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        count_text = ui_text(f"{len(rows)} angezeigt · {len(self.monitor_rows)} gespeichert")
+        count_text = f"{len(rows)} {ui_text('angezeigt')} · {len(self.monitor_rows)} {ui_text('gespeichert')}"
         self.monitor_count_label.setText(count_text)
         if hasattr(self, "dashboard_monitor_count_label"):
             self.dashboard_monitor_count_label.setText(count_text)
@@ -1183,6 +1517,14 @@ class MainWindow(QMainWindow):
             room_key = room if room else "Alle"
             room_counts[room_key] = room_counts.get(room_key, 0) + 1
 
+        statistics_signature = (
+            message_count, node_count, position_count, telemetry_count,
+            monitor_count, private_count, tuple(sorted(room_counts.items()))
+        )
+        if statistics_signature == getattr(self, "_last_statistics_signature", None):
+            return
+        self._last_statistics_signature = statistics_signature
+
         self.statistics_summary.setText(
             f"{ui_text('Nachrichten:')} <b>{message_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
             f"{ui_text('Nodes:')} <b>{node_count}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
@@ -1232,6 +1574,104 @@ class MainWindow(QMainWindow):
         self.mh_stations.clear()
         self._render_mh()
 
+    @staticmethod
+    def _callsigns_from_path(value):
+        """Extract plausible callsigns from MeshCom route/path text."""
+        text = str(value or "").upper()
+        found = []
+        for token in re.split(r"[^A-Z0-9-]+", text):
+            token = token.strip("-")
+            if token and CALLSIGN_RE.fullmatch(token) and token not in found:
+                found.append(token)
+        return found
+
+    def _record_map_connection(self, a, b, source="observed"):
+        """Remember one evidence-based map edge."""
+        a = str(a or "").strip().upper()
+        b = str(b or "").strip().upper()
+        if not a or not b or a == b:
+            return
+        key = "|".join(sorted((a, b)))
+        now = datetime.now().strftime("%H:%M:%S")
+        row = self.map_connections.setdefault(key, {
+            "a": min(a, b), "b": max(a, b),
+            "last_seen": now, "first_seen": now,
+            "source": source, "count": 0,
+        })
+        row["last_seen"] = now
+        row["source"] = source
+        row["count"] = int(row.get("count", 0) or 0) + 1
+
+    def _connection_path_candidates(self, packet):
+        """Return explicit relay/path candidates exposed by EXTUDP."""
+        candidates = []
+        keys = (
+            "route", "path", "relay", "relays", "relay_path", "source_path",
+            "rpath", "via", "hops_path", "digipeater_path",
+        )
+        for key in keys:
+            value = packet.get(key, "")
+            if isinstance(value, (list, tuple)):
+                values = []
+                for item in value:
+                    values.extend(self._callsigns_from_path(item))
+            else:
+                values = self._callsigns_from_path(value)
+            if len(values) >= 2:
+                candidates.append((key, values))
+
+        src_values = self._callsigns_from_path(packet.get("src", ""))
+        if len(src_values) >= 2:
+            candidates.insert(0, ("src", src_values))
+        return candidates
+
+    def _update_map_connection_from_packet(self, packet):
+        """Learn only connections supported by actual received MeshCom data."""
+        if not isinstance(packet, dict):
+            return
+
+        src_type = str(packet.get("src_type", packet.get("source_type", "")) or "").strip().lower()
+        src_raw = packet.get("src", "")
+        src = self._udp_callsign(src_raw)
+        explicit_paths = self._connection_path_candidates(packet)
+        detected = []
+
+        for field, calls in explicit_paths:
+            for a, b in zip(calls, calls[1:]):
+                self._record_map_connection(a, b, f"Pfad:{field}")
+                detected.append(f"{a} → {b}")
+
+        # A packet without an explicit path is a real direct reception only
+        # when it was received locally via LoRa.
+        if not explicit_paths and src and src_type == "lora":
+            own = str(self.own_callsign or "").strip().upper()
+            if own and src.upper() != own:
+                self._record_map_connection(own, src, "Direkt gehört")
+                detected.append(f"{own} → {src}")
+
+        if detected:
+            event = {
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "src": str(src_raw or "-"),
+                "src_type": src_type or "-",
+                "detected": detected,
+            }
+            self.map_connection_events.append(event)
+            self.map_connection_events = self.map_connection_events[-100:]
+
+            try:
+                self._update_map()
+            except Exception:
+                pass
+
+    def _map_connection_payload(self, stations):
+        known = {str(s.get("callsign", "")).upper() for s in stations if s.get("callsign")}
+        payload = []
+        for row in self.map_connections.values():
+            if row.get("a") in known and row.get("b") in known:
+                payload.append(dict(row))
+        return payload
+
     def _handle_udp_packet(self, packet):
         status = packet.get("_status") if isinstance(packet, dict) else None
         if status:
@@ -1241,6 +1681,7 @@ class MainWindow(QMainWindow):
             return
         self._monitor_add_packet(packet)
         self._update_mh_from_packet(packet)
+        self._update_map_connection_from_packet(packet)
         ptype = str(packet.get("type", packet.get("packet_type", ""))).lower().strip()
         if ptype in {"tel", "tele", "telemetry", "status"}:
             self.telemetry_count += 1
@@ -1494,7 +1935,7 @@ class MainWindow(QMainWindow):
         """
         settings = load_settings()
         try:
-            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+            self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
             set_language(self.language)
             if hasattr(self, "ip_input"):
                 self.ip_input.setText(settings.get("ip", ""))
@@ -1621,28 +2062,31 @@ class MainWindow(QMainWindow):
 
         self.ip_input = QLineEdit(settings.get("ip", ""))
         self.target_input = QLineEdit(settings.get("target", ""))
-        self.target_input.setPlaceholderText("Raum oder Ziel, z. B. 262 oder DL9ABC-1")
+        self.target_input.setPlaceholderText(ui_text("Raum oder Ziel, z. B. 262 oder DL9ABC-1"))
 
         form = QFormLayout()
-        form.addRow("Hotspot IP", self.ip_input)
-        form.addRow("Raum / Ziel", self.target_input)
+        self.classic_hotspot_label = QLabel(ui_text("Hotspot IP"))
+        form.addRow(self.classic_hotspot_label, self.ip_input)
+        self.classic_target_label = QLabel(ui_text("Raum / Ziel"))
+        form.addRow(self.classic_target_label, self.target_input)
 
         self.own_callsign_input = QLineEdit(settings.get("own_callsign", ""))
-        self.own_callsign_input.setPlaceholderText("eigenes Rufzeichen, z. B. DL9ABC-1")
+        self.own_callsign_input.setPlaceholderText(ui_text("eigenes Rufzeichen, z. B. DL9ABC-1"))
         self.own_lat_input = QLineEdit(settings.get("own_lat", ""))
-        self.own_lat_input.setPlaceholderText("Breitengrad, z. B. 51.93")
+        self.own_lat_input.setPlaceholderText(ui_text("Breitengrad, z. B. 51.93"))
         self.own_lon_input = QLineEdit(settings.get("own_lon", ""))
-        self.own_lon_input.setPlaceholderText("Längengrad, z. B. 8.88")
+        self.own_lon_input.setPlaceholderText(ui_text("Längengrad, z. B. 8.88"))
         location_row = QHBoxLayout()
         location_row.addWidget(self.own_callsign_input)
         location_row.addWidget(self.own_lat_input)
         location_row.addWidget(self.own_lon_input)
-        form.addRow("Eigene Station / GPS", location_row)
+        self.classic_gps_label = QLabel(ui_text("Eigene Station / GPS"))
+        form.addRow(self.classic_gps_label, location_row)
 
-        self.save_button = QPushButton("Einstellungen speichern")
+        self.save_button = QPushButton(ui_text("Einstellungen speichern"))
         self.save_button.clicked.connect(self.save_all_settings)
-        self.node_info_button = QPushButton("Node Info aufrufen")
-        self.node_info_button.setToolTip("Node Information des verbundenen MeshCom-WebService anzeigen")
+        self.node_info_button = QPushButton(ui_text("Node Info aufrufen"))
+        self.node_info_button.setToolTip(ui_text("Node Information des verbundenen MeshCom-WebService anzeigen"))
         self.node_info_button.clicked.connect(self.open_node_info)
 
         # Schaltflächenzeile der klassischen Ansicht. Diese wurde beim
@@ -1651,7 +2095,7 @@ class MainWindow(QMainWindow):
         settings_buttons.addWidget(self.save_button, 1)
         settings_buttons.addWidget(self.node_info_button, 1)
 
-        self.filter_enabled = QCheckBox("Raumfilter aktiv")
+        self.filter_enabled = QCheckBox(ui_text("Raumfilter aktiv"))
         self.filter_enabled.setChecked(settings.get("filter_enabled", "0") == "1")
         self.filter_enabled.toggled.connect(self._filter_toggled)
 
@@ -1665,12 +2109,13 @@ class MainWindow(QMainWindow):
             field.setText(settings.get(f"filter_room{i + 1}", ""))
             self.filter_inputs.append(field)
             filter_row.addWidget(field)
-        self.filter_save_button = QPushButton("Filter speichern")
+        self.filter_save_button = QPushButton(ui_text("Filter speichern"))
         self.filter_save_button.clicked.connect(self.save_filter_settings)
         filter_row.addWidget(self.filter_save_button)
 
         filter_box = QVBoxLayout()
-        filter_box.addWidget(QLabel("Nachrichtenfilter – bis zu 5 Räume"))
+        self.classic_filter_title = QLabel(ui_text("Nachrichtenfilter – bis zu 5 Räume"))
+        filter_box.addWidget(self.classic_filter_title)
         filter_box.addWidget(self.filter_enabled)
         filter_box.addLayout(filter_row)
 
@@ -1678,25 +2123,27 @@ class MainWindow(QMainWindow):
         self.weather_panel = QWidget()
         weather_layout = QVBoxLayout(self.weather_panel)
         weather_layout.setContentsMargins(0, 4, 0, 4)
-        weather_title = QLabel("Wetterdaten")
+        weather_title = QLabel(ui_text("Wetterdaten"))
+        self.classic_weather_title = weather_title
         weather_title.setStyleSheet("font-weight: 600;")
         weather_layout.addWidget(weather_title)
 
         weather_row = QHBoxLayout()
-        weather_row.addWidget(QLabel("Stadt:"))
+        self.classic_city_label = QLabel(ui_text("Stadt:"))
+        weather_row.addWidget(self.classic_city_label)
         self.weather_city_input = QLineEdit()
         self.weather_city_input.setPlaceholderText(ui_text("Stadtname, z. B. Bielefeld"))
         self.weather_city_input.setText(settings.get("weather_city", ""))
         weather_row.addWidget(self.weather_city_input, 1)
-        self.weather_refresh_button = QPushButton("Wetter aktualisieren")
+        self.weather_refresh_button = QPushButton(ui_text("Wetter aktualisieren"))
         self.weather_refresh_button.clicked.connect(self._refresh_weather)
         weather_row.addWidget(self.weather_refresh_button)
-        self.weather_send_button = QPushButton("Wetter senden")
+        self.weather_send_button = QPushButton(ui_text("Wetter senden"))
         self.weather_send_button.clicked.connect(self._send_weather)
         weather_row.addWidget(self.weather_send_button)
         weather_layout.addLayout(weather_row)
 
-        self.weather_values_label = QLabel("Warte auf WX-Information …")
+        self.weather_values_label = QLabel(ui_text("Warte auf WX-Information …"))
         self.weather_values_label.setWordWrap(True)
         weather_layout.addWidget(self.weather_values_label)
         self.weather_status_label = QLabel("")
@@ -1720,7 +2167,7 @@ class MainWindow(QMainWindow):
         else:
             self.map_view = QLabel("Karte ist im Dashboard aktiv.")
             self.map_view.setMinimumHeight(300)
-        self.map_tab_index = self.tabs.addTab(self.map_view, "Karte")
+        self.map_tab_index = self.tabs.addTab(self.map_view, ui_text("Karte"))
         # Die Karte ist ein fester Tab und darf nicht geschlossen werden.
         self.tabs.tabBar().setTabButton(
             self.map_tab_index,
@@ -1736,17 +2183,18 @@ class MainWindow(QMainWindow):
         monitor_layout.setContentsMargins(6, 6, 6, 6)
         monitor_toolbar = QHBoxLayout()
 
-        self.monitor_pause_button = QPushButton("⏸ Pause")
+        self.monitor_pause_button = QPushButton(ui_text("⏸ Pause"))
         self.monitor_pause_button.setFixedWidth(130)
         self.monitor_pause_button.clicked.connect(self._toggle_monitor_pause)
         monitor_toolbar.addWidget(self.monitor_pause_button)
 
-        monitor_clear_button = QPushButton("Leeren")
+        monitor_clear_button = QPushButton(ui_text("Leeren"))
         monitor_clear_button.setFixedWidth(116)
         monitor_clear_button.clicked.connect(self._clear_monitor)
         monitor_toolbar.addWidget(monitor_clear_button)
 
-        monitor_toolbar.addWidget(QLabel("Filter:"))
+        self.monitor_filter_label = QLabel(ui_text("Filter:"))
+        monitor_toolbar.addWidget(self.monitor_filter_label)
         self.monitor_filter_combo = QComboBox()
         self.monitor_filter_combo.addItem(ui_text("Alle"), "ALLE")
         self.monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
@@ -1756,18 +2204,18 @@ class MainWindow(QMainWindow):
         monitor_toolbar.addWidget(self.monitor_filter_combo)
 
         self.monitor_search_edit = QLineEdit()
-        self.monitor_search_edit.setPlaceholderText("Suchen …")
+        self.monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
         self.monitor_search_edit.setMinimumWidth(130)
         self.monitor_search_edit.setMaximumWidth(190)
         self.monitor_search_edit.textChanged.connect(self._set_monitor_search)
         monitor_toolbar.addWidget(self.monitor_search_edit)
 
-        self.monitor_autoscroll_check = QCheckBox("Auto-Scroll")
+        self.monitor_autoscroll_check = QCheckBox(ui_text("Auto-Scroll"))
         self.monitor_autoscroll_check.setChecked(True)
         self.monitor_autoscroll_check.toggled.connect(self._toggle_monitor_autoscroll)
         monitor_toolbar.addWidget(self.monitor_autoscroll_check)
         monitor_toolbar.addStretch(1)
-        self.monitor_count_label = QLabel("0 angezeigt · 0 gespeichert")
+        self.monitor_count_label = QLabel(ui_text("0 angezeigt · 0 gespeichert"))
         monitor_toolbar.addWidget(self.monitor_count_label)
         monitor_toolbar.addWidget(QLabel("MSG / POS / TEL / ACK"))
         monitor_layout.addLayout(monitor_toolbar)
@@ -1814,7 +2262,7 @@ class MainWindow(QMainWindow):
         self.mh_count_label = QLabel("0 Station(en)")
         mh_toolbar.addWidget(self.mh_count_label)
         mh_toolbar.addStretch(1)
-        mh_clear_button = QPushButton("Leeren")
+        mh_clear_button = QPushButton(ui_text("Leeren"))
         mh_clear_button.setFixedWidth(78)
         mh_clear_button.clicked.connect(self._clear_mh)
         mh_toolbar.addWidget(mh_clear_button)
@@ -1910,6 +2358,11 @@ class MainWindow(QMainWindow):
         self.message_input.setPlaceholderText("Nachricht eingeben …")
         self.message_input.setMaxLength(149)
 
+        # Bild-Upload: direkte picrd-API, ohne Browser/WebKit und ohne Clipboard.
+        self._picrd_uploader = PicrdUploader(self)
+        self._picrd_uploader.finished.connect(self._picrd_upload_finished)
+        self._picrd_uploader.error.connect(self._picrd_upload_error)
+
         # Schnelltexte: auswählbar, bearbeitbar und um neue Einträge erweiterbar.
         self.quick_text_button = QPushButton("⚡ Schnelltexte")
         self.quick_text_button.setFixedWidth(120)
@@ -1934,8 +2387,8 @@ class MainWindow(QMainWindow):
         self.message_counter.setToolTip("Maximal 149 Zeichen")
         self.message_input.textChanged.connect(self._update_message_counter)
 
-        self.send_button = QPushButton("Senden")
-        self.update_button = QPushButton("Aktualisieren")
+        self.send_button = QPushButton(ui_text("Senden"))
+        self.update_button = QPushButton(ui_text("Aktualisieren"))
         self.send_button.clicked.connect(self.send)
         self.update_button.clicked.connect(self.update_messages)
         self.message_input.returnPressed.connect(self.send)
@@ -1944,12 +2397,12 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self.send_button)
         buttons.addWidget(self.update_button)
 
-        self.send_log = QLabel("Letzter Sendeauftrag: noch keiner")
+        self.send_log = QLabel(ui_text("Letzter Sendeauftrag: noch keiner"))
         self.send_log.setWordWrap(True)
-        self.status = QLabel("Bereit")
+        self.status = QLabel(ui_text("Bereit"))
         self.status.setWordWrap(True)
 
-        self.message_label = QLabel("Nachricht:")
+        self.message_label = QLabel(ui_text("Nachricht:"))
         self.classic_message_panel = QWidget()
         classic_message_layout = QVBoxLayout(self.classic_message_panel)
         classic_message_layout.setContentsMargins(0, 0, 0, 0)
@@ -1958,6 +2411,14 @@ class MainWindow(QMainWindow):
 
         message_row = QHBoxLayout()
         message_row.addWidget(self.message_input, 1)
+
+        self.paperclip_button = QPushButton()
+        self.paperclip_button.setIcon(QIcon(str(Path(__file__).resolve().parent.parent / "icons" / "paperclip.svg")))
+        self.paperclip_button.setIconSize(QPixmap(24, 24).size())
+        self.paperclip_button.setFixedSize(42, 30)
+        self.paperclip_button.setToolTip(ui_text("Bild hochladen"))
+        self.paperclip_button.clicked.connect(self._select_picrd_image)
+        message_row.addWidget(self.paperclip_button)
         message_row.addWidget(self.quick_text_button)
         message_row.addWidget(self.emoji_button)
         message_row.addWidget(self.message_counter)
@@ -2387,7 +2848,12 @@ class MainWindow(QMainWindow):
         dashboard_disconnect.setEnabled(False)
         dash_header_layout.addWidget(dashboard_disconnect)
 
-        dash_header_layout.addWidget(QLabel(ui_text("Hotspot IP:")))
+        # Keep the source translation key stable so the label changes
+        # immediately when the language is switched.  An anonymous QLabel
+        # containing an already translated string cannot always be mapped
+        # back reliably because the text also contains the colon.
+        self.dashboard_hotspot_label = QLabel(ui_text("Hotspot IP") + ":")
+        dash_header_layout.addWidget(self.dashboard_hotspot_label)
         self.dashboard_hotspot_input = QLineEdit(self.ip_input.text())
         self.dashboard_hotspot_input.setPlaceholderText("http://192.168.x.x")
         self.dashboard_hotspot_input.setMinimumWidth(170)
@@ -2579,6 +3045,13 @@ class MainWindow(QMainWindow):
         self.dashboard_message_input.setMaxLength(149)
         self.dashboard_message_input.returnPressed.connect(self._dashboard_send)
         dash_message.addWidget(self.dashboard_message_input, 1)
+        self.dashboard_paperclip_button = QPushButton()
+        self.dashboard_paperclip_button.setIcon(QIcon(str(Path(__file__).resolve().parent.parent / "icons" / "paperclip.svg")))
+        self.dashboard_paperclip_button.setIconSize(QPixmap(24, 24).size())
+        self.dashboard_paperclip_button.setFixedSize(42, 30)
+        self.dashboard_paperclip_button.setToolTip(ui_text("Bild hochladen"))
+        self.dashboard_paperclip_button.clicked.connect(self._select_picrd_image)
+        dash_message.addWidget(self.dashboard_paperclip_button)
         dashboard_quick = QPushButton(ui_text("⚡ Schnelltexte"))
         dashboard_quick.setToolTip(ui_text("Schnelltext auswählen oder bearbeiten"))
         dashboard_quick.clicked.connect(self._open_quick_texts)
@@ -2712,7 +3185,8 @@ class MainWindow(QMainWindow):
         monitor_panel_layout = QVBoxLayout(monitor_panel)
         monitor_panel_layout.setContentsMargins(6, 6, 6, 6)
         monitor_panel_layout.setSpacing(3)
-        monitor_panel_layout.addWidget(QLabel(ui_text("📡 Monitor – Live")))
+        self.dashboard_monitor_title = QLabel(ui_text("📡 Monitor – Live"))
+        monitor_panel_layout.addWidget(self.dashboard_monitor_title)
         dashboard_monitor_toolbar = QHBoxLayout()
         dashboard_monitor_toolbar.setSpacing(4)
 
@@ -2726,7 +3200,8 @@ class MainWindow(QMainWindow):
         self.dashboard_monitor_clear_button.clicked.connect(self._clear_monitor)
         dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_clear_button)
 
-        dashboard_monitor_toolbar.addWidget(QLabel(ui_text("Filter:")))
+        self.dashboard_monitor_filter_label = QLabel(ui_text("Filter:"))
+        dashboard_monitor_toolbar.addWidget(self.dashboard_monitor_filter_label)
         self.dashboard_monitor_filter_combo = QComboBox()
         self.dashboard_monitor_filter_combo.addItem(tr("Alle"), "ALLE")
         self.dashboard_monitor_filter_combo.addItems(["MSG", "POS", "TEL", "ACK"])
@@ -2997,7 +3472,7 @@ class MainWindow(QMainWindow):
         # den einzelnen Räumen. Es bleibt ein eigener Chat-Eintrag und ist
         # niemals Teil der gespeicherten Raumliste.
         all_key = ("all", "all")
-        all_button = QPushButton("💬 Alle")
+        all_button = QPushButton(ui_text("💬 Alle"))
         all_button.setMinimumHeight(30)
         all_button.setProperty("dashboardNav", True)
         all_button.setProperty("chatKey", all_key)
@@ -3100,7 +3575,7 @@ class MainWindow(QMainWindow):
                 self._ensure_tab(key, self._room_tab_title(key[1]))
                 index = self.tab_keys.get(key)
             elif key[0] == "all":
-                self._ensure_tab(key, "Alle")
+                self._ensure_tab(key, tr("Alle"))
                 index = self.tab_keys.get(key)
             else:
                 return
@@ -3152,11 +3627,69 @@ class MainWindow(QMainWindow):
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(title)
         else:
-            self.dashboard_chat_view.set_all_html(
-                self._render_blocks(self._filter_blocks(list(self.message_cache.values())))
-            )
+            # „Alle“ besitzt einen eigenen Live-Puffer. Beim Wechsel in den
+            # Dashboard-Chat darf hier niemals der alte WebService-Cache
+            # angezeigt werden.
+            self._refresh_all_live_view()
+            # The 5-second refresh is optimized to skip identical HTML. That
+            # is correct for the already visible All-tab, but this shared
+            # Dashboard view may currently still show a room/private chat.
+            # Restore the current All document on an actual view switch.
+            all_view = self.tabs.widget(self.tab_keys.get(("all", "all"), -1))
+            if (isinstance(all_view, ChatView) and
+                    hasattr(self, "dashboard_chat_view") and
+                    hasattr(all_view, "_all_html_text")):
+                self.dashboard_chat_view.set_all_html(all_view._all_html_text)
             if hasattr(self, "dashboard_chat_title"):
                 self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
+
+    def _select_picrd_image(self):
+        """Select an image and upload it directly to picrd in the background."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            ui_text("Bild auswählen"),
+            str(Path.home()),
+            "Bilder (*.png *.jpg *.jpeg *.webp *.gif);;Alle Dateien (*)",
+        )
+        if not path:
+            return
+
+        target = (
+            self.dashboard_message_input
+            if getattr(self, "layout_mode", "classic") == "dashboard"
+            else self.message_input
+        )
+        self._picrd_target_input = target
+        self._picrd_set_buttons_enabled(False)
+        self.status.setText(ui_text("Bild wird hochgeladen …"))
+        self._picrd_uploader.upload(path)
+
+    def _picrd_set_buttons_enabled(self, enabled):
+        for name in ("paperclip_button", "dashboard_paperclip_button"):
+            button = getattr(self, name, None)
+            if button is not None:
+                button.setEnabled(bool(enabled))
+
+    def _picrd_upload_finished(self, url):
+        self._picrd_set_buttons_enabled(True)
+        target = getattr(self, "_picrd_target_input", None)
+        if target is None:
+            target = self.dashboard_message_input if (
+                getattr(self, "layout_mode", "classic") == "dashboard"
+                and hasattr(self, "dashboard_message_input")
+            ) else self.message_input
+        current = target.text().strip()
+        if url not in current:
+            new_text = (current + " " + url).strip() if current else url
+            target.setText(new_text[:149])
+            target.setCursorPosition(len(target.text()))
+        target.setFocus()
+        self.status.setText(ui_text("Bild-Link eingefügt."))
+
+    def _picrd_upload_error(self, message):
+        self._picrd_set_buttons_enabled(True)
+        self.status.setText(ui_text("Bild-Upload fehlgeschlagen."))
+        QMessageBox.warning(self, ui_text("Bild-Upload"), str(message))
 
     def _dashboard_send(self):
         text = self.dashboard_message_input.text().strip()
@@ -3213,8 +3746,10 @@ class MainWindow(QMainWindow):
         if not self.dashboard_map_ready:
             return
         station_json = json.dumps(self.dashboard_map_pending, ensure_ascii=False)
+        connection_json = json.dumps(self._map_connection_payload(self.dashboard_map_pending), ensure_ascii=False)
         self.dashboard_map_view.page().runJavaScript(
-            f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+            f"if (typeof window.updateStations === 'function') window.updateStations({station_json}); "
+            f"if (typeof window.updateConnections === 'function') window.updateConnections({connection_json});"
         )
 
     def _dashboard_worldwide_load_finished(self, ok):
@@ -3992,7 +4527,7 @@ class MainWindow(QMainWindow):
         section["chat_background"] = self.chat_background
         section["chat_text_color"] = self.chat_text_color
         section["chat_link_color"] = self.chat_link_color
-        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr") else "de"
+        section["language"] = self.language if getattr(self, "language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         section["sound_enabled"] = "1" if self.sound_enabled else "0"
         section["sound_driver"] = self.sound_driver
         section["sound_volume"] = str(self.sound_volume)
@@ -4031,8 +4566,11 @@ class MainWindow(QMainWindow):
         combo.addItem(tr("italian"), "it")
         combo.addItem(tr("dutch"), "nl")
         combo.addItem(tr("french"), "fr")
+        combo.addItem(tr("spanish"), "es")
+        combo.addItem(tr("swedish"), "sv")
+        combo.addItem(tr("polish"), "pl")
         current = getattr(self, "language", "de")
-        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4}.get(current, 0))
+        combo.setCurrentIndex({"de": 0, "en": 1, "it": 2, "nl": 3, "fr": 4, "es": 5, "sv": 6, "pl": 7}.get(current, 0))
         layout.addWidget(label)
         layout.addWidget(combo)
         button = QPushButton("OK")
@@ -4062,7 +4600,7 @@ class MainWindow(QMainWindow):
 
     def _set_ui_language(self, language):
         """Save and immediately apply the selected UI language."""
-        language = language if language in ("de", "en", "it", "nl", "fr") else "de"
+        language = language if language in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
         self.language = language
         set_language(language)
         self._apply_qt_translation(language)
@@ -4101,6 +4639,11 @@ class MainWindow(QMainWindow):
             if tip:
                 widget.setToolTip(ui_text(tip))
 
+        # Dashboard: keep the hotspot label tied to its original source key.
+        # This makes the language change immediate; no restart is required.
+        if hasattr(self, "dashboard_hotspot_label"):
+            self.dashboard_hotspot_label.setText(ui_text("Hotspot IP") + ":")
+
         # Combo-box labels/items
         for combo in self.findChildren(QComboBox):
             for i in range(combo.count()):
@@ -4127,6 +4670,22 @@ class MainWindow(QMainWindow):
                     elif title == "📋 MH":
                         self.tabs.setTabText(i, tr("📋 MH"))
 
+            # Karten-Tab immer über das Widget identifizieren. Der bisherige
+            # Textvergleich erkannte nur "Karte" oder "Map"; wenn der Tab z. B.
+            # "Carte" hieß, blieb er beim Wechsel zurück auf Deutsch unverändert.
+            if hasattr(self, "map_view"):
+                map_idx = self.tabs.indexOf(self.map_view)
+                if map_idx >= 0:
+                    self.tabs.setTabText(map_idx, ui_text("Karte"))
+
+            # Weltweit-Tab immer über das Widget identifizieren. So wird
+            # z. B. "Worldwide" nach einem Sprachwechsel zuverlässig wieder
+            # auf "🌐 Weltweit" gesetzt.
+            if hasattr(self, "worldwide_view"):
+                worldwide_idx = self.tabs.indexOf(self.worldwide_view)
+                if worldwide_idx >= 0:
+                    self.tabs.setTabText(worldwide_idx, ui_text("🌐 Weltweit"))
+
             # Statistik-Tab muss beim Sprachwechsel sofort umbenannt werden.
             # Da der aktuelle Tab-Titel bereits "📊 Statistics" sein kann,
             # reicht eine reine Prüfung auf den deutschen Ausgangstext nicht.
@@ -4135,11 +4694,103 @@ class MainWindow(QMainWindow):
                 if stats_idx >= 0:
                     self.tabs.setTabText(stats_idx, ui_text("📊 Statistik"))
 
+        # Dashboard-"Alle"-Button immer über den stabilen deutschen
+        # Quellschlüssel aktualisieren. Dadurch bleibt z. B. "Todos" nicht
+        # stehen, wenn die Oberfläche wieder auf Deutsch gewechselt wird.
+        if hasattr(self, "dashboard_all_button") and self.dashboard_all_button is not None:
+            self.dashboard_all_button.setText(ui_text("💬 Alle"))
+
         # Wetteranzeige immer aus den unveränderten Rohwerten neu aufbauen.
         # Wichtig: Niemals den bereits übersetzten Anzeigetext erneut durch
         # ui_text() schicken. Sonst können bei einem Sprachwechsel aus
         # "Temperatur"/"Temperatuur"/"Temperature" Buchstaben angehängt werden.
         self._update_weather_display()
+
+        # Klassische Ansicht: alle eigenen Bedienelemente werden immer aus
+        # stabilen deutschen Quellschlüsseln neu übersetzt. Dadurch bleiben
+        # sie auch nach einem Sprachwechsel bzw. Neustart konsistent.
+        classic_refs = {
+            "classic_hotspot_label": "Hotspot IP",
+            "classic_target_label": "Raum / Ziel",
+            "classic_gps_label": "Eigene Station / GPS",
+            "save_button": "Einstellungen speichern",
+            "node_info_button": "Node Info aufrufen",
+            "filter_enabled": "Raumfilter aktiv",
+            "filter_save_button": "Filter speichern",
+            "classic_filter_title": "Nachrichtenfilter – bis zu 5 Räume",
+            "classic_weather_title": "Wetterdaten",
+            "classic_city_label": "Stadt:",
+            "weather_refresh_button": "Wetter aktualisieren",
+            "weather_send_button": "Wetter senden",
+            "message_label": "Nachricht:",
+            "send_button": "Senden",
+            "update_button": "Aktualisieren",
+            "send_log": "Letzter Sendeauftrag: noch keiner",
+        }
+        for attr, source_key in classic_refs.items():
+            widget = getattr(self, attr, None)
+            if widget is not None:
+                widget.setText(ui_text(source_key))
+        if hasattr(self, "target_input"):
+            self.target_input.setPlaceholderText(
+                ui_text("Raum oder Ziel, z. B. 262 oder DL9ABC-1")
+            )
+        if hasattr(self, "own_callsign_input"):
+            self.own_callsign_input.setPlaceholderText(
+                ui_text("eigenes Rufzeichen, z. B. DL9ABC-1")
+            )
+        if hasattr(self, "own_lat_input"):
+            self.own_lat_input.setPlaceholderText(
+                ui_text("Breitengrad, z. B. 51.93")
+            )
+        if hasattr(self, "own_lon_input"):
+            self.own_lon_input.setPlaceholderText(
+                ui_text("Längengrad, z. B. 8.88")
+            )
+        if hasattr(self, "weather_values_label") and not getattr(self, "weather_data", None):
+            self.weather_values_label.setText(ui_text("Warte auf WX-Information …"))
+
+        # Monitor-Bedienelemente müssen bei einem Sprachwechsel sofort aus
+        # den stabilen deutschen Quelltexten neu aufgebaut werden. Einige
+        # dieser Elemente wurden früher als bereits übersetzter Text
+        # weiterverwendet; dadurch blieben sie bis zum Neustart deutsch.
+        if hasattr(self, "monitor_pause_button"):
+            self.monitor_pause_button.setText(
+                ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+            )
+        if hasattr(self, "monitor_view"):
+            # Klassischer Monitor
+            for child in self.monitor_view.findChildren(QPushButton):
+                txt = child.text()
+                if txt in {"Leeren", "Clear", "Rensa", "Effacer", "Borrar"}:
+                    child.setText(ui_text("Leeren"))
+        if hasattr(self, "monitor_filter_label"):
+            self.monitor_filter_label.setText(ui_text("Filter:"))
+        if hasattr(self, "monitor_search_edit"):
+            self.monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
+        if hasattr(self, "monitor_autoscroll_check"):
+            self.monitor_autoscroll_check.setText(ui_text("Auto-Scroll"))
+        count_text = f"{len(self.monitor_rows)} {ui_text('angezeigt')} · {len(self.monitor_rows)} {ui_text('gespeichert')}"
+        if hasattr(self, "monitor_count_label"):
+            self.monitor_count_label.setText(count_text)
+        if hasattr(self, "dashboard_monitor_count_label"):
+            self.dashboard_monitor_count_label.setText(count_text)
+
+        # Dashboard-Monitor
+        if hasattr(self, "dashboard_monitor_title"):
+            self.dashboard_monitor_title.setText(ui_text("📡 Monitor – Live"))
+        if hasattr(self, "dashboard_monitor_pause_button"):
+            self.dashboard_monitor_pause_button.setText(
+                ui_text("▶ Weiter" if self.monitor_paused else "⏸ Pause")
+            )
+        if hasattr(self, "dashboard_monitor_clear_button"):
+            self.dashboard_monitor_clear_button.setText(ui_text("Leeren"))
+        if hasattr(self, "dashboard_monitor_filter_label"):
+            self.dashboard_monitor_filter_label.setText(ui_text("Filter:"))
+        if hasattr(self, "dashboard_monitor_search_edit"):
+            self.dashboard_monitor_search_edit.setPlaceholderText(ui_text("Suchen …"))
+        if hasattr(self, "dashboard_monitor_autoscroll_check"):
+            self.dashboard_monitor_autoscroll_check.setText(ui_text("Auto-Scroll"))
 
         # Table headers
         if hasattr(self, "monitor_table"):
@@ -4157,6 +4808,31 @@ class MainWindow(QMainWindow):
             self.dashboard_mh_table.setHorizontalHeaderLabels([
                 ui_text("Rufzeichen"), ui_text("Entfernung"), "RSSI", "SNR"
             ])
+        # Map overlay labels are rendered inside Leaflet's HTML page. Update
+        # them in-place on language changes without reloading the map.
+        try:
+            map_labels = {
+                "connections": ui_text("Verbindungen"),
+                "legend": ui_text("Legende"),
+                "off": ui_text("Aus"),
+                "on": ui_text("Ein"),
+                "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+                "connection_count": ui_text("Verbindung(en)"),
+                "from": ui_text("von"),
+                "mesh_path": ui_text("MeshCom-Pfad"),
+                "direct_heard": ui_text("Direkt gehört"),
+            }
+            labels_json = json.dumps(map_labels, ensure_ascii=False)
+            for view, ready in (
+                (getattr(self, "map_view", None), getattr(self, "_map_ready", False)),
+                (getattr(self, "dashboard_map_view", None), getattr(self, "dashboard_map_ready", False)),
+            ):
+                if view is not None and ready:
+                    view.page().runJavaScript(
+                        f"if (typeof window.updateMapLanguage === 'function') window.updateMapLanguage({labels_json});"
+                    )
+        except Exception:
+            pass
 
     def save_all_settings(self):
         # Nur im Dashboard werden die sichtbaren Dashboard-Felder als
@@ -4407,6 +5083,9 @@ class MainWindow(QMainWindow):
             "it": "MeshCom-Guru – Guida utente",
             "nl": "MeshCom-Guru – Gebruikershandleiding",
             "fr": "MeshCom-Guru – Guide utilisateur",
+            "es": "MeshCom-Guru – Guía de usuario",
+            "sv": "MeshCom-Guru – Användarhandbok",
+            "pl": "MeshCom-Guru – Instrukcja użytkownika",
         }
         dialog.setWindowTitle(titles.get(lang, titles["de"]))
         dialog.resize(860, 720)
@@ -4440,17 +5119,22 @@ class MainWindow(QMainWindow):
             <p><b>Statistik</b> zeigt die laufenden Sitzungszähler für Nachrichten, Nodes, Positionen, Telemetrie, private Nachrichten, Monitor-Einträge und Nachrichten nach Raum.</p>
             <h3>🗺 Karte und 🌐 Weltweit</h3>
             <p>Die OSM-/Leaflet-Karte zeigt Positionsdaten und Stationen. Der Tab <b>🌐 Weltweit</b> bzw. die Weltweit-Ansicht im Dashboard öffnet die öffentliche MeshCom-Aktivitätsseite des ÖVSV. Beim Laden wird automatisch <b>ACTIVITY</b> ausgewählt. Die eingebettete Webseite übernimmt ihre eigene Aktualisierung; MeshCom-Guru verwendet keinen zusätzlichen 15-Sekunden-Refresh.</p>
-            <h3>🌤 Wetterdaten</h3>
+                        <h3>🔗 Karten-Verbindungen</h3>
+            <p>Mit <b>🔗 Verbindungen</b> können auf der Karte tatsächlich empfangene MeshCom-Verbindungen und explizite Pfade als Linien eingeblendet werden. Ein Klick auf einen Node hebt dessen erkannte Verbindungen hervor.</p>
+            <p>Die Linien werden nur aus empfangenen MeshCom-Pfadinformationen oder einer tatsächlich lokal gehörten direkten LoRa-Verbindung erzeugt. Die Anzeige erfindet keine Verbindungen aus Entfernung, Position oder vermuteten Funkstrecken.</p>
+            <p><b>Wichtig:</b> Die Linien zeigen keine RSSI- oder SNR-Werte pro einzelner Teilstrecke. Die Werte eines empfangenen Frames beschreiben nur den Empfang dieses Frames an der eigenen Station.</p>
+<h3>🌤 Wetterdaten</h3>
             <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Wetter kann aktualisiert und an das aktuell ausgewählte Ziel gesendet werden.</p>
             <h3>⚡ Schnelltexte und 😊 Emojis</h3>
             <p>Schnelltexte können eingefügt, bearbeitet, ergänzt und gelöscht werden. Das Einfügen sendet nicht automatisch. Der Emoji-Picker fügt das ausgewählte Emoji an der Cursorposition ein.</p>
             <h3>🎨 Chat-Farben und 🔊 Sound</h3>
             <p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe anklickbarer Rufzeichen und Internetlinks eingestellt werden. Sound, Lautstärke und Hell-/Dunkel-Theme können ebenfalls konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
-            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands und Français</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
+            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands, Français, Español und Svenska</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
 <h3>💾 Datensicherung und ♻️ Wiederherstellung</h3><p>Über <b>Datei → Datensicherung erstellen …</b> können die persönlichen MeshCom-Guru-Daten aus <code>~/.MeshCom</code> als ZIP-Datei gesichert werden. Mit <b>Datei → Datensicherung wiederherstellen …</b> kann eine zuvor erstellte Sicherung zurückgespielt werden. Nicht im Backup enthaltene Dateien werden nicht gelöscht.</p><p>Nach einer Wiederherstellung werden die Daten auch in der laufenden Anwendung übernommen. Beim anschließenden Neustart bleibt der restaurierte Backup-Stand erhalten.</p>
 <h3>🔄 Nach Updates suchen</h3><p>Über <b>Hilfe → Nach Update suchen …</b> kann die installierte Version mit der aktuellen GitHub-Release verglichen werden. Bei einer neueren Version wird ein Hinweis mit Link zur GitHub-Release angezeigt. MeshCom-Guru lädt Updates nicht automatisch herunter und installiert sie nicht automatisch.</p>
-                        <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
+                                    <h3>🖼️ Bilder und Bildvorschau im Chat</h3><p>Mit der <b>Büroklammer</b> können Bilder direkt über <b>Picrd</b> hochgeladen werden. Der erzeugte Picrd-Link kann anschließend im MeshCom-Chat gesendet werden.</p><p>Wenn ein Chat-Link auf ein Bild verweist, versucht MeshCom-Guru automatisch eine <b>Bildvorschau</b> direkt im Chat anzuzeigen. Normale Internetlinks ohne Bild bleiben normale anklickbare Links. Die Vorschau wird im Hintergrund geladen und bei späteren Chat-Aktualisierungen nicht mehrfach angezeigt.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Den Ordner <code>MeshCom</code> entpacken und <code>./run_linux.sh</code> starten. <b>Windows:</b> <code>run_windows.bat</code> starten. <b>Debian:</b> Installation nach <code>/usr/share/MeshCom</code>; persönliche Einstellungen bleiben unter <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
@@ -4461,14 +5145,19 @@ class MainWindow(QMainWindow):
             <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
             <h3>📡 Monitor, 📋 Stations / MH and 📊 Statistics</h3><p><b>Monitor</b> shows MeshCom UDP packets on <b>port 1799</b> with type, callsign, target, RSSI, SNR and information. The information column remains readable and can be scrolled when necessary.</p><p><b>Stations / MH</b> shows recently heard stations with callsign, distance, RSSI and SNR without an unnecessary horizontal scrollbar.</p><p><b>Statistics</b> shows live session counters for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
             <h3>🗺 Map and 🌐 Worldwide</h3><p>The OSM/Leaflet map displays positions and stations. The <b>Worldwide</b> view opens the public MeshCom activity page of ÖVSV and automatically selects <b>ACTIVITY</b>. The embedded website handles its own updates; MeshCom-Guru does not add a 15-second refresh.</p>
-            <h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
+                        <h3>🔗 Map connections</h3>
+            <p>Use <b>🔗 Connections</b> to display actually received MeshCom connections and explicit paths as lines on the map. Clicking a node highlights its detected connections.</p>
+            <p>Lines are created only from received MeshCom path information or an actually locally heard direct LoRa reception. The display does not invent connections from distance, position, or assumed radio links.</p>
+            <p><b>Important:</b> The lines do not show RSSI or SNR values for individual path segments. The values of a received frame describe only reception of that frame at your own station.</p>
+<h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
             <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
             <h3>Node Info</h3><p><b>Open Node Info</b> displays information from the connected MeshCom WebService.</p>
             <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The choice is saved, and the built-in guide follows the selected language.</p>
 <h3>💾 Backup and ♻️ Restore</h3><p>Use <b>File → Create backup …</b> to save the personal MeshCom-Guru data from <code>~/.MeshCom</code> as a ZIP file. Use <b>File → Restore backup …</b> to restore a previously created backup. Files that are not included in the backup are not deleted.</p><p>After a restore, the restored data is also applied to the running application. During the following restart, the restored backup state is preserved.</p>
 <h3>🔄 Check for updates</h3><p>Use <b>Help → Check for updates …</b> to compare the installed version with the current GitHub release. If a newer version is available, MeshCom-Guru shows a notice with a link to the GitHub release. MeshCom-Guru does not download or install updates automatically.</p>
-                        <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
+                                    <h3>🖼️ Images and image previews in chat</h3><p>Use the <b>paperclip</b> to upload images directly via <b>Picrd</b>. The resulting Picrd link can then be sent in a MeshCom chat.</p><p>If a chat link points to an image, MeshCom-Guru automatically tries to show an <b>image preview</b> directly in the chat. Normal internet links without an image remain normal clickable links. The preview is loaded in the background and is not inserted repeatedly during later chat refreshes.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> Extract <code>MeshCom</code> and run <code>./run_linux.sh</code>. <b>Windows:</b> run <code>run_windows.bat</code>. <b>Debian:</b> installation in <code>/usr/share/MeshCom</code>; personal settings remain in <code>~/.MeshCom/settings.ini</code>.</p>
             """,
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
@@ -4479,12 +5168,17 @@ class MainWindow(QMainWindow):
             <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH e 📊 Statistiche</h3><p>Il <b>Monitor</b> mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b> con tipo, nominativo, destinazione, RSSI, SNR e informazioni. La colonna informazioni può essere fatta scorrere.</p><p><b>Stations / MH</b> mostra le stazioni ascoltate recentemente con nominativo, distanza, RSSI e SNR senza una barra orizzontale inutile. Le <b>Statistiche</b> mostrano i contatori della sessione.</p>
             <h3>🗺 Mappa e 🌐 Mondiale</h3><p>La mappa OSM/Leaflet mostra posizioni e stazioni. La vista <b>Mondiale</b> apre l'attività pubblica MeshCom e seleziona automaticamente <b>ACTIVITY</b>. Il sito integrato gestisce i propri aggiornamenti; non viene aggiunto un refresh di 15 secondi.</p>
-            <h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
+                        <h3>🔗 Connessioni sulla mappa</h3>
+            <p>Con <b>🔗 Connessioni</b> puoi visualizzare sulla mappa come linee le connessioni MeshCom effettivamente ricevute e i percorsi espliciti. Facendo clic su un nodo vengono evidenziate le sue connessioni rilevate.</p>
+            <p>Le linee vengono create solo da informazioni di percorso MeshCom ricevute o da una ricezione LoRa diretta effettivamente ascoltata dalla stazione locale. Non vengono inventate connessioni in base a distanza, posizione o collegamenti radio presunti.</p>
+            <p><b>Importante:</b> le linee non mostrano valori RSSI o SNR per i singoli tratti del percorso. I valori di un frame ricevuto descrivono solo la ricezione di quel frame presso la propria stazione.</p>
+<h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
             <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
             <h3>Lingua</h3><p>L'interfaccia supporta <b>Deutsch, English, Italiano, Nederlands e Français</b>. Anche questa guida segue la lingua selezionata.</p>
             <h3>💾 Backup e ♻️ Ripristino</h3><p>Con <b>File → Crea backup …</b> puoi salvare i dati personali di MeshCom-Guru da <code>~/.MeshCom</code> in un file ZIP. Con <b>File → Ripristina backup …</b> puoi ripristinare un backup creato in precedenza. I file non inclusi nel backup non vengono eliminati.</p><p>Dopo il ripristino, i dati vengono applicati anche all'applicazione in esecuzione. Al riavvio successivo il contenuto ripristinato viene mantenuto.</p>
             <h3>🔄 Controlla aggiornamenti</h3><p>Con <b>Aiuto → Cerca aggiornamenti …</b> puoi confrontare la versione installata con la release GitHub corrente. Se è disponibile una versione più recente, MeshCom-Guru mostra un avviso con il link alla release GitHub. Gli aggiornamenti non vengono scaricati o installati automaticamente.</p>
+                        <h3>🖼️ Immagini e anteprime nel chat</h3><p>Usa la <b>graffetta</b> per caricare direttamente le immagini tramite <b>Picrd</b>. Il link Picrd generato può quindi essere inviato in una chat MeshCom.</p><p>Se un link nella chat conduce a un'immagine, MeshCom-Guru tenta automaticamente di mostrare una <b>anteprima dell'immagine</b> direttamente nella chat. I normali link Internet senza immagini rimangono normali link cliccabili. L'anteprima viene caricata in background e non viene inserita più volte durante i successivi aggiornamenti della chat.</p>
             <h3>Installazione</h3><p><b>Linux:</b> estrarre <code>MeshCom</code> e avviare <code>./run_linux.sh</code>. <b>Windows:</b> avviare <code>run_windows.bat</code>. <b>Debian:</b> installazione in <code>/usr/share/MeshCom</code>.</p>
             """,
             "nl": f"""
@@ -4496,12 +5190,17 @@ class MainWindow(QMainWindow):
             <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH en 📊 Statistieken</h3><p>De <b>Monitor</b> toont MeshCom-UDP-pakketten op <b>poort 1799</b> met type, roepnaam, doel, RSSI, SNR en informatie. De informatiekolom kan worden gescrold.</p><p><b>Stations / MH</b> toont recent gehoorde stations met roepnaam, afstand, RSSI en SNR zonder onnodige horizontale scrollbar. <b>Statistieken</b> tonen de actuele sessietellers.</p>
             <h3>🗺 Kaart en 🌐 Wereldwijd</h3><p>De OSM/Leaflet-kaart toont posities en stations. <b>Wereldwijd</b> opent de openbare MeshCom Activity-pagina en selecteert automatisch <b>ACTIVITY</b>. De website beheert zijn eigen updates; MeshCom-Guru voegt geen refresh van 15 seconden toe.</p>
-            <h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
+                        <h3>🔗 Verbindingen op de kaart</h3>
+            <p>Met <b>🔗 Verbindingen</b> kun je daadwerkelijk ontvangen MeshCom-verbindingen en expliciete paden als lijnen op de kaart tonen. Klik op een node om de herkende verbindingen ervan te markeren.</p>
+            <p>Lijnen worden alleen gemaakt op basis van ontvangen MeshCom-padgegevens of een daadwerkelijk lokaal ontvangen directe LoRa-verbinding. Er worden geen verbindingen afgeleid uit afstand, positie of veronderstelde radioverbindingen.</p>
+            <p><b>Belangrijk:</b> De lijnen tonen geen RSSI- of SNR-waarden per afzonderlijk deel van het pad. De waarden van een ontvangen frame beschrijven alleen de ontvangst van dat frame bij het eigen station.</p>
+<h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
             <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
             <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
             <h3>Taal</h3><p>De interface ondersteunt <b>Deutsch, English, Italiano, Nederlands en Français</b>. De ingebouwde handleiding volgt de gekozen taal.</p>
             <h3>💾 Back-up en ♻️ Herstellen</h3><p>Gebruik <b>Bestand → Back-up maken …</b> om de persoonlijke MeshCom-Guru-gegevens uit <code>~/.MeshCom</code> als ZIP-bestand op te slaan. Met <b>Bestand → Back-up herstellen …</b> kun je een eerder gemaakte back-up terugzetten. Bestanden die niet in de back-up staan worden niet verwijderd.</p><p>Na herstel worden de teruggezette gegevens ook in de actieve toepassing overgenomen. Bij de daaropvolgende herstart blijft de herstelde back-up behouden.</p>
             <h3>🔄 Naar updates zoeken</h3><p>Via <b>Help → Naar updates zoeken …</b> kun je de geïnstalleerde versie vergelijken met de huidige GitHub-release. Als een nieuwere versie beschikbaar is, toont MeshCom-Guru een melding met een link naar de GitHub-release. Updates worden niet automatisch gedownload of geïnstalleerd.</p>
+                        <h3>🖼️ Afbeeldingen en afbeeldingsvoorbeelden in de chat</h3><p>Gebruik de <b>paperclip</b> om afbeeldingen rechtstreeks via <b>Picrd</b> te uploaden. De aangemaakte Picrd-link kan daarna in een MeshCom-chat worden verzonden.</p><p>Als een link in de chat naar een afbeelding verwijst, probeert MeshCom-Guru automatisch een <b>afbeeldingsvoorbeeld</b> direct in de chat te tonen. Normale internetlinks zonder afbeelding blijven gewone aanklikbare links. Het voorbeeld wordt op de achtergrond geladen en wordt bij latere chatverversingen niet opnieuw ingevoegd.</p>
             <h3>Installatie</h3><p><b>Linux:</b> pak <code>MeshCom</code> uit en start <code>./run_linux.sh</code>. <b>Windows:</b> start <code>run_windows.bat</code>. <b>Debian:</b> installatie in <code>/usr/share/MeshCom</code>.</p>
             """,
             "fr": f"""
@@ -4513,13 +5212,141 @@ class MainWindow(QMainWindow):
             <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
             <h3>📡 Moniteur, 📋 Stations / MH et 📊 Statistiques</h3><p>Le <b>Moniteur</b> affiche les paquets UDP MeshCom sur le <b>port 1799</b> avec type, indicatif, destination, RSSI, SNR et informations. La colonne d'informations peut être parcourue.</p><p><b>Stations / MH</b> affiche les stations entendues récemment avec indicatif, distance, RSSI et SNR sans barre de défilement horizontale inutile. Les <b>Statistiques</b> affichent les compteurs de session.</p>
             <h3>🗺 Carte et 🌐 Monde entier</h3><p>La carte OSM/Leaflet affiche les positions et stations. <b>Monde entier</b> ouvre la page publique d'activité MeshCom et sélectionne automatiquement <b>ACTIVITY</b>. Le site intégré gère ses propres mises à jour ; MeshCom-Guru n'ajoute pas de rafraîchissement de 15 secondes.</p>
-            <h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
+                        <h3>🔗 Connexions sur la carte</h3>
+            <p>Avec <b>🔗 Connexions</b>, vous pouvez afficher sur la carte les connexions MeshCom réellement reçues et les chemins explicites sous forme de lignes. Un clic sur un nœud met en évidence ses connexions détectées.</p>
+            <p>Les lignes sont créées uniquement à partir des informations de chemin MeshCom reçues ou d'une réception LoRa directe réellement entendue par la station locale. Aucune connexion n'est déduite de la distance, de la position ou de liaisons radio supposées.</p>
+            <p><b>Important :</b> les lignes n'affichent pas de valeurs RSSI ou SNR pour chaque segment du chemin. Les valeurs d'une trame reçue décrivent uniquement sa réception par votre propre station.</p>
+<h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
             <h3>🎨 Couleurs du chat et 🔊 Son</h3><p>Les couleurs du chat, des indicatifs/liens cliquables, le son, le volume et le thème clair/sombre sont configurables dans les paramètres.</p>
             <h3>Infos du nœud</h3><p><b>Infos du nœud</b> affiche les informations du WebService MeshCom connecté.</p>
             <h3>Langue</h3><p>L'interface prend en charge <b>Deutsch, English, Italiano, Nederlands et Français</b>. Le guide intégré suit également la langue sélectionnée.</p>
 <h3>💾 Sauvegarde et ♻️ restauration</h3><p>Utilisez <b>Fichier → Créer une sauvegarde …</b> pour enregistrer les données personnelles de MeshCom-Guru depuis <code>~/.MeshCom</code> dans un fichier ZIP. Avec <b>Fichier → Restaurer une sauvegarde …</b>, vous pouvez restaurer une sauvegarde précédente. Les fichiers qui ne figurent pas dans la sauvegarde ne sont pas supprimés.</p><p>Après la restauration, les données restaurées sont également appliquées à l'application en cours d'exécution. Lors du redémarrage suivant, l'état restauré est conservé.</p>
 <h3>🔄 Rechercher les mises à jour</h3><p>Avec <b>Aide → Rechercher les mises à jour …</b>, vous pouvez comparer la version installée avec la release GitHub actuelle. Si une version plus récente est disponible, MeshCom-Guru affiche un message avec un lien vers la release GitHub. Les mises à jour ne sont ni téléchargées ni installées automatiquement.</p>
-                        <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
+                                    <h3>🖼️ Images et aperçus d’images dans le chat</h3><p>Utilisez la <b>trombone</b> pour envoyer directement des images via <b>Picrd</b>. Le lien Picrd généré peut ensuite être envoyé dans un chat MeshCom.</p><p>Si un lien dans le chat pointe vers une image, MeshCom-Guru essaie automatiquement d’afficher un <b>aperçu de l’image</b> directement dans le chat. Les liens Internet normaux sans image restent des liens cliquables classiques. L’aperçu est chargé en arrière-plan et n’est pas inséré plusieurs fois lors des actualisations suivantes du chat.</p>
+            <h3>Installation</h3><p><b>Linux :</b> extraire <code>MeshCom</code> et lancer <code>./run_linux.sh</code>. <b>Windows :</b> lancer <code>run_windows.bat</code>. <b>Debian :</b> installation dans <code>/usr/share/MeshCom</code>.</p>
+            """,
+            "es": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Guía rápida</h3>
+            <h3>🎛 Vista: Clásica o Dashboard</h3>
+            <p>En <b>Ajustes → Vista</b> puedes elegir entre la vista <b>Clásica</b> y el nuevo <b>Dashboard</b>. Ambas utilizan los mismos datos y funciones de MeshCom. La selección se guarda y se restaura al iniciar de nuevo.</p>
+            <p>El Dashboard reúne conexión, salas, chat, mapa, actividad mundial, monitor, MH y estadísticas en una sola vista. La interfaz clásica sigue estando disponible.</p>
+            <h3>💬 Chats de salas y 👤 Chats privados</h3>
+            <p>Las hasta <b>cinco salas guardadas</b> aparecen a la izquierda como <b>chats de sala</b> seleccionables. Al hacer clic en una sala se abre únicamente esa sala. <b>Todos</b> es una vista independiente y puede seleccionarse de nuevo en cualquier momento.</p>
+            <p>Los <b>chats privados</b> aparecen por separado. Al hacer clic en uno se abre la conversación privada y no se vuelve accidentalmente a «Todos». Los mensajes privados nuevos aparecen en la conversación privada y en «Todos».</p>
+            <p><b>Hacer clic en un indicativo:</b> un indicativo seleccionable abre un pequeño menú con <b>Chat privado</b> y <b>QRZ.com</b>. Para QRZ.com se utiliza automáticamente solo el indicativo base, por ejemplo <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>Conexión y ajustes</h3>
+            <p><b>IP del hotspot:</b> introduce la dirección IP del WebService de MeshCom.</p>
+            <p><b>Estación propia / GPS:</b> introduce tu indicativo y, opcionalmente, latitud y longitud.</p>
+            <p><b>Guardar ajustes:</b> los ajustes personales se guardan en <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Conectar / Desconectar / Reconexión automática</h3>
+            <p>Usa <b>Conectar</b> para establecer la conexión con el WebService de MeshCom. Después de una conexión manual se activa la reconexión automática.</p>
+            <p>Si la conexión se pierde temporalmente por un problema de red, hotspot o WebService, MeshCom-Guru intenta reconectarse automáticamente. <b>Desconectar</b> desactiva deliberadamente la reconexión automática.</p>
+            <h3>Enviar mensajes</h3>
+            <p>En el Dashboard basta con pulsar <b>Enter</b> para enviar. No hace falta un botón de envío adicional.</p>
+            <p>Los mensajes están limitados a <b>149 caracteres</b> y el contador muestra la longitud actual.</p>
+            <h3>📡 Monitor, 📋 Estaciones / MH y 📊 Estadísticas</h3>
+            <p>El <b>Monitor</b> muestra los paquetes UDP de MeshCom en el <b>puerto 1799</b> con tipo, indicativo, destino, RSSI, SNR e información. La columna de información puede desplazarse cuando sea necesario.</p>
+            <p><b>Estaciones / MH</b> muestra las estaciones escuchadas recientemente con indicativo, distancia, RSSI y SNR.</p>
+            <p><b>Estadísticas</b> muestra los contadores de sesión de mensajes, nodos, posiciones, telemetría, mensajes privados, entradas del monitor y mensajes por sala.</p>
+            <h3>🗺 Mapa y 🌐 Mundial</h3>
+            <p>El mapa OSM/Leaflet muestra posiciones y estaciones. La vista <b>Mundial</b> abre la página pública de actividad de MeshCom del ÖVSV y selecciona automáticamente <b>ACTIVITY</b>. La página integrada gestiona sus propias actualizaciones; MeshCom-Guru no añade una actualización cada 15 segundos.</p>
+                        <h3>🔗 Conexiones del mapa</h3>
+            <p>Con <b>🔗 Conexiones</b> puedes mostrar en el mapa las conexiones MeshCom realmente recibidas y las rutas explícitas mediante líneas. Al hacer clic en un nodo se resaltan sus conexiones detectadas.</p>
+            <p>Las líneas solo se crean a partir de información de ruta MeshCom recibida o de una recepción LoRa directa realmente escuchada por la estación local. No se inventan conexiones a partir de distancia, posición o enlaces de radio supuestos.</p>
+            <p><b>Importante:</b> las líneas no muestran valores RSSI o SNR para cada tramo individual de la ruta. Los valores de una trama recibida describen únicamente la recepción de esa trama en la propia estación.</p>
+<h3>🌤 Tiempo</h3>
+            <p>La información WX muestra temperatura, humedad, QFE y QNH cuando el WebService proporciona estos valores. El tiempo puede actualizarse y enviarse al destino seleccionado.</p>
+            <h3>⚡ Textos rápidos y 😊 Emojis</h3>
+            <p>Los textos rápidos se pueden insertar, editar, añadir y eliminar. Insertar un texto rápido no lo envía automáticamente. El selector de emojis inserta el emoji seleccionado en la posición del cursor.</p>
+            <h3>🎨 Colores del chat y 🔊 Sonido</h3>
+            <p>En <b>Ajustes → Colores del chat …</b> puedes configurar el fondo, el color del texto de «Todos» y el color de los indicativos y enlaces de Internet. También se pueden configurar el sonido, el volumen y el tema claro/oscuro.</p>
+            <h3>Información del nodo</h3><p><b>Abrir información del nodo</b> muestra la información del WebService de MeshCom conectado.</p>
+            <h3>Idioma</h3><p>La interfaz admite <b>Deutsch, English, Italiano, Nederlands, Français, Español y Svenska</b>. La selección se guarda y esta guía integrada utiliza el idioma seleccionado.</p>
+            <h3>💾 Copia de seguridad y ♻️ Restauración</h3>
+            <p>Mediante <b>Archivo → Crear copia de seguridad …</b> puedes guardar los datos personales de MeshCom-Guru de <code>~/.MeshCom</code> como archivo ZIP. Con <b>Archivo → Restaurar copia de seguridad …</b> puedes restaurar una copia existente. Los archivos que no forman parte de la copia no se eliminan.</p>
+            <h3>🔄 Buscar actualizaciones</h3><p>Mediante <b>Ayuda → Buscar actualizaciones …</b> puedes comparar la versión instalada con la versión actual de GitHub. Si hay una versión más reciente, MeshCom-Guru muestra un aviso con un enlace a la release de GitHub. Las actualizaciones no se descargan ni instalan automáticamente.</p>
+                        <h3>🖼️ Imágenes y vistas previas en el chat</h3><p>Usa el <b>clip</b> para subir imágenes directamente mediante <b>Picrd</b>. El enlace de Picrd generado se puede enviar después en un chat de MeshCom.</p><p>Si un enlace del chat apunta a una imagen, MeshCom-Guru intenta mostrar automáticamente una <b>vista previa de la imagen</b> directamente en el chat. Los enlaces normales de Internet sin imagen siguen siendo enlaces en los que se puede hacer clic. La vista previa se carga en segundo plano y no se inserta varias veces durante las actualizaciones posteriores del chat.</p>
+            <h3>Instalación</h3><p><b>ZIP de Linux:</b> extrae la carpeta <code>MeshCom</code> y ejecuta <code>./run_linux.sh</code>. <b>Windows:</b> ejecuta <code>run_windows.bat</code>. <b>Debian:</b> instalación en <code>/usr/share/MeshCom</code>; los ajustes personales permanecen en <code>~/.MeshCom/settings.ini</code>.</p>
+            """,
+            "sv": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Snabbguide</h3>
+            <h3>🎛 Visning: Klassisk eller Dashboard</h3>
+            <p>Under <b>Inställningar → Visning</b> kan du välja mellan <b>Klassisk</b> och den nya <b>Dashboard</b>. Båda vyerna använder samma MeshCom-data och funktioner. Valet sparas och återställs vid nästa start.</p>
+            <p>Dashboard samlar anslutning, rum, chatt, karta, världsomfattande aktivitet, monitor, MH och statistik i en vy. Det klassiska gränssnittet finns fortfarande kvar.</p>
+            <h3>💬 Rumschattar och 👤 Privata chattar</h3>
+            <p>Upp till <b>fem sparade rum</b> visas till vänster som klickbara <b>rumschattar</b>. Klicka på ett rum för att öppna endast det rummet. <b>Alla</b> är en separat vy och kan alltid väljas igen.</p>
+            <p><b>Privata chattar</b> visas separat. Ett klick öppnar den privata konversationen och hoppar inte tillbaka till ”Alla”. Nya privata meddelanden visas i den privata konversationen och i ”Alla”.</p>
+            <p><b>Klicka på en anropssignal:</b> en klickbar anropssignal öppnar en liten meny med <b>Privat chatt</b> och <b>QRZ.com</b>. För QRZ.com används automatiskt bara grundanropssignalen, till exempel <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>Anslutning och inställningar</h3>
+            <p><b>Hotspot-IP:</b> ange IP-adressen till MeshCom-WebService.</p>
+            <p><b>Egen station / GPS:</b> ange din anropssignal och vid behov latitud och longitud.</p>
+            <p><b>Spara inställningar:</b> personliga inställningar sparas i <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Anslut / Koppla från / Automatisk återanslutning</h3>
+            <p>Använd <b>Anslut</b> för att ansluta till MeshCom-WebService. Efter en manuell anslutning är automatisk återanslutning aktiverad.</p>
+            <p>Om anslutningen tillfälligt förloras på grund av nätverk, hotspot eller WebService försöker MeshCom-Guru ansluta igen automatiskt. <b>Koppla från</b> stänger av den automatiska återanslutningen.</p>
+            <h3>Skicka meddelanden</h3>
+            <p>I Dashboard räcker det att trycka på <b>Enter</b> för att skicka. Ingen separat Skicka-knapp behövs.</p>
+            <p>Meddelanden är begränsade till <b>149 tecken</b> och räknaren visar aktuell längd.</p>
+            <h3>📡 Monitor, 📋 Stationer / MH och 📊 Statistik</h3>
+            <p><b>Monitor</b> visar MeshCom-UDP-paket på <b>port 1799</b> med typ, anropssignal, mål, RSSI, SNR och information. Informationskolumnen kan rullas vid behov.</p>
+            <p><b>Stationer / MH</b> visar senast hörda stationer med anropssignal, avstånd, RSSI och SNR.</p>
+            <p><b>Statistik</b> visar aktuella sessionsräknare för meddelanden, noder, positioner, telemetri, privata meddelanden, monitorposter och meddelanden per rum.</p>
+            <h3>🗺 Karta och 🌐 Världen</h3>
+            <p>OSM/Leaflet-kartan visar positioner och stationer. Världsvyn öppnar MeshComs offentliga aktivitetssida från ÖVSV och väljer automatiskt <b>ACTIVITY</b>. Den integrerade webbsidan sköter sina egna uppdateringar; MeshCom-Guru använder ingen extra uppdatering var 15:e sekund.</p>
+                        <h3>🔗 Anslutningar på kartan</h3>
+            <p>Med <b>🔗 Anslutningar</b> kan du visa faktiskt mottagna MeshCom-anslutningar och uttryckliga vägar som linjer på kartan. Klicka på en nod för att markera dess identifierade anslutningar.</p>
+            <p>Linjer skapas endast från mottagen MeshCom-väginformation eller en direkt LoRa-mottagning som faktiskt har hörts lokalt. Inga anslutningar skapas utifrån avstånd, position eller antagna radiolänkar.</p>
+            <p><b>Viktigt:</b> Linjerna visar inte RSSI- eller SNR-värden för enskilda delsträckor. Värdena för en mottagen ram beskriver endast mottagningen av den ramen vid den egna stationen.</p>
+<h3>🌤 Väder</h3>
+            <p>WX-informationen visar temperatur, luftfuktighet, QFE och QNH när WebService levererar dessa värden. Vädret kan uppdateras och skickas till det valda målet.</p>
+            <h3>⚡ Snabbtexter och 😊 Emojis</h3>
+            <p>Snabbtexter kan infogas, redigeras, läggas till och tas bort. Att infoga en snabbtext skickar den inte automatiskt. Emoji-väljaren infogar vald emoji vid markörens position.</p>
+            <h3>🎨 Chattfärger och 🔊 Ljud</h3>
+            <p>Under <b>Inställningar → Chattfärger …</b> kan bakgrund, textfärg för ”Alla” samt färg för klickbara anropssignaler och internetlänkar ställas in. Ljud, volym och ljust/mörkt tema kan också konfigureras.</p>
+            <h3>Nodinformation</h3><p><b>Öppna nodinformation</b> visar information från den anslutna MeshCom-WebService.</p>
+            <h3>Språk</h3><p>Gränssnittet stöder <b>Deutsch, English, Italiano, Nederlands, Français, Español och Svenska</b>. Valet sparas och denna inbyggda guide följer valt språk.</p>
+            <h3>💾 Säkerhetskopiering och ♻️ Återställning</h3>
+            <p>Via <b>Arkiv → Skapa säkerhetskopia …</b> kan MeshCom-Gurus personliga data från <code>~/.MeshCom</code> sparas som en ZIP-fil. Via <b>Arkiv → Återställ säkerhetskopia …</b> kan en tidigare säkerhetskopia återställas. Filer som inte ingår i säkerhetskopian raderas inte.</p>
+            <h3>🔄 Sök efter uppdateringar</h3><p>Via <b>Hjälp → Sök efter uppdateringar …</b> kan den installerade versionen jämföras med den aktuella GitHub-releasen. Om en nyare version finns visar MeshCom-Guru ett meddelande med länk till GitHub-releasen. Uppdateringar laddas inte ner eller installeras automatiskt.</p>
+                        <h3>🖼️ Bilder och bildförhandsvisningar i chatten</h3><p>Använd <b>gemet</b> för att ladda upp bilder direkt via <b>Picrd</b>. Den skapade Picrd-länken kan sedan skickas i en MeshCom-chatt.</p><p>Om en länk i chatten leder till en bild försöker MeshCom-Guru automatiskt visa en <b>bildförhandsvisning</b> direkt i chatten. Vanliga internetlänkar utan bild förblir vanliga klickbara länkar. Förhandsvisningen laddas i bakgrunden och läggs inte in flera gånger vid senare uppdateringar av chatten.</p>
+            <h3>Installation</h3><p><b>Linux ZIP:</b> packa upp mappen <code>MeshCom</code> och kör <code>./run_linux.sh</code>. <b>Windows:</b> kör <code>run_windows.bat</code>. <b>Debian:</b> installation i <code>/usr/share/MeshCom</code>; personliga inställningar finns kvar i <code>~/.MeshCom/settings.ini</code>.</p>
+            """,
+            "pl": f"""
+            <h2>MeshCom-Guru v{VERSION}</h2><h3>Skrócona instrukcja</h3>
+            <h3>🎛 Widok: Klasyczny lub Panel</h3>
+            <p>W <b>Ustawienia → Widok</b> można przełączać między widokiem <b>Klasycznym</b> a <b>Panelem</b>. Oba widoki korzystają z tych samych danych i funkcji MeshCom.</p>
+            <h3>💬 Czaty pokoi i 👤 czaty prywatne</h3>
+            <p>Można zapisać do <b>pięciu pokoi</b>. Pokoje są dostępne jako osobne czaty. Widok <b>Wszystkie</b> pokazuje wiadomości zgodnie z ustawieniami filtra. Czaty prywatne są oddzielone od czatów pokoi.</p>
+            <p><b>Kliknięcie znaku wywoławczego:</b> otwiera menu z czatem prywatnym i stroną QRZ.com. Przy otwieraniu QRZ używany jest podstawowy znak wywoławczy.</p>
+            <h3>Połączenie i ustawienia</h3>
+            <p><b>IP hotspotu:</b> wpisz adres IP MeshCom-WebService. W <b>Własna stacja / GPS</b> można podać własny znak wywoławczy oraz opcjonalnie współrzędne.</p>
+            <p>Ustawienia osobiste są zapisywane w <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>Połącz / Rozłącz i automatyczne ponowne połączenie</h3>
+            <p>Przycisk <b>Połącz</b> nawiązuje połączenie z MeshCom-WebService. Po ręcznym połączeniu automatyczne ponowne łączenie jest aktywne. <b>Rozłącz</b> wyłącza automatyczne ponowne łączenie.</p>
+            <h3>Wysyłanie wiadomości</h3>
+            <p>W Panelu wiadomość można wysłać klawiszem <b>Enter</b>. Wiadomości mają limit <b>149 znaków</b>; licznik pokazuje aktualną długość.</p>
+            <h3>📡 Monitor, 📋 Stacje / MH i 📊 Statystyki</h3>
+            <p><b>Monitor</b> pokazuje pakiety MeshCom UDP na <b>porcie 1799</b> wraz z typem, znakiem wywoławczym, celem, RSSI, SNR i informacją.</p>
+            <p><b>Stacje / MH</b> pokazuje ostatnio słyszane stacje wraz ze znakiem wywoławczym, odległością, RSSI i SNR. <b>Statystyki</b> pokazują liczniki wiadomości, węzłów, pozycji, telemetrii, wiadomości prywatnych i wpisów monitora.</p>
+            <h3>🗺 Mapa i 🌐 Świat</h3>
+            <p>Mapa OSM/Leaflet pokazuje pozycje stacji. Widok <b>🌐 Świat</b> otwiera publiczną stronę aktywności MeshCom ÖVSV. Strona obsługuje własne odświeżanie; MeshCom-Guru nie dodaje dodatkowego odświeżania co 15 sekund.</p>
+            <h3>🔗 Połączenia na mapie</h3>
+            <p>Opcja <b>🔗 Połączenia</b> pokazuje rzeczywiście odebrane ścieżki MeshCom i bezpośrednie lokalne odbiory LoRa jako linie. Linie nie są tworzone na podstawie samej odległości, pozycji ani przypuszczalnego zasięgu radiowego.</p>
+            <h3>🌤 Pogoda</h3>
+            <p>Dane WX mogą zawierać temperaturę, wilgotność, QFE i QNH. Dane można odświeżyć i wysłać do wybranego celu.</p>
+            <h3>⚡ Szybkie teksty i 😊 Emoji</h3>
+            <p>Szybkie teksty można wstawiać, edytować, dodawać i usuwać. Wstawienie tekstu nie wysyła go automatycznie. Selektor emoji wstawia wybrane emoji w miejscu kursora.</p>
+            <h3>🎨 Kolory czatu i 🔊 dźwięk</h3>
+            <p>W ustawieniach można zmieniać tło czatu, kolor tekstu widoku „Wszystkie”, kolor klikalnych znaków wywoławczych i łączy internetowych, a także dźwięk, głośność i motyw jasny/ciemny.</p>
+            <h3>🌐 Język</h3>
+            <p>Interfejs obsługuje <b>Deutsch, English, Italiano, Nederlands, Français, Español, Svenska i Polski</b>. Wybrany język jest zapisywany, a ta wbudowana instrukcja jest wyświetlana w wybranym języku.</p>
+            <h3>💾 Kopia zapasowa i ♻️ przywracanie</h3>
+            <p>Przez <b>Plik → Utwórz kopię zapasową …</b> można zapisać osobiste dane MeshCom-Guru z <code>~/.MeshCom</code> jako plik ZIP. Funkcja przywracania odtwarza wcześniejszą kopię bez usuwania innych plików.</p>
+            <h3>🔄 Sprawdzanie aktualizacji</h3>
+            <p>Przez <b>Pomoc → Sprawdź aktualizacje …</b> można porównać zainstalowaną wersję z bieżącym wydaniem GitHub. Program nie pobiera ani nie instaluje aktualizacji automatycznie.</p>
+            <h3>🖼️ Obrazy i podgląd Picrd</h3>
+            <p>Za pomocą <b>spinacza</b> można przesłać obraz przez Picrd. Jeśli wiadomość zawiera link prowadzący do obrazu, MeshCom-Guru próbuje pokazać podgląd bezpośrednio w czacie. Zwykłe linki internetowe pozostają klikalne.</p>
+            <h3>Instalacja</h3><p><b>Linux ZIP:</b> rozpakuj folder <code>MeshCom</code> i uruchom <code>./run_linux.sh</code>. <b>Windows:</b> uruchom <code>run_windows.bat</code>. <b>Debian:</b> program jest instalowany w <code>/usr/share/MeshCom</code>, a ustawienia osobiste pozostają w <code>~/.MeshCom/settings.ini</code>.</p>
             """,
         }
         view.setHtml(guides.get(lang, guides["de"]))
@@ -4875,6 +5702,7 @@ class MainWindow(QMainWindow):
             self.target_input.setText(key[1])
         elif key[0] == "all":
             self.target_input.clear()
+            self._refresh_all_live_view()
         view = self.tabs.widget(index)
         if isinstance(view, ChatView):
             view.scroll_to_bottom()
@@ -4963,6 +5791,32 @@ class MainWindow(QMainWindow):
         return candidate
 
     # ---------- Message parsing ----------
+    @staticmethod
+    def _is_no_messages_response(block):
+        """Return True for the WebService response that means there are no messages.
+
+        Such a status response is not a real MeshCom message and must never enter
+        the chat/session cache. The node/WebService can return this in different
+        UI languages.
+        """
+        plain = MainWindow._normalized_plain(block).strip().casefold()
+        if not plain:
+            return False
+
+        no_message_texts = {
+            "no messages available.",
+            "no messages available",
+            "keine nachrichten verfügbar.",
+            "keine nachrichten verfügbar",
+            "nessun messaggio disponibile.",
+            "nessun messaggio disponibile",
+            "geen berichten beschikbaar.",
+            "geen berichten beschikbaar",
+            "aucun message disponible.",
+            "aucun message disponible",
+        }
+        return plain in no_message_texts
+
     @staticmethod
     def _extract_message_blocks(page):
         """Extract normal message cards plus position/status cards.
@@ -5110,6 +5964,9 @@ class MainWindow(QMainWindow):
                     blocks.append(candidate)
                     existing.add(candidate)
 
+        # A status response such as "No messages available." is not a
+        # MeshCom message. Never pass it into the chat/session cache.
+        blocks = [block for block in blocks if not MainWindow._is_no_messages_response(block)]
         return blocks
 
     @staticmethod
@@ -5245,7 +6102,74 @@ class MainWindow(QMainWindow):
         return participants[0] if participants else ""
 
     @classmethod
-    def _make_clickable(cls, block):
+    def _make_clickable(cls, block, preview_seen=None, all_mode=False):
+        # A single message can contain the same URL more than once (for example
+        # after HTML/link normalization).  Never render the same image preview
+        # more than once inside that message.  Normal links themselves remain
+        # untouched and fully clickable.
+        if preview_seen is None:
+            preview_seen = set()
+
+        def image_preview_once(url):
+            key = str(url or "").strip()
+            if not key or key in preview_seen:
+                return ""
+
+            # In "Alle" the message document is rebuilt on the regular refresh.
+            # The image download may finish between two refreshes.  Without a
+            # persistent key, the same message would then gain a second preview.
+            # Remember the exact message-block + URL pair only after a preview
+            # was actually produced.  This does NOT remove or deduplicate any
+            # messages; it only suppresses a duplicate image preview for the
+            # same message.
+            stable_preview_key = None
+            if all_mode:
+                normalized_block = re.sub(r"\s+", " ", html.unescape(str(block or ""))).strip()
+                stable_preview_key = hashlib.sha1(
+                    (normalized_block + "\x1f" + key).encode("utf-8", errors="ignore")
+                ).hexdigest()
+                if stable_preview_key in cls._ALL_IMAGE_PREVIEW_RENDERED:
+                    return ""
+
+            # Mark the source URL first so the same link can never produce two
+            # previews during one complete "Alle" render.  There is a second
+            # layer below for image-content deduplication: two Picrd/page URLs
+            # can resolve to the exact same cached image even though their source
+            # URLs differ.  That situation used to make the same picture appear
+            # again on a later refresh of "Alle".
+            preview_seen.add(key)
+            preview = _chat_image_preview_html(key, getattr(cls, "chat_link_color", "#062f6f"))
+            if not preview:
+                return ""
+
+            if stable_preview_key is not None:
+                cls._ALL_IMAGE_PREVIEW_RENDERED.add(stable_preview_key)
+                # Keep the registry bounded during long-running Raspberry Pi
+                # sessions.  Old entries are only a preview bookkeeping detail.
+                if len(cls._ALL_IMAGE_PREVIEW_RENDERED) > 1200:
+                    cls._ALL_IMAGE_PREVIEW_RENDERED = set(
+                        list(cls._ALL_IMAGE_PREVIEW_RENDERED)[-600:]
+                    )
+
+            # Only the consolidated "Alle" renderer shares one preview_seen set
+            # across all message blocks.  If a cached preview is available, use
+            # its file content as a stable second deduplication key.  Normal room
+            # and private chats pass a fresh set per message and therefore keep
+            # their existing behaviour.
+            try:
+                with _CHAT_IMAGE_LOCK:
+                    cached_path = _CHAT_IMAGE_CACHE.get(key)
+                if cached_path:
+                    digest = hashlib.sha256(Path(cached_path).read_bytes()).hexdigest()
+                    image_key = "__image_content__:" + digest
+                    if image_key in preview_seen:
+                        return ""
+                    preview_seen.add(image_key)
+            except Exception:
+                # Preview display must never be affected by cache/hash errors.
+                pass
+            return preview
+
         # Dashboard-Links mit Rufzeichen werden auf interne MeshCom-Links umgebogen.
         # Danach werden zusätzlich noch plain-text-Rufzeichen anklickbar gemacht.
         protected = []
@@ -5272,7 +6196,26 @@ class MainWindow(QMainWindow):
                 return "".join(parts)
 
             converted = link_callsigns(inner)
-            protected.append(converted)
+            href_match = re.search(r'href\s*=\s*["\']([^"\']+)', match.group(1) or "", re.IGNORECASE)
+            href = html.unescape(href_match.group(1)).strip() if href_match else ""
+
+            # IMPORTANT: Keep existing internet anchors intact.  The old
+            # renderer accidentally discarded the original <a href=...> and
+            # therefore made links in "Alle" unclickable.
+            if re.match(r"^https?://", href, re.IGNORECASE):
+                preview = image_preview_once(href)
+                safe_href = html.escape(href, quote=True)
+                protected.append(
+                    preview
+                    + f'<a href="{safe_href}">'
+                    + converted
+                    + '</a>'
+                )
+            else:
+                # MeshCom callsign anchors are intentionally rebuilt from the
+                # visible callsign(s), preserving their existing internal
+                # behaviour.
+                protected.append(converted)
             return f"@@MESHCOM_ANCHOR_{len(protected)-1}@@"
 
         block = re.sub(r'<a\b([^>]*)>(.*?)</a>', protect_anchor, block, flags=re.IGNORECASE | re.DOTALL)
@@ -5295,7 +6238,19 @@ class MainWindow(QMainWindow):
                 raw = raw[:-1]
             if not raw:
                 return match.group(0)
+
             safe_url = html.escape(raw, quote=True)
+            preview = image_preview_once(raw)
+
+            # If the target is a real image, show a compact preview and keep
+            # the original URL underneath. If it is not an image, the old
+            # clickable-link rendering remains exactly as before.
+            if preview:
+                return (
+                    preview
+                    + f'<a href="{safe_url}" style="color:{getattr(cls, "chat_link_color", "#062f6f")};">'
+                    f'{html.escape(raw)}</a>{html.escape(trailing)}'
+                )
             return f'<a href="{safe_url}">{html.escape(raw)}</a>{html.escape(trailing)}'
 
         parts = re.split(r"(<[^>]+>)", block)
@@ -5414,12 +6369,24 @@ class MainWindow(QMainWindow):
             self.update_messages()
 
 
-    def _render_blocks(self, blocks):
+    def _render_blocks(self, blocks, preview_seen=None, all_mode=False):
         if not blocks:
             return "<html><body><p><b>Keine Nachrichten.</b></p></body></html>"
+        # For the consolidated "Alle" view, use one preview registry for the
+        # complete render pass.  The same message can occur more than once in
+        # the merged room stream; an image URL must still produce only one
+        # preview in that view.  Callers for normal room/private renders can
+        # provide their own registry (or leave this None for the old per-block
+        # behaviour).
+        if preview_seen is None:
+            preview_seen = None
         rendered = []
         for block in blocks:
-            content = self._make_clickable(block)
+            content = self._make_clickable(
+                block,
+                preview_seen=preview_seen if preview_seen is not None else set(),
+                all_mode=all_mode,
+            )
             # Nur bei einer tatsächlich eigenen Textnachricht einen Status
             # anhängen. POS-/Koordinatenblöcke bleiben 1:1 unangetastet.
             ack_html = ""
@@ -5526,18 +6493,35 @@ class MainWindow(QMainWindow):
     def _filter_blocks(self, blocks):
         if not self.filter_enabled.isChecked():
             return blocks
+
         rooms = self._rooms()
-        if not rooms:
-            return [b for b in blocks if self._is_all_target(b)]
-        # Bei aktivem Raumfilter bleiben die gespeicherten Räume sichtbar.
-        # Zusätzlich müssen Nachrichten, die ausdrücklich an „Alle“
-        # (>* bzw. >ALL) gerichtet sind, weiterhin im Tab „Alle“ erscheinen.
-        return [
-            b for b in blocks
-            if self._room_from_block(b) in rooms
-            or self._is_all_target(b)
-            or self._private_participants(b) is not None
-        ]
+        filtered = []
+        for block in blocks:
+            # POS/TEL packets from the UDP stream do not carry a MeshCom room
+            # destination.  When the room filter is explicitly enabled they
+            # must therefore not bypass the filter and reappear in „Alle“.
+            # With the filter OFF they remain fully visible, as intended.
+            if 'class="monitor-derived"' in block and re.search(
+                r"data-monitor-type=[\"'](?:POS|TEL)[\"']",
+                block, re.IGNORECASE,
+            ):
+                continue
+
+            if not rooms:
+                if self._is_all_target(block):
+                    filtered.append(block)
+                continue
+
+            # Bei aktivem Raumfilter bleiben nur Nachrichten der ausgewählten
+            # Räume, explizite globale Nachrichten und echte Privatnachrichten.
+            if (
+                self._room_from_block(block) in rooms
+                or self._is_all_target(block)
+                or self._private_participants(block) is not None
+            ):
+                filtered.append(block)
+
+        return filtered
 
     @classmethod
     def _is_all_target(cls, block):
@@ -5635,37 +6619,64 @@ class MainWindow(QMainWindow):
 
     @classmethod
     def _timestamp_from_block(cls, block):
-        """Return the timestamp carried by a MeshCom message/position card.
+        """Return the display time carried by a MeshCom message/position card.
 
-        Prefer the timestamp supplied by the WebService instead of the local
-        refresh time. This is important because the map refreshes repeatedly;
-        refreshing must never make every station appear to have been heard at
-        the same moment.
+        This method intentionally returns only the display value. Sorting uses
+        _timestamp_sort_key so a midnight transition cannot reverse messages.
         """
-        # HTML datetime/data attributes and <time datetime="...">.
-        attr_patterns = (
-            r'(?:data-(?:timestamp|time|datetime)|datetime|timestamp)\s*=\s*[\"\']([^\"\']+)',
-        )
-        for pattern in attr_patterns:
-            m = re.search(pattern, block, re.IGNORECASE)
-            if m:
-                value = html.unescape(m.group(1)).strip()
-                # ISO date/time -> local display format.
-                try:
-                    iso = value.replace('Z', '+00:00')
-                    dt = datetime.fromisoformat(iso)
-                    return dt.astimezone().strftime('%H:%M:%S')
-                except Exception:
-                    hm = re.search(r'\b([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b', value)
-                    if hm:
-                        return hm.group(0) if len(hm.group(0).split(':')) == 3 else hm.group(0) + ':00'
+        dt = cls._datetime_from_block(block)
+        if dt is not None:
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
+            return dt.strftime('%H:%M:%S')
 
         plain = cls._plain(block)
-        # Prefer a full date/time if present.
-        m = re.search(r'\b(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}[ T]+)?([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
+        m = re.search(r'\b([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
         if m:
             return f"{m.group(1)}:{m.group(2)}:{m.group(3) or '00'}"
         return ''
+
+    @classmethod
+    def _datetime_from_block(cls, block):
+        """Return the full timestamp from a message/position card when available."""
+        attr_pattern = r'(?:data-(?:timestamp|time|datetime)|datetime|timestamp)\s*=\s*[\"\']([^\"\']+)'
+        m = re.search(attr_pattern, block, re.IGNORECASE)
+        if m:
+            value = html.unescape(m.group(1)).strip()
+            try:
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except Exception:
+                pass
+
+        plain = cls._plain(block)
+        m = re.search(
+            r'\b(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2})[ T]+'
+            r'([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b',
+            plain,
+        )
+        if m:
+            date_text = m.group(1).replace('.', '-').replace('/', '-')
+            time_text = f"{m.group(2)}:{m.group(3)}:{m.group(4) or '00'}"
+            try:
+                return datetime.fromisoformat(f"{date_text} {time_text}")
+            except Exception:
+                pass
+        return None
+
+    @classmethod
+    def _timestamp_sort_key(cls, block):
+        """Return a chronological key, preserving correct order across midnight."""
+        dt = cls._datetime_from_block(block)
+        if dt is not None:
+            return (0, dt.timestamp())
+
+        # Legacy cards may contain only HH:MM:SS. Keep that as a fallback.
+        plain = cls._plain(block)
+        m = re.search(r'\b([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b', plain)
+        if m:
+            seconds = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3) or 0)
+            return (1, seconds)
+        return (2, 0)
 
     @classmethod
     def _station_position_from_block(cls, block):
@@ -5684,39 +6695,139 @@ class MainWindow(QMainWindow):
     def _map_html(self, stations):
         import json
         station_json = json.dumps(stations, ensure_ascii=False)
-        html_page = """<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>html,body,#map{height:100%;margin:0}</style></head>
-<body><div id='map'></div><script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script><script>
+        connection_json = json.dumps(self._map_connection_payload(stations), ensure_ascii=False)
+
+        labels = {
+            "connections": ui_text("Verbindungen"),
+            "legend": ui_text("Legende"),
+            "off": ui_text("Aus"),
+            "on": ui_text("Ein"),
+            "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+            "connection_count": ui_text("Verbindung(en)"),
+            "from": ui_text("von"),
+            "mesh_path": ui_text("MeshCom-Pfad"),
+            "direct_heard": ui_text("Direkt gehört"),
+        }
+        labels_json = json.dumps(labels, ensure_ascii=False)
+
+        html_page = r"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>
+html,body,#map{height:100%;margin:0}
+#mapControls{position:absolute;z-index:1000;top:10px;right:10px;background:rgba(20,30,42,.94);padding:7px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.35);font:13px sans-serif;color:#fff}
+#mapControls button{border:0;border-radius:7px;padding:7px 11px;background:#26384b;color:#fff;cursor:pointer;margin-right:3px}
+#mapControls button.active{background:#1677d2}
+#connectionInfo{margin-top:5px;color:#c8d4df;font-size:11px}
+.leaflet-popup-content{font-size:13px}
+</style></head>
+<body><div id='map'></div>
+<div id='mapControls'>
+<button id='connectionsBtn' onclick='toggleConnections()'></button>
+<button onclick='showLegend()'></button>
+<div id='connectionInfo'></div>
+</div>
+<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script><script>
 const initialStations=__STATIONS__;
+const initialConnections=__CONNECTIONS__;
+let mapLabels=__LABELS__;
 const map=L.map('map').setView([51,10],6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap-Mitwirkende'}).addTo(map);
 const markerLayer=L.layerGroup().addTo(map);
+const connectionLayer=L.layerGroup().addTo(map);
 let firstRender=true;
-function esc(v){return String(v).replace(/[&<>]/g,'');}
+let currentStations=[];
+let currentConnections=initialConnections||[];
+let connectionsVisible=false;
+let selectedCallsign='';
+
+function esc(v){return String(v??'').replace(/[&<>]/g,'');}
 function formatDistance(km){
   if(km===null || km===undefined || !isFinite(km)) return '';
-  if(km < 1) return Math.round(km*1000)+' m';
+  if(km<1) return Math.round(km*1000)+' m';
   return km.toFixed(1)+' km';
 }
+function stationByCall(c){
+  return currentStations.find(s=>String(s.callsign).toUpperCase()===String(c).toUpperCase());
+}
+function updateControls(){
+  const btn=document.getElementById('connectionsBtn');
+  const buttons=document.querySelectorAll('#mapControls button');
+  if(btn) btn.textContent='🔗 '+mapLabels.connections;
+  if(buttons[1]) buttons[1].textContent='☷ '+mapLabels.legend;
+  const info=document.getElementById('connectionInfo');
+  if(info) info.textContent=connectionsVisible ? (currentConnections.length+' '+mapLabels.connection_count) : mapLabels.off;
+  if(btn) btn.classList.toggle('active',connectionsVisible);
+}
+function showLegend(){
+  alert(mapLabels.legend_text);
+}
+function drawConnections(){
+  connectionLayer.clearLayers();
+  if(!connectionsVisible){ updateControls(); return; }
+  let count=0;
+  currentConnections.forEach(c=>{
+    const a=stationByCall(c.a),b=stationByCall(c.b);
+    if(!a||!b) return;
+    const selected=!selectedCallsign ||
+      String(c.a).toUpperCase()===selectedCallsign ||
+      String(c.b).toUpperCase()===selectedCallsign;
+    if(!selected) return;
+    const line=L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{
+      color:'#3388ff',weight:selectedCallsign?5:3,opacity:selectedCallsign?.9:.72
+    });
+    const rawSource=String(c.source||'');
+    const sourceLabel = rawSource === 'Direkt gehört' ? mapLabels.direct_heard :
+      (rawSource.indexOf('Pfad:') === 0 ? mapLabels.mesh_path : rawSource);
+    line.bindTooltip('<b>'+esc(c.a)+' ↔ '+esc(c.b)+'</b><br>'+esc(sourceLabel||''));
+    line.addTo(connectionLayer);
+    count++;
+  });
+  const info=document.getElementById('connectionInfo');
+  if(info) info.textContent=count+' '+mapLabels.connection_count+(selectedCallsign?' '+mapLabels.from+' '+esc(selectedCallsign):'');
+  updateControls();
+}
+function selectNode(c){
+  selectedCallsign=String(c||'').toUpperCase();
+  drawConnections();
+}
+function toggleConnections(){
+  connectionsVisible=!connectionsVisible;
+  if(!connectionsVisible) selectedCallsign='';
+  drawConnections();
+}
 function renderStations(stations){
+  currentStations=stations||[];
   const hadStations=markerLayer.getLayers().length>0;
   markerLayer.clearLayers();
-  stations.forEach(s=>{const m=L.marker([s.lat,s.lon]).addTo(markerLayer);const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
+  currentStations.forEach(s=>{
+    const m=L.marker([s.lat,s.lon]).addTo(markerLayer);
+    const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
     const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
     const distanceText=distance && !s.own ? '<br><b>Entfernung:</b> '+esc(distance) : '';
-    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+'<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+(s.own?'<br><b>Eigene Station</b>':''));
+    m.on('click',()=>{if(connectionsVisible)selectNode(s.callsign);});
+    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+
+      '<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+
+      (s.own?'<br><b>Eigene Station</b>':'')+
+      (connectionsVisible?'<br><br>🔗':''));
   });
   setTimeout(()=>map.invalidateSize(),50);
   if(firstRender && !hadStations){
-    const bounds=stations.map(s=>[s.lat,s.lon]);
+    const bounds=currentStations.map(s=>[s.lat,s.lon]);
     if(bounds.length===1) map.setView(bounds[0],10);
     else if(bounds.length>1) map.fitBounds(bounds,{padding:[30,30]});
   }
   firstRender=false;
+  drawConnections();
 }
 window.updateStations=function(stations){renderStations(stations||[]);};
-renderStations(initialStations);</script></body></html>"""
-        return html_page.replace('__STATIONS__', station_json)
+window.updateConnections=function(connections){currentConnections=connections||[];drawConnections();};
+window.updateMapLanguage=function(labels){mapLabels=labels||mapLabels;updateControls();drawConnections();};
+updateControls();
+renderStations(initialStations);
+</script></body></html>"""
+        return (html_page
+                .replace('__STATIONS__', station_json)
+                .replace('__CONNECTIONS__', connection_json)
+                .replace('__LABELS__', labels_json))
 
     def _map_load_finished(self, ok):
         self._map_ready = bool(ok)
@@ -5736,8 +6847,10 @@ renderStations(initialStations);</script></body></html>"""
         if classic_available and self._map_ready:
             import json
             station_json = json.dumps(self._map_pending_stations, ensure_ascii=False)
+            connection_json = json.dumps(self._map_connection_payload(self._map_pending_stations), ensure_ascii=False)
             self.map_view.page().runJavaScript(
-                f"if (typeof window.updateStations === 'function') window.updateStations({station_json});"
+                f"if (typeof window.updateStations === 'function') window.updateStations({station_json}); "
+                f"if (typeof window.updateConnections === 'function') window.updateConnections({connection_json});"
             )
 
         if hasattr(self, "dashboard_map_view"):
@@ -5782,8 +6895,30 @@ renderStations(initialStations);</script></body></html>"""
             own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
             stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0})
-        # Die Karte wird nicht neu geladen. Die Stationsdaten werden jedoch
-        # gepuffert, bis Leaflet/JavaScript nach setHtml() vollständig bereit ist.
+        # Die Karte wird nicht neu geladen. Ein 5-Sekunden-Refresh darf aber
+        # auch nicht die komplette Leaflet-Marker-Schicht neu erzeugen.
+        # Das wäre beim Zoomen und während der Texteingabe deutlich spürbar.
+        map_connections = self._map_connection_payload(stations)
+        map_signature = (
+            classic_map_available,
+            dashboard_map_available,
+            tuple(
+                (
+                    str(item.get("callsign", "")),
+                    item.get("lat"), item.get("lon"),
+                    str(item.get("last_heard", "")),
+                    item.get("distance_km"), bool(item.get("own", False)),
+                )
+                for item in stations
+            ),
+            tuple(
+                (str(item.get("a", "")), str(item.get("b", "")), str(item.get("source", "")))
+                for item in map_connections
+            ),
+        )
+        if map_signature == getattr(self, "_last_map_render_signature", None):
+            return
+        self._last_map_render_signature = map_signature
         self._push_map_stations(stations)
 
     # ---------- Verbindung ----------
@@ -5872,10 +7007,17 @@ renderStations(initialStations);</script></body></html>"""
         try:
             page = self.mesh.get_messages()
             self._set_connection_status(True)
-            blocks = self._extract_message_blocks(page)
-            if not blocks:
-                # Keep compatibility with nodes that return the message HTML directly.
-                blocks = [page] if page.strip() else []
+
+            # "No messages available." is a WebService status response, not a
+            # MeshCom message. It must be discarded before the compatibility
+            # fallback below can treat the complete response as a chat block.
+            if self._is_no_messages_response(page):
+                blocks = []
+            else:
+                blocks = self._extract_message_blocks(page)
+                if not blocks:
+                    # Keep compatibility with nodes that return the message HTML directly.
+                    blocks = [page] if page.strip() else []
 
             # Positions werden ausschließlich direkt über die eigene UDP-
             # Schnittstelle übernommen.
@@ -5892,7 +7034,6 @@ renderStations(initialStations);</script></body></html>"""
                         if heard:
                             self.station_last_heard[key] = heard
             self._update_map()
-            self._update_statistics()
 
             self._ensure_room_tabs()
             # Der HTTP-Nachrichtenstrom bleibt für Chat/Privatnachrichten zuständig.
@@ -5922,7 +7063,7 @@ renderStations(initialStations);</script></body></html>"""
 
             self._update_statistics()
             cached_blocks = list(self.message_cache.values())
-            cached_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
+            cached_blocks.sort(key=self._timestamp_sort_key)
 
             # Configured room tabs.
             for room in self._rooms():
@@ -5989,113 +7130,13 @@ renderStations(initialStations);</script></body></html>"""
             if hasattr(self, "dashboard_sidebar"):
                 self._dashboard_rebuild_private_buttons(self.dashboard_sidebar.layout())
 
-            # Tab „Alle“ basiert ebenfalls auf dem lokalen Nachrichtenpuffer.
-            # Dadurch verschwinden Nachrichten nicht mehr nur deshalb, weil der
-            # WebService sie bei einer späteren Abfrage nicht mehr zurückliefert.
-            all_key = ("all", "all")
-            all_index = self._ensure_tab(all_key, "Alle")
-            # Der Raumfilter gilt auch für den Gesamt-Tab „Alle“:
-            # - Filter AUS: unverändert alle bekannten Nachrichten anzeigen.
-            # - Filter EIN: ausschließlich Nachrichten aus den gespeicherten Räumen
-            #   anzeigen. Die übrigen Tabs und die eigentliche Nachrichtenablage
-            #   bleiben davon unberührt.
-            all_blocks = self._filter_blocks(cached_blocks)
+            # „Alle“ wird zusätzlich über seinen eigenen Live-Puffer aktualisiert.
+            # Der periodische WebService-Refresh bleibt für die übrigen Chats
+            # erhalten, darf aber den Live-Bestand von „Alle“ nicht ersetzen.
+            self._refresh_all_live_view()
 
-            # Zusätzlich bekannte UDP-Positionsdaten werden nur bei
-            # deaktiviertem Raumfilter als Nachrichtenblock in „Alle“ angezeigt.
-            # Die Positionsdaten selbst bleiben unabhängig davon in
-            # station_positions für die Karte erhalten. Dadurch verschwinden
-            # beim aktiven Raumfilter die Koordinaten aus dem Chat, während die
-            # Kartenmarker weiterhin sichtbar bleiben.
-            seen_all = {self._message_identity(b) for b in all_blocks if self._message_identity(b)}
-            if not self.filter_enabled.isChecked():
-                for block in self.udp_position_blocks:
-                    key = self._message_identity(block)
-                    if key and key in seen_all:
-                        continue
-                    if key:
-                        seen_all.add(key)
-                    all_blocks.append(block)
-
-            # Eine eigene lokale Kopie wird NICHT zusätzlich erzeugt. Eigene
-            # Nachrichten kommen weiterhin über den normalen WebService zurück.
-            self.local_all_messages.clear()
-
-            # Nur für „Alle“: dieselbe Room-Nachricht kann vom WebService
-            # in zwei HTML-Varianten geliefert werden (z. B. einmal mit einem
-            # zusätzlichen HTML-Entity/Icon vor dem Rufzeichen). Diese Varianten
-            # werden hier als identisch behandelt. Die Raum-Tabs werden bewusst
-            # NICHT verändert.
-            unique_all = []
-            seen_all_pairs = set()
-            seen_all_fallback = set()
-            for block in all_blocks:
-                # Die spezielle Dublettenprüfung darf NUR auf Nachrichten
-                # angewendet werden, die selbst an „Alle“ gerichtet sind
-                # (z. B. >* / >ALL). Nachrichten aus Raum-Tabs werden zwar
-                # unter „Alle“ mit angezeigt, dürfen aber niemals mit dieser
-                # Prüfung untereinander oder mit einer Alle-Nachricht
-                # verglichen werden.
-                plain_block = self._normalized_plain(block)
-                all_target = re.search(
-                    r"\s*>\s*(?:\*|ALL)(?=\s|$)", plain_block, re.IGNORECASE
-                ) is not None
-                if not all_target:
-                    unique_all.append(block)
-                    continue
-
-                identity = self._all_display_identity(block)
-                if identity is None:
-                    unique_all.append(block)
-                    continue
-
-                callsign, text_key = identity
-                block_timestamp = self._timestamp_from_block(block) or ""
-
-                # In „Alle“ dürfen zwei echte Nachrichten desselben
-                # Rufzeichens mit exakt demselben Text NICHT als Duplikat
-                # verworfen werden, wenn sie zu unterschiedlichen Zeiten
-                # gesendet wurden.
-                #
-                # Gleichzeitig können dieselbe Nachricht und ihre leicht
-                # unterschiedlich gerenderte WebService-Variante weiterhin
-                # zusammengeführt werden: gleicher Absender + gleicher Text
-                # + gleicher Zeitstempel.
-                if callsign and text_key:
-                    duplicate = False
-                    for old_callsign, old_text, old_timestamp in seen_all_pairs:
-                        if old_text != text_key:
-                            continue
-                        if block_timestamp and old_timestamp and block_timestamp != old_timestamp:
-                            continue
-                        a = re.sub(r"[^A-Z0-9-]", "", callsign.upper())
-                        b = re.sub(r"[^A-Z0-9-]", "", old_callsign.upper())
-                        if a and b and (a in b or b in a):
-                            duplicate = True
-                            break
-                    if duplicate:
-                        continue
-                    seen_all_pairs.add((callsign.upper(), text_key, block_timestamp))
-                else:
-                    # Für ungewöhnliche Karten/Status-Blöcke ohne vollständige
-                    # Rufzeichen+Text-Kombination weiterhin nur exakt identische
-                    # Fallback-Daten unterdrücken.
-                    fallback = (callsign.upper(), text_key)
-                    if fallback in seen_all_fallback:
-                        continue
-                    seen_all_fallback.add(fallback)
-                unique_all.append(block)
-            all_blocks = unique_all
-
-            # Chronologisch sortieren.
-            all_blocks.sort(key=lambda b: self._timestamp_from_block(b) or "99:99:99")
-
-            self._update_tab_content(all_key, all_index, all_blocks)
-
-            # Kartenmarker sind unabhängig vom Raumfilter. Die bereits
-            # gespeicherten station_positions werden nach jeder Chat-/Filter-
-            # Aktualisierung erneut an Classic und Dashboard gepusht.
-            self._update_map()
+            # Die Kartenmarker wurden bereits nach der Positionsverarbeitung
+            # aktualisiert. Kein zweiter Leaflet-Push im selben Refresh-Zyklus.
 
             if self.filter_enabled.isChecked():
                 rooms = self._rooms()
@@ -6467,23 +7508,28 @@ renderStations(initialStations);</script></body></html>"""
                         f"💬 Raum #{key[1]}" if key[0] == "room" else f"👤 Privat – {key[1]}"
                     )
         else:
-            rendered = self._render_blocks(blocks)
+            # In "Alle" the merged stream can contain the same underlying
+            # message/link more than once.  Keep one preview registry for the
+            # entire render pass so an identical image is displayed only once.
+            all_preview_seen = set() if key[0] == "all" else None
+            rendered = self._render_blocks(
+                blocks, preview_seen=all_preview_seen, all_mode=(key[0] == "all")
+            )
             digest = hashlib.sha1(rendered.encode("utf-8", errors="ignore")).hexdigest()
-            changed = self.tab_hashes.get(key) not in ("", digest) and self.tab_hashes.get(key) != digest
+            old_all_digest = self.tab_hashes.get(key, "")
+            changed = old_all_digest not in ("", digest) and old_all_digest != digest
             self.tab_hashes[key] = digest
             if key[0] == "all":
-                view.set_all_html(rendered)
-                # Dashboard shows the exact same rendered Alle chat.  This
-                # deliberately reuses the established renderer instead of
-                # creating a second, simplified message parser.
-                # Nur wenn im Dashboard tatsächlich „Alle“ ausgewählt ist,
-                # darf der regelmäßige Nachrichten-Refresh dessen Inhalt setzen.
-                # Bei Raum/Privat darf ein Hintergrund-Refresh den aktuell
-                # ausgewählten Chat nicht wieder auf „Alle“ zurücksetzen.
-                if (hasattr(self, "dashboard_chat_view") and
-                        getattr(self, "dashboard_current_key", ("all", "all")) == ("all", "all")):
-
-                    self.dashboard_chat_view.set_all_html(rendered)
+                # Das vollständige QTextBrowser-Dokument nur bei einer echten
+                # Änderung neu erzeugen. Ein unnötiges set_all_html() alle
+                # fünf Sekunden blockiert den GUI-Thread und macht sich beim
+                # Tippen/Scrollen als kurzer Hänger bemerkbar.
+                if old_all_digest != digest:
+                    view.set_all_html(rendered)
+                    # Dashboard erhält dieselbe Aktualisierung nur bei Änderung.
+                    if (hasattr(self, "dashboard_chat_view") and
+                            getattr(self, "dashboard_current_key", ("all", "all")) == ("all", "all")):
+                        self.dashboard_chat_view.set_all_html(rendered)
             else:
                 view.setHtml(rendered)
         # ChatView keeps the current scroll position during refreshes and only
@@ -6523,7 +7569,7 @@ renderStations(initialStations);</script></body></html>"""
             blocks = self._filter_blocks(cached_blocks)
             title = "Alle Nachrichten"
 
-        blocks = sorted(blocks, key=lambda b: self._timestamp_from_block(b) or "99:99:99")
+        blocks = sorted(blocks, key=self._timestamp_sort_key)
         if not blocks:
             self.status.setText(ui_text("Keine Nachrichten zum Exportieren"))
             return
@@ -6611,7 +7657,7 @@ renderStations(initialStations);</script></body></html>"""
             self.monitor_rows = []
         clean_text = str(text or "").strip()
         clean_target = str(target or "-").strip() or "-"
-        self.monitor_rows.append({
+        row = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": "MSG",
             "src": str(self.own_callsign or "-").strip() or "-",
@@ -6622,11 +7668,17 @@ renderStations(initialStations);</script></body></html>"""
             "_local_send": True,
             "_text": clean_text,
             "_source": "local_send",
-        })
+        }
+        self.monitor_rows.append(row)
+        if not hasattr(self, "monitor_all_rows"):
+            self.monitor_all_rows = []
+        self.monitor_all_rows.append(row)
         self.monitor_rows = self.monitor_rows[-1000:]
+        self.monitor_all_rows = self.monitor_all_rows[-500:]
         # Do not let the paused state prevent the send from being recorded.
         if not getattr(self, "monitor_paused", False):
             self._render_monitor()
+        self._refresh_all_live_view()
 
     def send(self):
         if not self.connected:
