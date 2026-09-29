@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.1**
+**Aktuelle Version: 0.4.2**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -32,16 +25,23 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italienisch-, niederländisch-, französisch-, spanisch- und schwedischsprachigen Handbücher stammen aus v0.3.96; das polnische Handbuch aus v0.3.97:
+Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.2 aktualisiert:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.3.96_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.3.96_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.3.96_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.3.96_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.3.96_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.3.96_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.3.96_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.2_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.2_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.2_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.2_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.2_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+
+## Version 0.4.2 – Unterstützung für 6 Räume
+
+- 🏠 **Sechs Räume:** Raumfilter, Raumverwaltung und Dashboard unterstützen jetzt bis zu **6 gespeicherte Räume**.
+- 💬 **Raum-Chats:** Alle sechs gespeicherten Räume werden als eigene anklickbare Raum-Chats angezeigt.
+- 🌐 **Mehrsprachige Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.2 aktualisiert.
+- 📚 **Dokumentation:** README, CHANGELOG und GitHub-Release-Dokumentation auf v0.4.2 aktualisiert.
 
 ## Version 0.4.1 – Vollständiger Mitternachts-Sortierfix
 
@@ -84,7 +84,7 @@ Im Release sind acht PDF-Handbücher enthalten. Die deutsch-, englisch-, italien
 
 - 🇵🇱 **Polnische Benutzeroberfläche:** Polski ergänzt und in die bestehende Sprachumschaltung integriert.
 - 📖 **Integrierte Anleitung:** Die Hilfe/Anleitung ist auch vollständig auf Polnisch verfügbar.
-- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.3.97_PL.pdf`.
+- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`.
 - 🛡️ **Bestehende Funktionen unverändert:** Empfang, Senden, Räume, Private Chats, „Alle“, Monitor, MH, Karte, Weltweit, Picrd-Vorschau und Update-Prüfung wurden nicht durch einen neuen Nachrichtenweg ersetzt.
 - 🧩 **Sprachmechanismus:** Polnisch ist Teil der normalen gespeicherten Spracheinstellung in `~/.MeshCom/settings.ini`.
 
@@ -352,7 +352,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.1**
+**Version 0.4.2**
 
 **By Goldisoft 2026**
 
@@ -492,7 +492,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.1**  
+**MeshCom-Guru v0.4.2**  
 **By Goldisoft 2026**
 
 
@@ -504,11 +504,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Ältere PDF-Versionen im Ordner `docs/` bleiben als Dokumentationshistorie erhalten.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.2-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

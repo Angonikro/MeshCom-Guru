@@ -39,7 +39,7 @@ class PicrdUploader(QObject):
                     self.API_URL,
                     files={"file": (path.rsplit("/", 1)[-1], handle)},
                     data={"visibility": "unlisted"},
-                    headers={"User-Agent": "MeshCom-Guru/0.4.1"},
+                    headers={"User-Agent": "MeshCom-Guru/0.4.2"},
                     timeout=(10, 120),
                 )
 

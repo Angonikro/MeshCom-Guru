@@ -252,7 +252,7 @@ def _chat_image_download(url):
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "MeshCom-Guru/0.4.1",
+                "User-Agent": "MeshCom-Guru/0.4.2",
                 "Accept": "image/avif,image/webp,image/apng,image/*,text/html,*/*;q=0.2",
             },
         )
@@ -288,7 +288,7 @@ def _chat_image_download(url):
                         image_req = urllib.request.Request(
                             image_url,
                             headers={
-                                "User-Agent": "MeshCom-Guru/0.4.1",
+                                "User-Agent": "MeshCom-Guru/0.4.2",
                                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.2",
                             },
                         )
@@ -914,7 +914,7 @@ class MainWindow(QMainWindow):
         self._apply_theme(self.current_theme)
         self._load_filter_fields(settings)
         # Dashboard is built before the saved filter fields are loaded.
-        # Rebuild its room-chat navigation now so the persistent five rooms
+        # Rebuild its room-chat navigation now so the persistent six rooms
         # are the source of truth from the first screen.
         if hasattr(self, "dashboard_sidebar"):
             sidebar_layout = self.dashboard_sidebar.layout()
@@ -2101,7 +2101,7 @@ class MainWindow(QMainWindow):
 
         self.filter_inputs = []
         filter_row = QHBoxLayout()
-        for i in range(5):
+        for i in range(6):
             field = QLineEdit()
             field.setPlaceholderText(ui_text("Raum") + f" {i + 1}")
             field.setMaxLength(10)
@@ -2114,7 +2114,7 @@ class MainWindow(QMainWindow):
         filter_row.addWidget(self.filter_save_button)
 
         filter_box = QVBoxLayout()
-        self.classic_filter_title = QLabel(ui_text("Nachrichtenfilter – bis zu 5 Räume"))
+        self.classic_filter_title = QLabel(ui_text("Nachrichtenfilter – bis zu 6 Räume"))
         filter_box.addWidget(self.classic_filter_title)
         filter_box.addWidget(self.filter_enabled)
         filter_box.addLayout(filter_row)
@@ -3459,7 +3459,7 @@ class MainWindow(QMainWindow):
             room = str(room).strip()
             if room and room not in rooms:
                 rooms.append(room)
-        rooms = rooms[:5]
+        rooms = rooms[:6]
 
         # The filter checkbox stays above the room list.  Room selection and
         # filter activation are intentionally independent.
@@ -3515,9 +3515,9 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle(ui_text("Räume verwalten"))
         layout = QVBoxLayout(dialog)
-        layout.addWidget(QLabel(ui_text("Bis zu 5 Räume eingeben. Die Räume werden auch im klassischen Filter verwendet.")))
+        layout.addWidget(QLabel(ui_text("Bis zu 6 Räume eingeben. Die Räume werden auch im klassischen Filter verwendet.")))
         fields = []
-        for i in range(5):
+        for i in range(6):
             row = QHBoxLayout()
             row.addWidget(QLabel(ui_text(f"Raum {i + 1}:")))
             field = QLineEdit(self.filter_inputs[i].text().strip())
@@ -4168,7 +4168,7 @@ class MainWindow(QMainWindow):
             field.setText(settings.get(f"filter_room{i}", ""))
         self._ensure_room_tabs()
         # The dashboard is built before the persistent filter fields are loaded.
-        # Rebuild its room-chat list afterwards so all five saved rooms are
+        # Rebuild its room-chat list afterwards so all six saved rooms are
         # immediately available there as clickable chats.
         if hasattr(self, "dashboard_sidebar"):
             self._dashboard_rebuild_room_buttons(self.dashboard_sidebar.layout())
@@ -4717,7 +4717,7 @@ class MainWindow(QMainWindow):
             "node_info_button": "Node Info aufrufen",
             "filter_enabled": "Raumfilter aktiv",
             "filter_save_button": "Filter speichern",
-            "classic_filter_title": "Nachrichtenfilter – bis zu 5 Räume",
+            "classic_filter_title": "Nachrichtenfilter – bis zu 6 Räume",
             "classic_weather_title": "Wetterdaten",
             "classic_city_label": "Stadt:",
             "weather_refresh_button": "Wetter aktualisieren",
@@ -5100,7 +5100,7 @@ class MainWindow(QMainWindow):
             <p>Unter <b>Einstellungen → Darstellung</b> kann zwischen <b>Klassisch</b> und dem neuen <b>Dashboard</b> gewechselt werden. Beide Ansichten verwenden dieselben MeshCom-Daten und Funktionen. Die Auswahl wird gespeichert und beim nächsten Start wieder verwendet.</p>
             <p>Das Dashboard bündelt Verbindung, Räume, Chat, Karte, Weltweit, Monitor, MH und Statistik in einer Ansicht. Die klassische Oberfläche bleibt vollständig verfügbar.</p>
             <h3>💬 Raum-Chats und 👤 Private Chats</h3>
-            <p>Die bis zu <b>fünf gespeicherten Räume</b> werden im Dashboard links direkt als anklickbare <b>Raum-Chats</b> angezeigt. Ein Klick auf einen Raum öffnet ausschließlich diesen Raum. <b>Alle</b> ist eine eigene Ansicht und kann jederzeit wieder angeklickt werden.</p>
+            <p>Die bis zu <b>sechs gespeicherten Räume</b> werden im Dashboard links direkt als anklickbare <b>Raum-Chats</b> angezeigt. Ein Klick auf einen Raum öffnet ausschließlich diesen Raum. <b>Alle</b> ist eine eigene Ansicht und kann jederzeit wieder angeklickt werden.</p>
             <p><b>Private Chats</b> stehen getrennt darunter. Ein Klick auf einen privaten Chat öffnet die private Unterhaltung und wechselt nicht ungewollt zurück zu „Alle“. Neue private Nachrichten werden in der privaten Unterhaltung und im Bereich „Alle“ berücksichtigt.</p>
             <p><b>Rufzeichen anklicken:</b> Ein anklickbares Rufzeichen öffnet ein kleines Menü mit <b>Privater Chat</b> und <b>QRZ.com</b>. Für QRZ.com wird automatisch nur das reine Rufzeichen verwendet, also z. B. <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Verbindung und Einstellungen</h3>
@@ -5130,7 +5130,7 @@ class MainWindow(QMainWindow):
             <h3>🎨 Chat-Farben und 🔊 Sound</h3>
             <p>Unter <b>Einstellungen → Chat-Farben …</b> können Hintergrund, Schriftfarbe für „Alle“ sowie die Farbe anklickbarer Rufzeichen und Internetlinks eingestellt werden. Sound, Lautstärke und Hell-/Dunkel-Theme können ebenfalls konfiguriert werden.</p>
             <h3>Node Info</h3><p><b>Node Info aufrufen</b> öffnet die Informationen des verbundenen MeshCom-WebService.</p>
-            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands, Français, Español und Svenska</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
+            <h3>Sprache</h3><p>Die Benutzeroberfläche unterstützt <b>Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski</b>. Die Auswahl wird gespeichert. Auch die integrierte Anleitung folgt der gewählten Sprache.</p>
 <h3>💾 Datensicherung und ♻️ Wiederherstellung</h3><p>Über <b>Datei → Datensicherung erstellen …</b> können die persönlichen MeshCom-Guru-Daten aus <code>~/.MeshCom</code> als ZIP-Datei gesichert werden. Mit <b>Datei → Datensicherung wiederherstellen …</b> kann eine zuvor erstellte Sicherung zurückgespielt werden. Nicht im Backup enthaltene Dateien werden nicht gelöscht.</p><p>Nach einer Wiederherstellung werden die Daten auch in der laufenden Anwendung übernommen. Beim anschließenden Neustart bleibt der restaurierte Backup-Stand erhalten.</p>
 <h3>🔄 Nach Updates suchen</h3><p>Über <b>Hilfe → Nach Update suchen …</b> kann die installierte Version mit der aktuellen GitHub-Release verglichen werden. Bei einer neueren Version wird ein Hinweis mit Link zur GitHub-Release angezeigt. MeshCom-Guru lädt Updates nicht automatisch herunter und installiert sie nicht automatisch.</p>
                                     <h3>🖼️ Bilder und Bildvorschau im Chat</h3><p>Mit der <b>Büroklammer</b> können Bilder direkt über <b>Picrd</b> hochgeladen werden. Der erzeugte Picrd-Link kann anschließend im MeshCom-Chat gesendet werden.</p><p>Wenn ein Chat-Link auf ein Bild verweist, versucht MeshCom-Guru automatisch eine <b>Bildvorschau</b> direkt im Chat anzuzeigen. Normale Internetlinks ohne Bild bleiben normale anklickbare Links. Die Vorschau wird im Hintergrund geladen und bei späteren Chat-Aktualisierungen nicht mehrfach angezeigt.</p>
@@ -5139,7 +5139,7 @@ class MainWindow(QMainWindow):
             "en": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
             <h3>🎛 Display: Classic or Dashboard</h3><p>Under <b>Settings → Display</b>, choose between <b>Classic</b> and the new <b>Dashboard</b>. Both views use the same MeshCom data and functions. The selection is saved and restored at the next start.</p><p>The Dashboard combines connection, rooms, chat, map, worldwide activity, monitor, MH and statistics in one view. The classic interface remains fully available.</p>
-            <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>five saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p><p><b>Clicking a callsign:</b> A clickable callsign opens a small menu with <b>Private Chat</b> and <b>QRZ.com</b>. For QRZ.com, only the base callsign is used automatically, for example <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>six saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p><p><b>Clicking a callsign:</b> A clickable callsign opens a small menu with <b>Private Chat</b> and <b>QRZ.com</b>. For QRZ.com, only the base callsign is used automatically, for example <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed. If a temporary network, hotspot or WebService error occurs, MeshCom-Guru tries to reconnect automatically. <b>Disconnect</b> deliberately disables automatic reconnection.</p>
             <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
@@ -5153,7 +5153,7 @@ class MainWindow(QMainWindow):
             <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
             <h3>Node Info</h3><p><b>Open Node Info</b> displays information from the connected MeshCom WebService.</p>
-            <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands and Français</b>. The choice is saved, and the built-in guide follows the selected language.</p>
+            <h3>Language</h3><p>The interface supports <b>Deutsch, English, Italiano, Nederlands, Français, Español, Svenska and Polski</b>. The choice is saved, and the built-in guide follows the selected language.</p>
 <h3>💾 Backup and ♻️ Restore</h3><p>Use <b>File → Create backup …</b> to save the personal MeshCom-Guru data from <code>~/.MeshCom</code> as a ZIP file. Use <b>File → Restore backup …</b> to restore a previously created backup. Files that are not included in the backup are not deleted.</p><p>After a restore, the restored data is also applied to the running application. During the following restart, the restored backup state is preserved.</p>
 <h3>🔄 Check for updates</h3><p>Use <b>Help → Check for updates …</b> to compare the installed version with the current GitHub release. If a newer version is available, MeshCom-Guru shows a notice with a link to the GitHub release. MeshCom-Guru does not download or install updates automatically.</p>
                                     <h3>🖼️ Images and image previews in chat</h3><p>Use the <b>paperclip</b> to upload images directly via <b>Picrd</b>. The resulting Picrd link can then be sent in a MeshCom chat.</p><p>If a chat link points to an image, MeshCom-Guru automatically tries to show an <b>image preview</b> directly in the chat. Normal internet links without an image remain normal clickable links. The preview is loaded in the background and is not inserted repeatedly during later chat refreshes.</p>
@@ -5162,7 +5162,7 @@ class MainWindow(QMainWindow):
             "it": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
             <h3>🎛 Visualizzazione: Classica o Dashboard</h3><p>In <b>Impostazioni → Visualizzazione</b> è possibile scegliere tra <b>Classica</b> e la nuova <b>Dashboard</b>. Entrambe usano gli stessi dati e le stesse funzioni MeshCom. La scelta viene salvata.</p><p>La Dashboard riunisce connessione, stanze, chat, mappa, attività mondiale, monitor, MH e statistiche in un'unica vista.</p>
-            <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>cinque stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p><p><b>Facendo clic su un nominativo:</b> un nominativo cliccabile apre un piccolo menu con <b>Chat privato</b> e <b>QRZ.com</b>. Per QRZ.com viene utilizzato automaticamente solo il nominativo base, ad esempio <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>sei stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p><p><b>Facendo clic su un nominativo:</b> un nominativo cliccabile apre un piccolo menu con <b>Chat privato</b> e <b>QRZ.com</b>. Per QRZ.com viene utilizzato automaticamente solo il nominativo base, ad esempio <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> inserire l'indirizzo IP del WebService MeshCom. <b>Stazione/GPS:</b> inserire il proprio nominativo e, se necessario, latitudine e longitudine. Le impostazioni personali sono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p><b>Connetti</b> stabilisce la connessione. Dopo una connessione manuale la riconnessione automatica è attiva. <b>Disconnetti</b> la disattiva intenzionalmente.</p>
             <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
@@ -5184,7 +5184,7 @@ class MainWindow(QMainWindow):
             "nl": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Korte handleiding</h3>
             <h3>🎛 Weergave: Klassiek of Dashboard</h3><p>Onder <b>Instellingen → Weergave</b> kun je kiezen tussen <b>Klassiek</b> en het nieuwe <b>Dashboard</b>. Beide weergaven gebruiken dezelfde MeshCom-gegevens en functies. De keuze wordt opgeslagen.</p><p>Het Dashboard combineert verbinding, ruimtes, chat, kaart, wereldwijde activiteit, monitor, MH en statistieken.</p>
-            <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>vijf opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p><p><b>Op een roepnaam klikken:</b> een aanklikbare roepnaam opent een klein menu met <b>Privéchat</b> en <b>QRZ.com</b>. Voor QRZ.com wordt automatisch alleen de basisroepnaam gebruikt, bijvoorbeeld <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>zes opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p><p><b>Op een roepnaam klikken:</b> een aanklikbare roepnaam opent een klein menu met <b>Privéchat</b> en <b>QRZ.com</b>. Voor QRZ.com wordt automatisch alleen de basisroepnaam gebruikt, bijvoorbeeld <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> voer het IP-adres van de MeshCom-WebService in. <b>Eigen station/GPS:</b> voer je roepnaam en eventueel breedte- en lengtegraad in. Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Verbinden / Verbinding verbreken / Automatische herverbinding</h3><p>Met <b>Verbinden</b> maak je verbinding met de MeshCom-WebService. Na een handmatige verbinding is automatische herverbinding actief. <b>Verbinding verbreken</b> schakelt dit bewust uit.</p>
             <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
@@ -5206,7 +5206,7 @@ class MainWindow(QMainWindow):
             "fr": f"""
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guide rapide</h3>
             <h3>🎛 Affichage : Classique ou Tableau de bord</h3><p>Dans <b>Paramètres → Affichage</b>, choisissez entre <b>Classique</b> et le nouveau <b>Tableau de bord</b>. Les deux vues utilisent les mêmes données et fonctions MeshCom. Le choix est enregistré.</p><p>Le Tableau de bord réunit connexion, salons, chat, carte, activité mondiale, moniteur, MH et statistiques dans une seule vue.</p>
-            <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>cinq salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p><p><b>Cliquer sur un indicatif :</b> un indicatif cliquable ouvre un petit menu avec <b>Chat privé</b> et <b>QRZ.com</b>. Pour QRZ.com, seul l'indicatif de base est utilisé automatiquement, par exemple <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
+            <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>six salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p><p><b>Cliquer sur un indicatif :</b> un indicatif cliquable ouvre un petit menu avec <b>Chat privé</b> et <b>QRZ.com</b>. Pour QRZ.com, seul l'indicatif de base est utilisé automatiquement, par exemple <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> saisir l'adresse IP du WebService MeshCom. <b>Station/GPS :</b> saisir votre indicatif et, si nécessaire, latitude et longitude. Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p><b>Connecter</b> établit la connexion au WebService MeshCom. Après une connexion manuelle, la reconnexion automatique est activée. <b>Déconnecter</b> la désactive volontairement.</p>
             <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
@@ -5231,7 +5231,7 @@ class MainWindow(QMainWindow):
             <p>En <b>Ajustes → Vista</b> puedes elegir entre la vista <b>Clásica</b> y el nuevo <b>Dashboard</b>. Ambas utilizan los mismos datos y funciones de MeshCom. La selección se guarda y se restaura al iniciar de nuevo.</p>
             <p>El Dashboard reúne conexión, salas, chat, mapa, actividad mundial, monitor, MH y estadísticas en una sola vista. La interfaz clásica sigue estando disponible.</p>
             <h3>💬 Chats de salas y 👤 Chats privados</h3>
-            <p>Las hasta <b>cinco salas guardadas</b> aparecen a la izquierda como <b>chats de sala</b> seleccionables. Al hacer clic en una sala se abre únicamente esa sala. <b>Todos</b> es una vista independiente y puede seleccionarse de nuevo en cualquier momento.</p>
+            <p>Las hasta <b>seis salas guardadas</b> aparecen a la izquierda como <b>chats de sala</b> seleccionables. Al hacer clic en una sala se abre únicamente esa sala. <b>Todos</b> es una vista independiente y puede seleccionarse de nuevo en cualquier momento.</p>
             <p>Los <b>chats privados</b> aparecen por separado. Al hacer clic en uno se abre la conversación privada y no se vuelve accidentalmente a «Todos». Los mensajes privados nuevos aparecen en la conversación privada y en «Todos».</p>
             <p><b>Hacer clic en un indicativo:</b> un indicativo seleccionable abre un pequeño menú con <b>Chat privado</b> y <b>QRZ.com</b>. Para QRZ.com se utiliza automáticamente solo el indicativo base, por ejemplo <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Conexión y ajustes</h3>
@@ -5274,7 +5274,7 @@ class MainWindow(QMainWindow):
             <p>Under <b>Inställningar → Visning</b> kan du välja mellan <b>Klassisk</b> och den nya <b>Dashboard</b>. Båda vyerna använder samma MeshCom-data och funktioner. Valet sparas och återställs vid nästa start.</p>
             <p>Dashboard samlar anslutning, rum, chatt, karta, världsomfattande aktivitet, monitor, MH och statistik i en vy. Det klassiska gränssnittet finns fortfarande kvar.</p>
             <h3>💬 Rumschattar och 👤 Privata chattar</h3>
-            <p>Upp till <b>fem sparade rum</b> visas till vänster som klickbara <b>rumschattar</b>. Klicka på ett rum för att öppna endast det rummet. <b>Alla</b> är en separat vy och kan alltid väljas igen.</p>
+            <p>Upp till <b>sex sparade rum</b> visas till vänster som klickbara <b>rumschattar</b>. Klicka på ett rum för att öppna endast det rummet. <b>Alla</b> är en separat vy och kan alltid väljas igen.</p>
             <p><b>Privata chattar</b> visas separat. Ett klick öppnar den privata konversationen och hoppar inte tillbaka till ”Alla”. Nya privata meddelanden visas i den privata konversationen och i ”Alla”.</p>
             <p><b>Klicka på en anropssignal:</b> en klickbar anropssignal öppnar en liten meny med <b>Privat chatt</b> och <b>QRZ.com</b>. För QRZ.com används automatiskt bara grundanropssignalen, till exempel <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
             <h3>Anslutning och inställningar</h3>
@@ -5316,7 +5316,7 @@ class MainWindow(QMainWindow):
             <h3>🎛 Widok: Klasyczny lub Panel</h3>
             <p>W <b>Ustawienia → Widok</b> można przełączać między widokiem <b>Klasycznym</b> a <b>Panelem</b>. Oba widoki korzystają z tych samych danych i funkcji MeshCom.</p>
             <h3>💬 Czaty pokoi i 👤 czaty prywatne</h3>
-            <p>Można zapisać do <b>pięciu pokoi</b>. Pokoje są dostępne jako osobne czaty. Widok <b>Wszystkie</b> pokazuje wiadomości zgodnie z ustawieniami filtra. Czaty prywatne są oddzielone od czatów pokoi.</p>
+            <p>Można zapisać do <b>sześciu pokoi</b>. Pokoje są dostępne jako osobne czaty. Widok <b>Wszystkie</b> pokazuje wiadomości zgodnie z ustawieniami filtra. Czaty prywatne są oddzielone od czatów pokoi.</p>
             <p><b>Kliknięcie znaku wywoławczego:</b> otwiera menu z czatem prywatnym i stroną QRZ.com. Przy otwieraniu QRZ używany jest podstawowy znak wywoławczy.</p>
             <h3>Połączenie i ustawienia</h3>
             <p><b>IP hotspotu:</b> wpisz adres IP MeshCom-WebService. W <b>Własna stacja / GPS</b> można podać własny znak wywoławczy oraz opcjonalnie współrzędne.</p>

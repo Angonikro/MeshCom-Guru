@@ -1,3 +1,11 @@
+## v0.4.2 – Unterstützung für 6 Räume
+
+- 🏠 Raumfilter, Raumverwaltung und Dashboard auf bis zu **6 Räume** erweitert.
+- 💬 Alle sechs gespeicherten Räume werden als eigene Raum-Chats angezeigt.
+- 🌐 Integrierte mehrsprachige Anleitung auf v0.4.2 aktualisiert.
+- 📄 Alle acht PDF-Handbücher auf v0.4.2 aktualisiert.
+- 📝 README und GitHub-Release-Dokumentation auf v0.4.2 aktualisiert.
+
 ## v0.4.1 – Vollständiger Mitternachts-Sortierfix
 
 - 🕛 **Chronologische Sortierung:** Lokaler Nachrichten-Cache und Chat-Export verwenden bei vollständigen Zeitstempeln Datum und Uhrzeit.
