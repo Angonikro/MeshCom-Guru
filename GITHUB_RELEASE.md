@@ -1,14 +1,15 @@
-# MeshCom-Guru v0.4.4 – Performance-Optimierung
+# MeshCom-Guru v0.4.5 – WebService-Performance und direkte ACK-Bestätigung
 
 ## Änderungen
 
-- ⚡ **Langzeit-Performance:** Die vorhandene Nachrichten-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch wird bei langen Laufzeiten unnötige wiederholte Arbeit am wachsenden Nachrichtenbestand vermieden.
-- 💬 **Sende-/Empfangspfad unverändert:** Senden, Echo, ACK und die Anzeige eigener Nachrichten wurden für diesen Performance-Fix nicht umgebaut.
-- 🏠 **Raumauswahl:** Nur der aktuell ausgewählte Raum-Button bleibt blau; die anderen Raum-Buttons werden beim Raumwechsel wieder normal dargestellt.
-- 🛡️ **Unbegrenzter Nachrichten-Cache:** Es wurde keine feste Cache-Grenze eingeführt und es werden keine alten Nachrichten gelöscht.
+- ⚡ **WebService im Hintergrund:** Das Abrufen und Verarbeiten der WebService-Daten läuft außerhalb des GUI-Threads.
+- 🧹 **Weniger unnötige Aktualisierungen:** Unveränderte Daten werden nicht wiederholt vollständig verarbeitet.
+- ✅ **ACK-Bestätigung direkt aktualisiert:** Ein empfangenes ACK aktualisiert die gesendete Nachricht sofort in der sichtbaren Chatansicht.
+- 🗺️ **Eigener Kartenmarker:** Der eigene Positionsmarker bleibt erhalten.
+- 🛡️ **Bestehende Funktionen:** Nachrichten, Räume, private Chats, Monitor, MH, Karte und Weltweit bleiben erhalten.
 
 ## Release-Stand
 
-**Version:** 0.4.4  
+**Version:** 0.4.5  
 **Projekt:** MeshCom-Guru  
 **Ordner im ZIP:** `MeshCom/`

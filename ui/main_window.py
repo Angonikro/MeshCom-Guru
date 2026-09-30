@@ -6392,11 +6392,33 @@ class MainWindow(QMainWindow):
             QDesktopServices.openUrl(QUrl(value))
 
     def _refresh_visible_ack_states(self):
-        # Den bestehenden Nachrichten-Refresh verwenden, damit auch der
-        # vorhandene „Alle“-Zusatzstrom (einschließlich POS/Koordinaten) exakt
-        # so aufgebaut wird wie bisher. Keine eigene neue Chat-/POS-Logik.
-        if not self.refresh_in_progress:
-            self.update_messages()
+        """Refresh visible chat bubbles from the local cache after echo/ACK."""
+        if self.refresh_in_progress:
+            return
+
+        cached_blocks = getattr(self, "_chat_sorted_cache", None)
+        if not cached_blocks:
+            cached_blocks = list(getattr(self, "message_cache", {}).values())
+            try:
+                cached_blocks.sort(key=self._timestamp_sort_key)
+            except Exception:
+                pass
+
+        # ACK is already received via UDP. Do not trigger another WebService
+        # request here; update only the normal room/private chat views.
+        for key in list(getattr(self, "tab_keys", [])):
+            if not key or key[0] not in {"room", "private"}:
+                continue
+            try:
+                idx = self._index_for_key(key)
+                if idx is None or idx < 0:
+                    continue
+                blocks = (self._room_blocks(cached_blocks, key[1])
+                          if key[0] == "room"
+                          else self._private_blocks(cached_blocks, key[1]))
+                self._update_tab_content(key, idx, blocks)
+            except Exception:
+                continue
 
 
     def _render_blocks(self, blocks, preview_seen=None, all_mode=False):

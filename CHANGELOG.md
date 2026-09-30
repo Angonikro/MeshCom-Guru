@@ -1,3 +1,11 @@
+## v0.4.5 – WebService-Performance und direkte ACK-Bestätigung
+
+- ⚡ **WebService im Hintergrund:** Abrufen und Verarbeiten der WebService-Daten läuft außerhalb des GUI-Threads.
+- 🧹 **Weniger unnötige Aktualisierungen:** Unveränderte Daten werden nicht wiederholt vollständig verarbeitet und dargestellt.
+- ✅ **ACK-Bestätigung direkt aktualisiert:** Ein empfangenes ACK aktualisiert den Status der zugehörigen gesendeten Nachricht unmittelbar, ohne auf den nächsten regulären Nachrichten-Refresh zu warten.
+- 🗺️ **Eigener Kartenmarker:** Der eigene Positionsmarker bleibt erhalten.
+- 🛡️ **Stabilitätsprinzip:** Die bestehenden Nachrichten-, Raum-, Monitor-, Karten- und Weltweit-Funktionen bleiben erhalten.
+
 ## v0.4.4 – Chat-Aufbau ohne sichtbaren Neuaufbau
 
 - 💬 **Alle-Chat:** Der Bereich **„Alle“** wird beim Neuaufbau zunächst vollständig aufgebaut und erst danach sichtbar angezeigt. Dadurch ist der Aufbau von der ältesten zur neuesten Nachricht nicht mehr sichtbar.

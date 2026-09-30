@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.4**
+**Aktuelle Version: 0.4.5**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,14 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+
+## Version 0.4.5 – WebService-Performance und direkte ACK-Bestätigung
+
+- ⚡ **WebService im Hintergrund:** Das Abrufen und Verarbeiten der WebService-Daten läuft nicht mehr im GUI-Thread. Dadurch bleibt die Oberfläche auch bei längeren Laufzeiten reaktionsfähiger.
+- 🧹 **Weniger unnötige Aktualisierungen:** Unveränderte WebService-Daten werden nicht wiederholt vollständig verarbeitet und dargestellt.
+- ✅ **ACK-Bestätigung direkt aktualisiert:** Sobald ein ACK empfangen wurde, wird der Status der gesendeten Nachricht direkt in der sichtbaren Chatansicht aktualisiert. Die Bestätigung muss dadurch nicht mehr auf den nächsten regulären Nachrichten-Refresh warten.
+- 🗺️ **Eigener Kartenmarker:** Die Anzeige des eigenen Positionsmarkers bleibt erhalten.
+- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit und die bisherigen Stabilitäts-/Performance-Fixes bleiben erhalten.
 
 ## Version 0.4.4 – Chat-Aufbau ohne sichtbaren Neuaufbau
 
@@ -372,7 +373,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.4**
+**Version 0.4.5**
 
 **By Goldisoft 2026**
 
@@ -512,7 +513,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.4**  
+**MeshCom-Guru v0.4.5**  
 **By Goldisoft 2026**
 
 
@@ -530,5 +531,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
