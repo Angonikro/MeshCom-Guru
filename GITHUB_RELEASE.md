@@ -1,15 +1,14 @@
-# MeshCom-Guru v0.4.2 – Unterstützung für 6 Räume
+# MeshCom-Guru v0.4.3 – Performance-Optimierung
 
 ## Änderungen
 
-- 🏠 Raumfilter, Raumverwaltung und Dashboard unterstützen jetzt bis zu **6 Räume**.
-- 💬 Alle sechs gespeicherten Räume sind als eigene Raum-Chats verfügbar.
-- 📖 Die integrierte mehrsprachige Anleitung wurde auf v0.4.2 aktualisiert.
-- 📄 Alle acht PDF-Handbücher wurden auf v0.4.2 aktualisiert.
-- 📝 README und CHANGELOG wurden auf den neuen Release-Stand gebracht.
+- ⚡ **Langzeit-Performance:** Die vorhandene Nachrichten-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch wird bei langen Laufzeiten unnötige wiederholte Arbeit am wachsenden Nachrichtenbestand vermieden.
+- 💬 **Sende-/Empfangspfad unverändert:** Senden, Echo, ACK und die Anzeige eigener Nachrichten wurden für diesen Performance-Fix nicht umgebaut.
+- 🏠 **Raumauswahl:** Nur der aktuell ausgewählte Raum-Button bleibt blau; die anderen Raum-Buttons werden beim Raumwechsel wieder normal dargestellt.
+- 🛡️ **Unbegrenzter Nachrichten-Cache:** Es wurde keine feste Cache-Grenze eingeführt und es werden keine alten Nachrichten gelöscht.
 
 ## Release-Stand
 
-**Version:** 0.4.2  
+**Version:** 0.4.3  
 **Projekt:** MeshCom-Guru  
 **Ordner im ZIP:** `MeshCom/`

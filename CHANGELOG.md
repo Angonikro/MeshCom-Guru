@@ -1,3 +1,10 @@
+## v0.4.3 – Performance-Optimierung und Raumanzeige
+
+- ⚡ **Langzeit-Performance:** Die Nachrichten-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch wird die wiederholte Vollsortierung des wachsenden Nachrichtenbestands bei normalen Refreshs vermieden.
+- 💬 **Sende-/Empfangspfad unverändert:** Senden, Echo, ACK und die Anzeige eigener Nachrichten bleiben auf dem bisherigen funktionierenden Pfad.
+- 🏠 **Raumauswahl:** Beim Wechsel des Raums bleibt nur der aktuell ausgewählte Raum-Button blau markiert; die übrigen Raum-Buttons werden wieder normal dargestellt.
+- 🛡️ **Nachrichten-Cache:** Der Cache bleibt unbegrenzt; es wurde keine feste 1500-Nachrichten-Grenze eingeführt.
+
 ## v0.4.2 – Unterstützung für 6 Räume
 
 - 🏠 Raumfilter, Raumverwaltung und Dashboard auf bis zu **6 Räume** erweitert.

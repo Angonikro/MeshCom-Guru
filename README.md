@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.2**
+**Aktuelle Version: 0.4.3**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+
+## Version 0.4.3 – Performance-Optimierung und Raumanzeige
+
+- ⚡ **Langzeit-Performance:** Die bestehende Chat-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch entfällt die wiederholte Vollsortierung des wachsenden Nachrichtenbestands bei jedem Refresh.
+- 💬 **Nachrichtenanzeige unverändert:** Senden, Echo, ACK und die Darstellung eigener Nachrichten bleiben auf dem bisherigen funktionierenden Pfad.
+- 🏠 **Raumauswahl:** Beim Wechsel des Raums bleibt nur der aktuell ausgewählte Raum-Button blau markiert; die übrigen Raum-Buttons werden wieder normal dargestellt.
+- 🛡️ **Cache:** Der Nachrichten-Cache bleibt weiterhin unbegrenzt; es werden keine alten Nachrichten aufgrund einer festen Cache-Grenze entfernt.
 
 ## Version 0.4.2 – Unterstützung für 6 Räume
 
@@ -359,7 +359,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.2**
+**Version 0.4.3**
 
 **By Goldisoft 2026**
 
@@ -499,7 +499,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.2**  
+**MeshCom-Guru v0.4.3**  
 **By Goldisoft 2026**
 
 
@@ -517,5 +517,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

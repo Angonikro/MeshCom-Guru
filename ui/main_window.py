@@ -839,6 +839,10 @@ class MainWindow(QMainWindow):
         # nicht aus der lokalen Anzeige verschwinden. Die Darstellung wird bei
         # jedem Refresh aus diesem Puffer aufgebaut.
         self.message_cache = {}
+        # Performance: keep the sorted chat view until the message cache changes.
+        # This does not alter send/echo/ACK handling or the unlimited cache.
+        self._chat_sorted_cache = []
+        self._chat_sorted_cache_dirty = True
         # Beim Programmstart werden die bereits vom WebService vorhandenen
         # Nachrichten nur als Startbestand gemerkt. Sie sollen nach einem
         # Neustart nicht wieder in den Raum-Tabs erscheinen. Erst Nachrichten,
@@ -3605,7 +3609,21 @@ class MainWindow(QMainWindow):
         self.dashboard_current_key = key
         self.unread.discard(key)
         self._set_tab_normal(key)
-        self._dashboard_update_chat_button(key)
+
+        # Alle Dashboard-Chatbuttons neu bewerten. Dadurch bleibt nur der
+        # aktuell ausgewählte Raum blau; der vorherige Raum wird sofort auf
+        # seine normale bzw. ungelesene Darstellung zurückgesetzt.
+        for collection_name in (
+            "dashboard_room_buttons",
+            "dashboard_room_chat_buttons",
+            "dashboard_private_buttons",
+        ):
+            for _name, candidate in getattr(self, collection_name, []):
+                self._dashboard_update_chat_button(candidate.property("chatKey"), candidate)
+        all_button = getattr(self, "dashboard_all_button", None)
+        if all_button is not None:
+            self._dashboard_update_chat_button(("all", "all"), all_button)
+
         self._dashboard_set_chat_from_key(key)
 
     def _dashboard_set_chat_from_key(self, key):
@@ -7060,10 +7078,18 @@ renderStations(initialStations);
                     identity = self._message_identity(block)
                     if identity and identity not in self.startup_message_identities:
                         self.message_cache[identity] = block
+                        self._chat_sorted_cache_dirty = True
+
+            # Keep the exact existing chat filtering/rendering paths, but avoid
+            # sorting the unlimited session cache on every 5-second refresh.
+            # Echo/ACK handling still runs through the normal tab update below.
+            if self._chat_sorted_cache_dirty:
+                self._chat_sorted_cache = list(self.message_cache.values())
+                self._chat_sorted_cache.sort(key=self._timestamp_sort_key)
+                self._chat_sorted_cache_dirty = False
+            cached_blocks = self._chat_sorted_cache
 
             self._update_statistics()
-            cached_blocks = list(self.message_cache.values())
-            cached_blocks.sort(key=self._timestamp_sort_key)
 
             # Configured room tabs.
             for room in self._rooms():
