@@ -579,6 +579,13 @@ class ChatView(QScrollArea):
         old_max = old_bar.maximum()
         was_at_bottom = old_max <= 0 or old_value >= max(0, old_max - 8)
 
+        # Build the replacement view without exposing the intermediate
+        # top-to-bottom document layout to the user.  The old view remains
+        # visually stable until the new document has its final geometry and
+        # scroll position.  This is intentionally presentation-only: the
+        # message order, cache, filtering and ACK logic remain unchanged.
+        self.setUpdatesEnabled(False)
+
         self._all_mode = True
         self._bubble_mode = False
         self._all_message_views = []
@@ -637,6 +644,11 @@ class ChatView(QScrollArea):
                 new_bar.setValue(new_bar.maximum())
             else:
                 new_bar.setValue(min(old_value, new_bar.maximum()))
+
+            # Only now expose the completely laid-out document.
+            self.setUpdatesEnabled(True)
+            self.viewport().update()
+            self.update()
 
         QTimer.singleShot(0, finalize)
         QTimer.singleShot(50, finalize)

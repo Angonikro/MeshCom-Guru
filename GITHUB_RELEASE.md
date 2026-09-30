@@ -1,4 +1,4 @@
-# MeshCom-Guru v0.4.3 – Performance-Optimierung
+# MeshCom-Guru v0.4.4 – Performance-Optimierung
 
 ## Änderungen
 
@@ -9,6 +9,6 @@
 
 ## Release-Stand
 
-**Version:** 0.4.3  
+**Version:** 0.4.4  
 **Projekt:** MeshCom-Guru  
 **Ordner im ZIP:** `MeshCom/`

@@ -1,3 +1,9 @@
+## v0.4.4 – Chat-Aufbau ohne sichtbaren Neuaufbau
+
+- 💬 **Alle-Chat:** Der Bereich **„Alle“** wird beim Neuaufbau zunächst vollständig aufgebaut und erst danach sichtbar angezeigt. Dadurch ist der Aufbau von der ältesten zur neuesten Nachricht nicht mehr sichtbar.
+- 🛡️ **Nachrichtenweg unverändert:** Nachrichtenlogik, Sortierung sowie Empfang und Senden bleiben unverändert. Die Räume und privaten Chats wurden durch diesen Fix nicht verändert.
+- ⚡ **Performance-Basis erhalten:** Die Optimierungen aus v0.4.3 bleiben vollständig erhalten.
+
 ## v0.4.3 – Performance-Optimierung und Raumanzeige
 
 - ⚡ **Langzeit-Performance:** Die Nachrichten-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch wird die wiederholte Vollsortierung des wachsenden Nachrichtenbestands bei normalen Refreshs vermieden.
