@@ -1,14 +1,15 @@
-# MeshCom-Guru v0.4.6 – Chat-Zeichen-Darstellung
+# MeshCom-Guru v0.4.7 – WebService-Hintergrundabruf
 
 ## Änderungen
 
-- 💬 **Sonderzeichen im Chat:** Apostrophe und weitere HTML-relevante Zeichen werden in den Chatansichten korrekt als Text dargestellt.
-- 🏠 **Raum-/Privatchats:** Die funktionierende Zeichenbehandlung bleibt erhalten.
-- 💬 **Alle-Chat:** Sonderzeichen wie `'`, `<` und `>` werden nicht mehr als sichtbare HTML-Zeichenreferenzen dargestellt.
-- 🛡️ **Bestehende Funktionen:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit sowie die bisherigen Performance- und ACK-Fixes bleiben erhalten.
+- ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
+- 🧩 **Nachrichtenverarbeitung unverändert:** Die bestehende Cache-, Sortier-, Raum-, Privat-, „Alle“-, Karten- und Statistiklogik bleibt im GUI-Thread und wurde nicht neu aufgebaut.
+- ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
+- 🔄 **Verbindungstest/Reconnect:** Auch der erste Verbindungsabruf und automatische Reconnects verwenden den Hintergrund-Worker.
+- 🛡️ **Bestehende Funktionen erhalten:** Die getesteten Funktionen und bisherigen Performance-/ACK-Fixes aus v0.4.6 und den vorherigen Versionen bleiben erhalten.
 
 ## Release-Stand
 
-**Version:** 0.4.6  
+**Version:** 0.4.7  
 **Projekt:** MeshCom-Guru  
 **Ordner im ZIP:** `MeshCom/`

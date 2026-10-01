@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF, QTranslator, QLibraryInfo
+from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF, QTranslator, QLibraryInfo, QObject, QThread
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
 except Exception:
@@ -762,6 +762,23 @@ class ChatView(QScrollArea):
         self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 
+class WebServiceWorker(QObject):
+    """Fetch MeshCom WebService data outside the GUI thread.
+
+    Only the blocking HTTP request lives here.  All message/cache/UI processing
+    stays in MainWindow's GUI thread after the result signal is emitted.
+    """
+    result = Signal(str)
+    error = Signal(str)
+
+    def fetch(self, ip):
+        try:
+            page = MeshCom(ip).get_messages()
+            self.result.emit(page)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
 class MainWindow(QMainWindow):
     # Tracks previews that were already rendered for the exact same message
     # block in the consolidated "Alle" view.  This survives the 5-second
@@ -774,6 +791,7 @@ class MainWindow(QMainWindow):
     MH_MAX_STATIONS = 250
     udpPacketReceived = Signal(dict)
     weatherUpdated = Signal(dict)
+    webserviceRequest = Signal(str)
     @staticmethod
     def _normalize_chat_color(value):
         """Return a valid #RRGGBB color for chat settings."""
@@ -833,6 +851,15 @@ class MainWindow(QMainWindow):
         self.connection_since = None
         self.connection_elapsed = 0
         self.refresh_in_progress = False
+        self.webservice_request_in_progress = False
+        self.webservice_manual_disconnect = False
+        self.webservice_thread = QThread(self)
+        self.webservice_worker = WebServiceWorker()
+        self.webservice_worker.moveToThread(self.webservice_thread)
+        self.webservice_thread.start()
+        self.webserviceRequest.connect(self.webservice_worker.fetch)
+        self.webservice_worker.result.connect(self._handle_webservice_result)
+        self.webservice_worker.error.connect(self._handle_webservice_error)
         self.last_sent = None
         self.last_sent_time = None
         # Merkt die zuletzt von diesem Client gesendete Direktnachricht.
@@ -6982,15 +7009,12 @@ renderStations(initialStations);
 
     # ---------- Verbindung ----------
     def connect_mesh(self, automatic=False):
-        """Connect to the WebService; after a user connection, auto-reconnect is armed.
+        """Start a WebService connection/refresh without blocking the GUI.
 
-        The connection handler is shared by both layouts.  Rebuilding the
-        Dashboard/classic widgets must never leave the classic Connect button
-        in a stale disabled state.
+        The first HTTP request also acts as the connection test.  The actual
+        request is executed by WebServiceWorker; the GUI becomes connected
+        only after the worker returns successfully.
         """
-        # A manual click explicitly enables automatic recovery.  Automatic
-        # retries do not change this flag, so a transient network/node failure
-        # cannot permanently disable the connection.
         if not automatic:
             self.auto_reconnect_enabled = True
 
@@ -7000,44 +7024,25 @@ renderStations(initialStations);
             self.status.setText(ui_text("Fehler: Keine Hotspot-IP eingetragen"))
             return
 
-        if self.reconnect_in_progress:
+        if self.reconnect_in_progress or self.webservice_request_in_progress:
             return
 
+        self.mesh = MeshCom(ip)
+        self.webservice_manual_disconnect = False
         self.reconnect_in_progress = True
-        try:
-            self.mesh = MeshCom(ip)
-            if automatic:
-                self.status.setText(ui_text("Verbindung verloren – verbinde erneut …"))
-            else:
-                self.status.setText(ui_text("Verbinde mit MeshCom-WebService …"))
-            self.connect_button.setEnabled(False)
-            self.disconnect_button.setEnabled(True)
-
-            # Echter WebService-Abruf als Verbindungstest.
-            self.mesh.get_messages()
-            self.connected = True
-            self._set_connection_status(True)
-            self.status.setText(ui_text("Mit MeshCom-WebService verbunden"))
-            self.update_messages()
-        except Exception as exc:
-            self.connected = False
-            self._set_connection_status(False)
-            # IMPORTANT: Do not clear auto_reconnect_enabled here.  A failed
-            # request is a lost connection, not a user-requested disconnect.
-            if self.auto_reconnect_enabled:
-                self.connect_button.setEnabled(False)
-                self.disconnect_button.setEnabled(True)
-                self.status.setText(ui_text(f"Verbindung verloren – neuer Versuch: {exc}"))
-            else:
-                self.connect_button.setEnabled(True)
-                self.disconnect_button.setEnabled(False)
-                self.status.setText(ui_text(f"Verbindung fehlgeschlagen: {exc}"))
-        finally:
-            self.reconnect_in_progress = False
+        self.connected = False
+        if automatic:
+            self.status.setText(ui_text("Verbindung verloren – verbinde erneut …"))
+        else:
+            self.status.setText(ui_text("Verbinde mit MeshCom-WebService …"))
+        self.connect_button.setEnabled(False)
+        self.disconnect_button.setEnabled(True)
+        self._request_webservice(ip)
 
     def disconnect_mesh(self):
         """Manually disconnect and permanently cancel automatic reconnect."""
         self.auto_reconnect_enabled = False
+        self.webservice_manual_disconnect = True
         self.connected = False
         self.reconnect_in_progress = False
         self._set_connection_status(False)
@@ -7051,21 +7056,38 @@ renderStations(initialStations);
         self._dashboard_sync_header()
 
     # ---------- Refresh ----------
+    def _request_webservice(self, ip=None):
+        """Queue exactly one WebService HTTP request on the worker thread."""
+        if self.webservice_request_in_progress:
+            return False
+        if ip is None:
+            ip = self.mesh.ip if self.mesh is not None else ""
+        ip = str(ip or "").strip().rstrip("/")
+        if not ip:
+            return False
+        self.webservice_request_in_progress = True
+        self.webserviceRequest.emit(ip)
+        return True
+
     def update_messages(self):
         if not self.connected:
-            # The normal 5-second refresh timer also acts as the reconnect
-            # timer.  Once the user has connected, a lost WebService
-            # connection is recovered automatically.  Manual "Trennen" clears
-            # auto_reconnect_enabled, so it never reconnects by itself.
             if self.auto_reconnect_enabled and not self.reconnect_in_progress:
                 self.connect_mesh(automatic=True)
             return
-        if self.refresh_in_progress:
+        self._request_webservice()
+
+    def _handle_webservice_result(self, page):
+        """Process an already-fetched WebService response in the GUI thread."""
+        self.webservice_request_in_progress = False
+        if self.webservice_manual_disconnect:
             return
+        self.reconnect_in_progress = False
         self.refresh_in_progress = True
         try:
-            page = self.mesh.get_messages()
+            self.connected = True
             self._set_connection_status(True)
+            self.connect_button.setEnabled(False)
+            self.disconnect_button.setEnabled(True)
 
             # "No messages available." is a WebService status response, not a
             # MeshCom message. It must be discarded before the compatibility
@@ -7213,18 +7235,33 @@ renderStations(initialStations);
         except Exception as exc:
             self.connected = False
             self._set_connection_status(False)
-            # Do not interpret a temporary HTTP/network error as a manual
-            # disconnect.  The next 5-second timer tick will reconnect.
             if self.auto_reconnect_enabled:
                 self.connect_button.setEnabled(False)
                 self.disconnect_button.setEnabled(True)
-                self.status.setText(ui_text(f"Verbindung verloren – verbinde erneut … ({exc})"))
+                self.status.setText(ui_text(f"Verbindung verloren – Verarbeitung fehlgeschlagen: {exc}"))
             else:
                 self.connect_button.setEnabled(True)
                 self.disconnect_button.setEnabled(False)
                 self.status.setText(ui_text(f"Abruf fehlgeschlagen: {exc}"))
         finally:
             self.refresh_in_progress = False
+
+    def _handle_webservice_error(self, error_text):
+        """Handle a failed background WebService request in the GUI thread."""
+        self.webservice_request_in_progress = False
+        if self.webservice_manual_disconnect:
+            return
+        self.reconnect_in_progress = False
+        self.connected = False
+        self._set_connection_status(False)
+        if self.auto_reconnect_enabled:
+            self.connect_button.setEnabled(False)
+            self.disconnect_button.setEnabled(True)
+            self.status.setText(ui_text(f"Verbindung verloren – verbinde erneut … ({error_text})"))
+        else:
+            self.connect_button.setEnabled(True)
+            self.disconnect_button.setEnabled(False)
+            self.status.setText(ui_text(f"Abruf fehlgeschlagen: {error_text}"))
 
 
     @staticmethod
@@ -7865,4 +7902,11 @@ renderStations(initialStations);
             if not getattr(self, "_skip_settings_write_on_close", False):
                 self._write_settings()
         finally:
+            try:
+                self.webservice_manual_disconnect = True
+                if self.webservice_thread.isRunning():
+                    self.webservice_thread.quit()
+                    self.webservice_thread.wait(3000)
+            except Exception:
+                pass
             event.accept()

@@ -1,18 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.6**
+**Aktuelle Version: 0.4.7**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -44,6 +35,14 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+
+## Version 0.4.7 – WebService-Hintergrundabruf
+
+- ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
+- 🧩 **Nachrichtenverarbeitung unverändert:** Die bestehende Cache-, Sortier-, Raum-, Privat-, „Alle“-, Karten- und Statistiklogik bleibt im GUI-Thread und wurde nicht neu aufgebaut.
+- ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
+- 🔄 **Verbindungstest/Reconnect:** Auch der erste Verbindungsabruf und automatische Reconnects verwenden den Hintergrund-Worker.
+- 🛡️ **Bestehende Funktionen erhalten:** Die getesteten Funktionen und bisherigen Performance-/ACK-Fixes aus v0.4.6 und den vorherigen Versionen bleiben erhalten.
 
 ## Version 0.4.6 – Chat-Zeichen-Darstellung
 
@@ -389,7 +388,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.6**
+**Version 0.4.7**
 
 **By Goldisoft 2026**
 
@@ -529,7 +528,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.6**  
+**MeshCom-Guru v0.4.7**  
 **By Goldisoft 2026**
 
 
@@ -547,5 +546,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

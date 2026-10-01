@@ -1,3 +1,11 @@
+## v0.4.7 – WebService-Hintergrundabruf
+
+- ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
+- 🧩 **Nachrichtenverarbeitung unverändert:** Die bestehende Cache-, Sortier-, Raum-, Privat-, „Alle“-, Karten- und Statistiklogik bleibt im GUI-Thread und wurde nicht neu aufgebaut.
+- ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
+- 🔄 **Verbindungstest/Reconnect:** Auch der erste Verbindungsabruf und automatische Reconnects verwenden den Hintergrund-Worker.
+- 🧪 **TEST-Version:** Diese Version dient ausschließlich dem Performance-/Langzeittest des WebService-Workers.
+
 ## v0.4.6 – Chat-Zeichen-Darstellung
 
 - 💬 **Sonderzeichen im Chat:** Apostrophe und weitere HTML-relevante Zeichen werden in den Chatansichten korrekt als Text dargestellt.
