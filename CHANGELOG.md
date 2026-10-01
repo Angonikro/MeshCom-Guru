@@ -1,3 +1,10 @@
+## v0.4.6 – Chat-Zeichen-Darstellung
+
+- 💬 **Sonderzeichen im Chat:** Apostrophe und weitere HTML-relevante Zeichen werden in den Chatansichten korrekt als Text dargestellt.
+- 🏠 **Raum-/Privatchats:** Die bereits funktionierende Zeichenbehandlung bleibt erhalten.
+- 💬 **Alle-Chat:** Die Textaufbereitung wurde gezielt angepasst, damit Zeichen wie `'`, `<` und `>` nicht mehr als `&#x27;` oder `&lt;` sichtbar werden.
+- 🛡️ **Keine Änderungen an bestehenden Kernfunktionen:** Nachrichtenempfang, Räume, ACK, Performance, Monitor, Karte, Weltweit und Verbindungen bleiben auf dem getesteten Stand.
+
 ## v0.4.5 – WebService-Performance und direkte ACK-Bestätigung
 
 - ⚡ **WebService im Hintergrund:** Abrufen und Verarbeiten der WebService-Daten läuft außerhalb des GUI-Threads.

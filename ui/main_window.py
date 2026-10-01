@@ -1301,12 +1301,19 @@ class MainWindow(QMainWindow):
                 body = detail or "ACK"
 
             meta = f"RSSI: {html.escape(rssi)} | SNR: {html.escape(snr)} | Typ: {html.escape(ptype)}"
+            # In "Alle" the message body is plain text. Escape it exactly once
+            # before passing it to the clickable-link renderer.  quote=False is
+            # intentional here: this is element text, not an HTML attribute, so
+            # apostrophes and quotation marks must remain normal visible Unicode
+            # characters. The surrounding header/meta attributes keep their
+            # existing quote=True escaping.
+            safe_body = html.escape(str(body), quote=False)
             block = (
                 '<div class="monitor-derived" data-monitor-row="1" '
                 f'data-monitor-type="{html.escape(ptype)}">'
                 f'<div>{header}</div>'
                 f'<div>{safe_time}</div>'
-                f'<div>{self._make_clickable(html.escape(body))}</div>'
+                f'<div>{self._make_clickable(safe_body)}</div>'
                 f'<div>{meta}</div>'
                 '</div>'
             )
@@ -7222,7 +7229,15 @@ renderStations(initialStations);
 
     @staticmethod
     def _chat_escape(value):
-        return html.escape(str(value or ""), quote=True)
+        # Keep apostrophes as normal text while still escaping HTML-sensitive
+        # characters. This helper is used for chat text, not HTML attributes.
+        text = str(value or "")
+        for _ in range(3):
+            decoded = html.unescape(text)
+            if decoded == text:
+                break
+            text = decoded
+        return html.escape(text, quote=True).replace("&#x27;", "'")
 
     @classmethod
     def _chat_field(cls, plain, label):

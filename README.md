@@ -1,16 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.5**
+**Aktuelle Version: 0.4.6**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -42,6 +35,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+
+## Version 0.4.6 – Chat-Zeichen-Darstellung
+
+- 💬 **Chat-Zeichen:** Sonderzeichen wie `'`, `<` und `>` werden in den Chatansichten wieder als normale Zeichen dargestellt, statt als sichtbare HTML-Zeichenreferenzen.
+- 🏠 **Raum-Chats:** Die funktionierende Zeichenbehandlung der Raum-/Privatchats bleibt erhalten.
+- 💬 **Alle-Chat:** Die Textaufbereitung im Bereich **„Alle“** wurde an den sicheren Textpfad angepasst, sodass Unicode- und Sonderzeichen korrekt angezeigt werden.
+- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit sowie die bestehenden Performance- und ACK-Fixes bleiben erhalten.
 
 ## Version 0.4.5 – WebService-Performance und direkte ACK-Bestätigung
 
@@ -380,7 +380,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.5**
+**Version 0.4.6**
 
 **By Goldisoft 2026**
 
@@ -520,7 +520,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.5**  
+**MeshCom-Guru v0.4.6**  
 **By Goldisoft 2026**
 
 
@@ -538,5 +538,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

@@ -1,15 +1,14 @@
-# MeshCom-Guru v0.4.5 – WebService-Performance und direkte ACK-Bestätigung
+# MeshCom-Guru v0.4.6 – Chat-Zeichen-Darstellung
 
 ## Änderungen
 
-- ⚡ **WebService im Hintergrund:** Das Abrufen und Verarbeiten der WebService-Daten läuft außerhalb des GUI-Threads.
-- 🧹 **Weniger unnötige Aktualisierungen:** Unveränderte Daten werden nicht wiederholt vollständig verarbeitet.
-- ✅ **ACK-Bestätigung direkt aktualisiert:** Ein empfangenes ACK aktualisiert die gesendete Nachricht sofort in der sichtbaren Chatansicht.
-- 🗺️ **Eigener Kartenmarker:** Der eigene Positionsmarker bleibt erhalten.
-- 🛡️ **Bestehende Funktionen:** Nachrichten, Räume, private Chats, Monitor, MH, Karte und Weltweit bleiben erhalten.
+- 💬 **Sonderzeichen im Chat:** Apostrophe und weitere HTML-relevante Zeichen werden in den Chatansichten korrekt als Text dargestellt.
+- 🏠 **Raum-/Privatchats:** Die funktionierende Zeichenbehandlung bleibt erhalten.
+- 💬 **Alle-Chat:** Sonderzeichen wie `'`, `<` und `>` werden nicht mehr als sichtbare HTML-Zeichenreferenzen dargestellt.
+- 🛡️ **Bestehende Funktionen:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit sowie die bisherigen Performance- und ACK-Fixes bleiben erhalten.
 
 ## Release-Stand
 
-**Version:** 0.4.5  
+**Version:** 0.4.6  
 **Projekt:** MeshCom-Guru  
 **Ordner im ZIP:** `MeshCom/`
