@@ -1,18 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.7**
+**Aktuelle Version: 0.4.8**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -21,6 +12,9 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Node-Informationen
 - Kartenanzeige mit Positionsdaten
 - **Karten-Verbindungen:** tatsächlich empfangene MeshCom-Pfade können als Linien auf der Karte angezeigt werden.
+- **Farbige Kartenmarker:** Marker zeigen den Aktivitätsstatus über Blau/Grün/Orange/Grau; die eigene Station wird Rot dargestellt.
+- **Rufzeichen auf der Karte:** Die Callsign-Anzeige kann direkt unter „Verbindungen“ ein- und ausgeschaltet werden.
+- **Kompaktes Marker-Infofenster:** Position, Entfernung, letzte Aktivität sowie vorhandener Akkustand, Node-Typ und Firmware.
 - Anzeige eigener Positionsdaten
 - integriertes Menü **Hilfe**
 - integrierte **Anleitung**
@@ -34,19 +28,33 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.2 aktualisiert:
+Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.8 aktualisiert:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.2_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.2_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.2_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.2_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.2_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.2_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.2_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.8_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.8_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.8_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.8_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.8_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.8_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.8_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.8_PL.pdf`
+
+## Version 0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
+
+- 🗺️ **Eigene Station:** Das kompakte Karten-Infofenster zeigt jetzt auch für die eigene Station den erkannten **Node-Typ** und die **Firmware**, sofern diese Informationen aus dem eigenen POS/EXTUDP-Paket vorliegen.
+- 🧩 **Einheitliche Darstellung:** Die eigene Station verwendet dabei dieselbe Node-Typ-/Firmware-Aufbereitung wie die übrigen Kartenmarker.
+- 👁️ **Rufzeichen auf der Karte:** Die Rufzeichen der Stationen können direkt unter **🔗 Verbindungen** auf der Karte ein- und ausgeblendet werden.
+- 🛡️ **Bestehende Kartenfunktionen erhalten:** Marker-Farben, Rufzeichen-Anzeige, Entfernungsanzeige und die übrigen Karteninformationen bleiben unverändert.
+- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit, ACK/UDP und die bisherigen Performance-Fixes bleiben auf dem getesteten v0.4.7-Stand.
+- 📖 **Dokumentation:** Alle acht PDF-Handbücher wurden auf v0.4.8 aktualisiert und enthalten die neuen Kartenmarker-/Rufzeichen-Funktionen an der passenden Stelle im Kartenabschnitt.
 
 ## Version 0.4.7 – WebService-Hintergrundabruf
 
+- 🗺️ **Kartenmarker:** Stationsmarker werden abhängig von der letzten Aktivität farblich dargestellt: Blau (unter 30 Min.), Grün (30–120 Min.), Orange (2–12 Std.), Grau (über 12 Std.); die eigene Station bleibt Rot.
+- 👁️ **Rufzeichen ein-/ausblendbar:** Direkt unter **🔗 Verbindungen** kann die Anzeige der Rufzeichen auf der Karte ein- und ausgeschaltet werden.
+- ℹ️ **Kompaktes Marker-Infofenster:** Beim Anklicken eines Markers werden Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ und Firmware angezeigt.
+- 🌍 **Mehrsprachige Kartenanzeige:** Neue Kartenbeschriftungen und Statusbezeichnungen sind in allen acht unterstützten Sprachen verfügbar.
+- 📖 **Dokumentation:** Die integrierte Anleitung und alle acht PDF-Handbücher wurden um die neuen Kartenmarker- und Rufzeichen-Funktionen ergänzt.
 - ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
 - 🧩 **Nachrichtenverarbeitung unverändert:** Die bestehende Cache-, Sortier-, Raum-, Privat-, „Alle“-, Karten- und Statistiklogik bleibt im GUI-Thread und wurde nicht neu aufgebaut.
 - ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
@@ -129,7 +137,7 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 
 - 🇵🇱 **Polnische Benutzeroberfläche:** Polski ergänzt und in die bestehende Sprachumschaltung integriert.
 - 📖 **Integrierte Anleitung:** Die Hilfe/Anleitung ist auch vollständig auf Polnisch verfügbar.
-- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.2_PL.pdf`.
+- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.8_PL.pdf`.
 - 🛡️ **Bestehende Funktionen unverändert:** Empfang, Senden, Räume, Private Chats, „Alle“, Monitor, MH, Karte, Weltweit, Picrd-Vorschau und Update-Prüfung wurden nicht durch einen neuen Nachrichtenweg ersetzt.
 - 🧩 **Sprachmechanismus:** Polnisch ist Teil der normalen gespeicherten Spracheinstellung in `~/.MeshCom/settings.ini`.
 
@@ -354,7 +362,7 @@ Danach:
 python -m pip install -r requirements.txt
 ```
 
-Die Kartenfunktion benötigt Qt WebEngine. Dieses wird bei der Installation automatisch über `PySide6-Addons[webengine]` bereitgestellt.
+Die Kartenfunktion verwendet die integrierte OSM-/Leaflet-Darstellung. Für die Weltweit-Ansicht wird unter Linux/Raspberry Pi WebKitGTK verwendet.
 
 **Hinweis:** `PySide6-WebEngine` wird nicht mehr als eigenes Paket verwendet.
 
@@ -397,7 +405,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.7**
+**Version 0.4.8**
 
 **By Goldisoft 2026**
 
@@ -537,7 +545,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.7**  
+**MeshCom-Guru v0.4.8**  
 **By Goldisoft 2026**
 
 
@@ -549,11 +557,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.2-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.8-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

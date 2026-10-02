@@ -48,7 +48,7 @@
   "Typ": "Tipo",
   "Von": "Da",
   "Nach": "A",
-  "Rufzeichen": "Nominativo",
+  "Rufzeichen": "Nominativi",
   "Entfernung": "Distanza",
   "Batterie": "Batteria",
   "Zuletzt gehört": "Ultimo ascolto",
@@ -190,7 +190,7 @@
   "Länge:": "Longitudine:",
   "Höhe:": "Altitudine:",
   "Batteriekapazität:": "Capacità batteria:",
-  "Eigene Station": "Propria stazione",
+  "Eigene Station": "Stazione propria",
   "Zuletzt gehört:": "Ultimo ascolto:",
   "Entfernung:": "Distanza:",
   "Noch ": "Ancora ",
@@ -291,5 +291,13 @@
   "MeshCom-Pfad": "Percorso MeshCom",
   "Direkt gehört": "Ricevuto direttamente",
   "Bild hochladen": "Carica immagine",
-  "polish": "Polacco"
+  "polish": "Polacco",
+  "Letzte Aktivität": "Ultima attività",
+  "Akkustand": "Batteria",
+  "Node-Typ": "Tipo di nodo",
+  "Aktiv": "Attivo",
+  "Normal": "Normale",
+  "Älter": "Più vecchio",
+  "Inaktiv": "Inattivo",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Colori: blu = attivo, verde = normale, arancione = più vecchio, grigio = inattivo, rosso = stazione propria. I nominativi possono essere mostrati o nascosti. Le linee mostrano percorsi MeshCom realmente ricevuti o ricezioni LoRa locali dirette."
 }

@@ -209,7 +209,7 @@
   "Ready": "Listo",
   "No messages.": "No hay mensajes.",
   "Position": "Pozycja",
-  "Firmware": "Oprogramowanie sprzętowe",
+  "Firmware": "Firmware",
   "Altitude": "Altitud",
   "Latitude": "Latitud",
   "Longitude": "Longitud",
@@ -314,7 +314,7 @@
   "Typ": "Typ",
   "Von": "Od",
   "Nach": "Do",
-  "Rufzeichen": "Znak wywoławczy",
+  "Rufzeichen": "Znaki wywoławcze",
   "Entfernung": "Odległość",
   "Batterie": "Bateria",
   "Zuletzt gehört": "Ostatnio słyszany",
@@ -460,5 +460,13 @@
   "MeshCom-Pfad": "Ścieżka MeshCom",
   "Direkt gehört": "Usłyszane bezpośrednio",
   "Bild hochladen": "Prześlij obraz",
-  "polish": "Polski"
+  "polish": "Polski",
+  "Letzte Aktivität": "Ostatnia aktywność",
+  "Akkustand": "Bateria",
+  "Node-Typ": "Typ węzła",
+  "Aktiv": "Aktywny",
+  "Normal": "Normalny",
+  "Älter": "Starszy",
+  "Inaktiv": "Nieaktywny",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Kolory: niebieski = aktywny, zielony = normalny, pomarańczowy = starszy, szary = nieaktywny, czerwony = własna stacja. Znaki wywoławcze można pokazywać lub ukrywać. Linie pokazują rzeczywiście odebrane ścieżki MeshCom lub bezpośrednie lokalne odbiory LoRa."
 }

@@ -48,7 +48,7 @@
   "Typ": "Type",
   "Von": "Van",
   "Nach": "Naar",
-  "Rufzeichen": "Roepnaam",
+  "Rufzeichen": "Roepnamen",
   "Entfernung": "Afstand",
   "Batterie": "Batterij",
   "Zuletzt gehört": "Laatst gehoord",
@@ -291,5 +291,13 @@
   "MeshCom-Pfad": "MeshCom-pad",
   "Direkt gehört": "Direct gehoord",
   "Bild hochladen": "Afbeelding uploaden",
-  "polish": "Pools"
+  "polish": "Pools",
+  "Letzte Aktivität": "Laatste activiteit",
+  "Akkustand": "Batterij",
+  "Node-Typ": "Node-type",
+  "Aktiv": "Actief",
+  "Normal": "Normaal",
+  "Älter": "Ouder",
+  "Inaktiv": "Inactief",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Kleuren: blauw = actief, groen = normaal, oranje = ouder, grijs = inactief, rood = eigen station. Roepnamen kunnen worden weergegeven of verborgen. Lijnen tonen daadwerkelijk ontvangen MeshCom-paden of directe lokale LoRa-ontvangsten."
 }

@@ -314,7 +314,7 @@
   "Typ": "Typ",
   "Von": "Från",
   "Nach": "Till",
-  "Rufzeichen": "Anropssignal",
+  "Rufzeichen": "Anropssignaler",
   "Entfernung": "Avstånd",
   "Batterie": "Batteri",
   "Zuletzt gehört": "Senast hörd",
@@ -460,5 +460,13 @@
   "MeshCom-Pfad": "MeshCom-sökväg",
   "Direkt gehört": "Hörd direkt",
   "Bild hochladen": "Ladda upp bild",
-  "polish": "Polska"
+  "polish": "Polska",
+  "Letzte Aktivität": "Senaste aktivitet",
+  "Akkustand": "Batteri",
+  "Node-Typ": "Nodtyp",
+  "Aktiv": "Aktiv",
+  "Normal": "Normal",
+  "Älter": "Äldre",
+  "Inaktiv": "Inaktiv",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Färger: blå = aktiv, grön = normal, orange = äldre, grå = inaktiv, röd = egen station. Anropssignaler kan visas eller döljas. Linjer visar faktiskt mottagna MeshCom-vägar eller direkta lokala LoRa-mottagningar."
 }

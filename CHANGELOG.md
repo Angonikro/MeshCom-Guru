@@ -1,3 +1,12 @@
+## v0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
+
+- 🗺️ **Eigene Station:** Das Karten-Infofenster zeigt jetzt auch bei der eigenen Station den erkannten **Node-Typ** und die **Firmware**, sofern diese Daten aus dem eigenen POS/EXTUDP-Paket vorliegen.
+- 🧩 **Einheitliche Aufbereitung:** Die eigene Station nutzt dieselbe Hardware-/Firmware-Aufbereitung wie fremde Stationen.
+- 👁️ **Rufzeichen auf der Karte:** Die Rufzeichen der Stationen können direkt unter **🔗 Verbindungen** auf der Karte ein- und ausgeblendet werden.
+- 🛡️ **Kartenfunktionen unverändert:** Marker-Farben, Rufzeichen, Entfernung und die übrigen Marker-Informationen bleiben erhalten.
+- 🛡️ **Keine Änderungen an Nachrichten-/Empfangspfaden:** Der getestete v0.4.7-Stand für Nachrichten, Räume, private Chats, Monitor, MH, ACK/UDP und WebService bleibt erhalten.
+- 📖 **Dokumentation:** Alle acht PDF-Handbücher wurden auf v0.4.8 aktualisiert. Die Kartenmarker-, Rufzeichen- und Marker-Info-Funktionen sind dort direkt im Abschnitt **Karte** eingeordnet.
+
 ## v0.4.7 – WebService-Hintergrundabruf
 
 - ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
@@ -5,6 +14,11 @@
 - ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
 - 🔄 **Verbindungstest/Reconnect:** Auch der erste Verbindungsabruf und automatische Reconnects verwenden den Hintergrund-Worker.
 - 🧪 **TEST-Version:** Diese Version dient ausschließlich dem Performance-/Langzeittest des WebService-Workers.
+- 🗺️ **Kartenmarker:** Stationsmarker werden abhängig von der letzten Aktivität farblich dargestellt: Blau (unter 30 Min.), Grün (30–120 Min.), Orange (2–12 Std.), Grau (über 12 Std.); die eigene Station bleibt Rot.
+- 👁️ **Rufzeichen ein-/ausblendbar:** Direkt unter **🔗 Verbindungen** kann die Anzeige der Rufzeichen auf der Karte ein- und ausgeschaltet werden.
+- ℹ️ **Kompaktes Marker-Infofenster:** Beim Anklicken eines Markers werden Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ und Firmware angezeigt. RSSI, SNR, Temperatur, Luftfeuchte, Luftdruck, Raum und letzte Nachricht werden dort bewusst nicht angezeigt.
+- 🌍 **Mehrsprachige Kartenanzeige:** Neue Kartenbeschriftungen und Statusbezeichnungen sind in allen acht unterstützten Sprachen verfügbar.
+- 📖 **Dokumentation:** Die integrierte Anleitung und alle acht PDF-Handbücher wurden um die neuen Kartenmarker- und Rufzeichen-Funktionen ergänzt.
 
 ## v0.4.6 – Chat-Zeichen-Darstellung
 

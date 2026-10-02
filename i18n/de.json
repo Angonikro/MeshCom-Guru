@@ -105,5 +105,18 @@
   "MeshCom-Pfad": "MeshCom-Pfad",
   "Direkt gehört": "Direkt gehört",
   "Bild hochladen": "Bild hochladen",
-  "polish": "Polnisch"
+  "polish": "Polnisch",
+  "Rufzeichen": "Rufzeichen",
+  "Position": "Position",
+  "Entfernung": "Entfernung",
+  "Letzte Aktivität": "Letzte Aktivität",
+  "Akkustand": "Akkustand",
+  "Node-Typ": "Node-Typ",
+  "Firmware": "Firmware",
+  "Eigene Station": "Eigene Station",
+  "Aktiv": "Aktiv",
+  "Normal": "Normal",
+  "Älter": "Älter",
+  "Inaktiv": "Inaktiv",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."
 }

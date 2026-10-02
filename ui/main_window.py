@@ -789,6 +789,47 @@ class MainWindow(QMainWindow):
 
     # MH-Liste: maximal 250 zuletzt gehörte Stationen im Speicher.
     MH_MAX_STATIONS = 250
+
+    # MeshCom-Hardware-IDs aus den POS/EXTUDP-Daten. Die Firmware
+    # überträgt die HW-ID; damit wird der Node-Typ nicht mehr geraten,
+    # sondern direkt aus dem tatsächlich empfangenen Paket bestimmt.
+    _MESHCOM_HW_NAMES = {
+        1: "TLORA-V2",
+        2: "TLORA-V1",
+        3: "TLORA-V2 1.6",
+        4: "T-BEAM 1.1",
+        5: "T-BEAM-1268 1.1",
+        6: "T-BEAM-0.7",
+        7: "T-ECHO",
+        8: "T-DECK",
+        9: "RAK4631",
+        10: "HELTEC-V2-1",
+        11: "HELTEC-V1",
+        12: "TBEAM-AXP2101",
+        39: "EBYTE-E22",
+        40: "T5-EPAPER",
+        41: "HELTEC-TRACKER",
+        42: "HELTEC-STICK V3",
+        43: "HELTEC-V3",
+        44: "HELTEC-E290",
+        45: "T-BEAM-1268 1.2",
+        46: "T-DECK-PLUS",
+        47: "T-BEAM SUPREME L76K",
+        48: "EBYTE-E22-S3",
+        49: "T-LORA-PAGER",
+        50: "T-DECK-PRO",
+        51: "T-BEAM-1W",
+        52: "HELTEC-V4",
+        53: "T-ETH-ELITE",
+        54: "HELTEC-T114",
+        55: "T3-S3-V1.3",
+        56: "T-CONNECT-PRO",
+        57: "HELTEC-WIRELESS-PAPER",
+        58: "HELTEC-E213",
+        59: "ESP32-LORAPRS-E22",
+        60: "ESP32-LORAPRS-RA01",
+        61: "T-WATCH-S3",
+    }
     udpPacketReceived = Signal(dict)
     weatherUpdated = Signal(dict)
     webserviceRequest = Signal(str)
@@ -898,6 +939,7 @@ class MainWindow(QMainWindow):
         self.station_positions = {}
         # Zeitpunkt, zu dem eine Station zuletzt mit Positionsdaten gehört wurde.
         self.station_last_heard = {}
+        self.station_last_heard_ts = {}
         self.station_last_heard_signature = {}
         # Observed MeshCom connections for the map overlay.
         # Only explicit relay/source paths and direct local LoRa reception
@@ -927,6 +969,12 @@ class MainWindow(QMainWindow):
         # UDP-Datenstrom aufgebaut; die bestehende POS-/Monitor-Verarbeitung
         # bleibt davon getrennt.
         self.mh_stations = {}
+        # Eigene Node-Informationen werden aus den eigenen POS/EXTUDP-Paketen
+        # übernommen. Die eigene Station wird bewusst nicht in mh_stations
+        # eingetragen, deshalb müssen diese Werte separat gehalten werden.
+        self.own_node_type = ""
+        self.own_firmware = ""
+        self.own_battery = ""
         self.udpPacketReceived.connect(self._handle_udp_packet)
         self.own_callsign = settings.get("own_callsign", "").strip().upper()
         try:
@@ -1485,10 +1533,12 @@ class MainWindow(QMainWindow):
         row = self.mh_stations.setdefault(callsign, {
             "callsign": callsign, "lat": None, "lon": None,
             "rssi": None, "snr": None, "battery": None,
-            "last_heard": now, "last_heard_ts": now_ts, "alt": None, "firmware": "",
+            "last_heard": now, "last_heard_ts": now_ts, "alt": None, "firmware": "", "node_type": "",
         })
         row["last_heard"] = now
         row["last_heard_ts"] = now_ts
+        self.station_last_heard[callsign.upper()] = now
+        self.station_last_heard_ts[callsign.upper()] = now_ts
 
         # Nur die 250 zuletzt gehörten Stationen behalten. Der älteste
         # Eintrag wird entfernt, sobald die Obergrenze überschritten wird.
@@ -1516,8 +1566,43 @@ class MainWindow(QMainWindow):
         if batt not in (None, ""):
             row["battery"] = batt
         fw = self._monitor_value(packet, "firmware", "fw", "version")
+        fw_sub = self._monitor_value(packet, "fw_sub", "fwsub", "firmware_sub", "firmware_suffix")
         if fw not in (None, ""):
-            row["firmware"] = str(fw)
+            fw_text = str(fw).strip()
+            fw_sub_text = str(fw_sub).strip() if fw_sub not in (None, "") else ""
+
+            # MeshCom EXTUDP sends the firmware as e.g. ``35`` and the
+            # release suffix separately as ``fw_sub`` (e.g. ``u``).
+            # In the UI this should be shown in the normal MeshCom form,
+            # e.g. ``4.35u`` instead of only ``35``.  Already formatted
+            # versions are kept unchanged.
+            if fw_text.isdigit():
+                fw_text = f"4.{int(fw_text):02d}"
+                if fw_sub_text:
+                    fw_text += fw_sub_text
+            elif fw_sub_text and fw_sub_text.lower() not in fw_text.lower():
+                fw_text += fw_sub_text
+
+            row["firmware"] = fw_text
+
+        # POS/EXTUDP liefert die Hardware als numerische HW-ID. Diese
+        # Information hat Vorrang vor optionalen Textfeldern wie
+        # ``node_type`` und wird über die offizielle MeshCom-HW-Tabelle
+        # in einen lesbaren Gerätenamen umgewandelt. Unbekannte IDs
+        # bleiben sichtbar (z. B. ``HW 62``), statt verloren zu gehen.
+        hw_id = self._monitor_value(packet, "hw_id", "hw", "hardware_id")
+        if hw_id not in (None, ""):
+            try:
+                hw_key = int(str(hw_id).strip(), 0)
+                row["node_type"] = self._MESHCOM_HW_NAMES.get(hw_key, f"HW {hw_key}")
+            except (TypeError, ValueError):
+                # Fallback für ungewöhnliche, aber trotzdem übertragene
+                # HW-Werte. Ein vorhandener Textname bleibt erhalten.
+                row["node_type"] = str(hw_id)
+        else:
+            node_type = self._monitor_value(packet, "node_type", "nodeType", "hardware", "device_type", "device", "model")
+            if node_type not in (None, ""):
+                row["node_type"] = str(node_type)
 
         self._render_mh()
 
@@ -1737,6 +1822,35 @@ class MainWindow(QMainWindow):
             self.telemetry_count += 1
         callsign = self._udp_callsign(packet.get("src", ""))
 
+        # Die eigene Station wird in _update_mh_from_packet bewusst
+        # herausgefiltert. Ihre Node-Informationen sollen trotzdem auf der
+        # Karte erscheinen, sobald ein eigenes POS/EXTUDP-Paket eintrifft.
+        if callsign and callsign.upper() == str(self.own_callsign or "").upper() and ptype in {"pos", "position", "gps"}:
+            fw = self._monitor_value(packet, "firmware", "fw", "version")
+            fw_sub = self._monitor_value(packet, "fw_sub", "fwsub", "firmware_sub", "firmware_suffix")
+            if fw not in (None, ""):
+                fw_text = str(fw).strip()
+                fw_sub_text = str(fw_sub).strip() if fw_sub not in (None, "") else ""
+                if fw_text.isdigit():
+                    fw_text = f"4.{int(fw_text):02d}"
+                    if fw_sub_text:
+                        fw_text += fw_sub_text
+                elif fw_sub_text and fw_sub_text.lower() not in fw_text.lower():
+                    fw_text += fw_sub_text
+                self.own_firmware = fw_text
+
+            hw_id = self._monitor_value(packet, "hw_id", "hw", "hardware_id")
+            if hw_id not in (None, ""):
+                try:
+                    hw_key = int(str(hw_id).strip(), 0)
+                    self.own_node_type = self._MESHCOM_HW_NAMES.get(hw_key, f"HW {hw_key}")
+                except (TypeError, ValueError):
+                    self.own_node_type = str(hw_id)
+
+            batt = self._monitor_value(packet, "batt", "battery")
+            if batt not in (None, ""):
+                self.own_battery = batt
+
         # Punkt 2 – ausschließlich den EXTUDP-MSG-Strom für die Sendebestätigung
         # auswerten. POS/Koordinaten bleiben darunter unverändert.
         if ptype in {"msg", "message"}:
@@ -1762,6 +1876,7 @@ class MainWindow(QMainWindow):
         if ptype in {"pos", "position", "gps"} and callsign and coords:
             self.station_positions[callsign] = coords
             self.station_last_heard[callsign.upper()] = datetime.now().strftime("%H:%M:%S")
+            self.station_last_heard_ts[callsign.upper()] = time.time()
             # POS-Paket zusätzlich als normale sichtbare Meldung führen.
             # Dadurch sieht man die Koordinaten nicht nur auf der Karte, sondern
             # auch im Tab „Alle“. Über msg_id wird dieselbe POS-Meldung nicht
@@ -4877,10 +4992,22 @@ class MainWindow(QMainWindow):
         try:
             map_labels = {
                 "connections": ui_text("Verbindungen"),
+                "callsigns": ui_text("Rufzeichen"),
                 "legend": ui_text("Legende"),
                 "off": ui_text("Aus"),
                 "on": ui_text("Ein"),
-                "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+                "position": ui_text("Position"),
+                "distance": ui_text("Entfernung"),
+                "last_activity": ui_text("Letzte Aktivität"),
+                "battery": ui_text("Akkustand"),
+                "node_type": ui_text("Node-Typ"),
+                "firmware": ui_text("Firmware"),
+                "own_station": ui_text("Eigene Station"),
+                "active": ui_text("Aktiv"),
+                "normal": ui_text("Normal"),
+                "older": ui_text("Älter"),
+                "inactive": ui_text("Inaktiv"),
+                "legend_text": ui_text("Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
                 "connection_count": ui_text("Verbindung(en)"),
                 "from": ui_text("von"),
                 "mesh_path": ui_text("MeshCom-Pfad"),
@@ -5187,6 +5314,9 @@ class MainWindow(QMainWindow):
             <p>Mit <b>🔗 Verbindungen</b> können auf der Karte tatsächlich empfangene MeshCom-Verbindungen und explizite Pfade als Linien eingeblendet werden. Ein Klick auf einen Node hebt dessen erkannte Verbindungen hervor.</p>
             <p>Die Linien werden nur aus empfangenen MeshCom-Pfadinformationen oder einer tatsächlich lokal gehörten direkten LoRa-Verbindung erzeugt. Die Anzeige erfindet keine Verbindungen aus Entfernung, Position oder vermuteten Funkstrecken.</p>
             <p><b>Wichtig:</b> Die Linien zeigen keine RSSI- oder SNR-Werte pro einzelner Teilstrecke. Die Werte eines empfangenen Frames beschreiben nur den Empfang dieses Frames an der eigenen Station.</p>
+            <h3>📍 Kartenmarker und Rufzeichen</h3>
+            <p>Die Kartenmarker verwenden jetzt Farben für den Aktivitätsstatus: <b>Blau</b> = aktiv (unter 30 Minuten), <b>Grün</b> = normal (30–120 Minuten), <b>Orange</b> = älter (2–12 Stunden), <b>Grau</b> = inaktiv (über 12 Stunden) und <b>Rot</b> = eigene Station.</p>
+            <p>Mit <b>👁 Rufzeichen</b> direkt unter <b>🔗 Verbindungen</b> können die Rufzeichen auf der Karte ein- und ausgeblendet werden. Beim Anklicken eines Markers zeigt das Infofenster nur die wichtigsten Daten: Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ und Firmware.</p>
 <h3>🌤 Wetterdaten</h3>
             <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Wetter kann aktualisiert und an das aktuell ausgewählte Ziel gesendet werden.</p>
             <h3>⚡ Schnelltexte und 😊 Emojis</h3>
@@ -5213,6 +5343,9 @@ class MainWindow(QMainWindow):
             <p>Use <b>🔗 Connections</b> to display actually received MeshCom connections and explicit paths as lines on the map. Clicking a node highlights its detected connections.</p>
             <p>Lines are created only from received MeshCom path information or an actually locally heard direct LoRa reception. The display does not invent connections from distance, position, or assumed radio links.</p>
             <p><b>Important:</b> The lines do not show RSSI or SNR values for individual path segments. The values of a received frame describe only reception of that frame at your own station.</p>
+            <h3>📍 Map markers and callsigns</h3>
+            <p>Map markers now use colors for activity status: <b>blue</b> = active (under 30 minutes), <b>green</b> = normal (30–120 minutes), <b>orange</b> = older (2–12 hours), <b>gray</b> = inactive (over 12 hours), and <b>red</b> = own station.</p>
+            <p>The <b>👁 Callsigns</b> button directly below <b>🔗 Connections</b> shows or hides callsigns on the map. Clicking a marker opens a compact information window with position, distance, last activity and, when available, battery level, node type and firmware.</p>
 <h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
             <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
@@ -5236,6 +5369,9 @@ class MainWindow(QMainWindow):
             <p>Con <b>🔗 Connessioni</b> puoi visualizzare sulla mappa come linee le connessioni MeshCom effettivamente ricevute e i percorsi espliciti. Facendo clic su un nodo vengono evidenziate le sue connessioni rilevate.</p>
             <p>Le linee vengono create solo da informazioni di percorso MeshCom ricevute o da una ricezione LoRa diretta effettivamente ascoltata dalla stazione locale. Non vengono inventate connessioni in base a distanza, posizione o collegamenti radio presunti.</p>
             <p><b>Importante:</b> le linee non mostrano valori RSSI o SNR per i singoli tratti del percorso. I valori di un frame ricevuto descrivono solo la ricezione di quel frame presso la propria stazione.</p>
+            <h3>📍 Marker della mappa e nominativi</h3>
+            <p>I marker della mappa ora usano colori per lo stato di attività: <b>blu</b> = attivo (meno di 30 minuti), <b>verde</b> = normale (30–120 minuti), <b>arancione</b> = più vecchio (2–12 ore), <b>grigio</b> = inattivo (oltre 12 ore) e <b>rosso</b> = stazione propria.</p>
+            <p>Il pulsante <b>👁 Nominativi</b>, direttamente sotto <b>🔗 Connessioni</b>, mostra o nasconde i nominativi sulla mappa. Facendo clic su un marker si apre una finestra compatta con posizione, distanza, ultima attività e, se disponibili, batteria, tipo di nodo e firmware.</p>
 <h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
             <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
@@ -5258,6 +5394,9 @@ class MainWindow(QMainWindow):
             <p>Met <b>🔗 Verbindingen</b> kun je daadwerkelijk ontvangen MeshCom-verbindingen en expliciete paden als lijnen op de kaart tonen. Klik op een node om de herkende verbindingen ervan te markeren.</p>
             <p>Lijnen worden alleen gemaakt op basis van ontvangen MeshCom-padgegevens of een daadwerkelijk lokaal ontvangen directe LoRa-verbinding. Er worden geen verbindingen afgeleid uit afstand, positie of veronderstelde radioverbindingen.</p>
             <p><b>Belangrijk:</b> De lijnen tonen geen RSSI- of SNR-waarden per afzonderlijk deel van het pad. De waarden van een ontvangen frame beschrijven alleen de ontvangst van dat frame bij het eigen station.</p>
+            <h3>📍 Kaartmarkeringen en roepnamen</h3>
+            <p>De kaartmarkeringen gebruiken nu kleuren voor de activiteitsstatus: <b>blauw</b> = actief (minder dan 30 minuten), <b>groen</b> = normaal (30–120 minuten), <b>oranje</b> = ouder (2–12 uur), <b>grijs</b> = inactief (meer dan 12 uur) en <b>rood</b> = eigen station.</p>
+            <p>Met de knop <b>👁 Roepnamen</b>, direct onder <b>🔗 Verbindingen</b>, kun je roepnamen op de kaart tonen of verbergen. Klik op een marker voor een compact infovenster met positie, afstand, laatste activiteit en, indien beschikbaar, batterij, node-type en firmware.</p>
 <h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
             <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
             <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
@@ -5280,6 +5419,9 @@ class MainWindow(QMainWindow):
             <p>Avec <b>🔗 Connexions</b>, vous pouvez afficher sur la carte les connexions MeshCom réellement reçues et les chemins explicites sous forme de lignes. Un clic sur un nœud met en évidence ses connexions détectées.</p>
             <p>Les lignes sont créées uniquement à partir des informations de chemin MeshCom reçues ou d'une réception LoRa directe réellement entendue par la station locale. Aucune connexion n'est déduite de la distance, de la position ou de liaisons radio supposées.</p>
             <p><b>Important :</b> les lignes n'affichent pas de valeurs RSSI ou SNR pour chaque segment du chemin. Les valeurs d'une trame reçue décrivent uniquement sa réception par votre propre station.</p>
+            <h3>📍 Marqueurs de carte et indicatifs</h3>
+            <p>Les marqueurs de carte utilisent désormais des couleurs selon l’activité : <b>bleu</b> = actif (moins de 30 minutes), <b>vert</b> = normal (30–120 minutes), <b>orange</b> = plus ancien (2–12 heures), <b>gris</b> = inactif (plus de 12 heures) et <b>rouge</b> = propre station.</p>
+            <p>Le bouton <b>👁 Indicatifs</b>, directement sous <b>🔗 Connexions</b>, permet d’afficher ou de masquer les indicatifs sur la carte. Un clic sur un marqueur ouvre une fenêtre compacte avec la position, la distance, la dernière activité et, si disponibles, la batterie, le type de nœud et le firmware.</p>
 <h3>🌤 Météo, ⚡ Textes rapides et 😊 Emojis</h3><p>WX affiche la température, l'humidité, QFE et QNH lorsqu'ils sont disponibles. Les textes rapides sont insérés sans envoi automatique. Le sélecteur d'emoji insère l'emoji à la position du curseur.</p>
             <h3>🎨 Couleurs du chat et 🔊 Son</h3><p>Les couleurs du chat, des indicatifs/liens cliquables, le son, le volume et le thème clair/sombre sont configurables dans les paramètres.</p>
             <h3>Infos du nœud</h3><p><b>Infos du nœud</b> affiche les informations du WebService MeshCom connecté.</p>
@@ -5318,6 +5460,9 @@ class MainWindow(QMainWindow):
             <p>Con <b>🔗 Conexiones</b> puedes mostrar en el mapa las conexiones MeshCom realmente recibidas y las rutas explícitas mediante líneas. Al hacer clic en un nodo se resaltan sus conexiones detectadas.</p>
             <p>Las líneas solo se crean a partir de información de ruta MeshCom recibida o de una recepción LoRa directa realmente escuchada por la estación local. No se inventan conexiones a partir de distancia, posición o enlaces de radio supuestos.</p>
             <p><b>Importante:</b> las líneas no muestran valores RSSI o SNR para cada tramo individual de la ruta. Los valores de una trama recibida describen únicamente la recepción de esa trama en la propia estación.</p>
+            <h3>📍 Marcadores del mapa e indicativos</h3>
+            <p>Los marcadores del mapa ahora usan colores para el estado de actividad: <b>azul</b> = activo (menos de 30 minutos), <b>verde</b> = normal (30–120 minutos), <b>naranja</b> = antiguo (2–12 horas), <b>gris</b> = inactivo (más de 12 horas) y <b>rojo</b> = estación propia.</p>
+            <p>El botón <b>👁 Indicativos</b>, directamente debajo de <b>🔗 Conexiones</b>, permite mostrar u ocultar los indicativos en el mapa. Al hacer clic en un marcador se abre una ventana compacta con posición, distancia, última actividad y, cuando están disponibles, batería, tipo de nodo y firmware.</p>
 <h3>🌤 Tiempo</h3>
             <p>La información WX muestra temperatura, humedad, QFE y QNH cuando el WebService proporciona estos valores. El tiempo puede actualizarse y enviarse al destino seleccionado.</p>
             <h3>⚡ Textos rápidos y 😊 Emojis</h3>
@@ -5361,6 +5506,9 @@ class MainWindow(QMainWindow):
             <p>Med <b>🔗 Anslutningar</b> kan du visa faktiskt mottagna MeshCom-anslutningar och uttryckliga vägar som linjer på kartan. Klicka på en nod för att markera dess identifierade anslutningar.</p>
             <p>Linjer skapas endast från mottagen MeshCom-väginformation eller en direkt LoRa-mottagning som faktiskt har hörts lokalt. Inga anslutningar skapas utifrån avstånd, position eller antagna radiolänkar.</p>
             <p><b>Viktigt:</b> Linjerna visar inte RSSI- eller SNR-värden för enskilda delsträckor. Värdena för en mottagen ram beskriver endast mottagningen av den ramen vid den egna stationen.</p>
+            <h3>📍 Kartmarkörer och anropssignaler</h3>
+            <p>Kartmarkörerna använder nu färger för aktivitetsstatus: <b>blå</b> = aktiv (under 30 minuter), <b>grön</b> = normal (30–120 minuter), <b>orange</b> = äldre (2–12 timmar), <b>grå</b> = inaktiv (över 12 timmar) och <b>röd</b> = egen station.</p>
+            <p>Knappen <b>👁 Anropssignaler</b>, direkt under <b>🔗 Anslutningar</b>, visar eller döljer anropssignaler på kartan. Klicka på en markör för ett kompakt informationsfönster med position, avstånd, senaste aktivitet och, när det finns, batteri, nodtyp och firmware.</p>
 <h3>🌤 Väder</h3>
             <p>WX-informationen visar temperatur, luftfuktighet, QFE och QNH när WebService levererar dessa värden. Vädret kan uppdateras och skickas till det valda målet.</p>
             <h3>⚡ Snabbtexter och 😊 Emojis</h3>
@@ -5396,7 +5544,10 @@ class MainWindow(QMainWindow):
             <p>Mapa OSM/Leaflet pokazuje pozycje stacji. Widok <b>🌐 Świat</b> otwiera publiczną stronę aktywności MeshCom ÖVSV. Strona obsługuje własne odświeżanie; MeshCom-Guru nie dodaje dodatkowego odświeżania co 15 sekund.</p>
             <h3>🔗 Połączenia na mapie</h3>
             <p>Opcja <b>🔗 Połączenia</b> pokazuje rzeczywiście odebrane ścieżki MeshCom i bezpośrednie lokalne odbiory LoRa jako linie. Linie nie są tworzone na podstawie samej odległości, pozycji ani przypuszczalnego zasięgu radiowego.</p>
-            <h3>🌤 Pogoda</h3>
+                        <h3>📍 Markery mapy i znaki wywoławcze</h3>
+            <p>Markery mapy używają teraz kolorów określających aktywność: <b>niebieski</b> = aktywny (mniej niż 30 minut), <b>zielony</b> = normalny (30–120 minut), <b>pomarańczowy</b> = starszy (2–12 godzin), <b>szary</b> = nieaktywny (ponad 12 godzin) i <b>czerwony</b> = własna stacja.</p>
+            <p>Przycisk <b>👁 Znaki wywoławcze</b>, bezpośrednio pod <b>🔗 Połączenia</b>, pozwala pokazywać lub ukrywać znaki wywoławcze na mapie. Kliknięcie markera otwiera kompaktowe okno z pozycją, odległością, ostatnią aktywnością oraz – jeśli dostępne – baterią, typem węzła i firmware.</p>
+<h3>🌤 Pogoda</h3>
             <p>Dane WX mogą zawierać temperaturę, wilgotność, QFE i QNH. Dane można odświeżyć i wysłać do wybranego celu.</p>
             <h3>⚡ Szybkie teksty i 😊 Emoji</h3>
             <p>Szybkie teksty można wstawiać, edytować, dodawać i usuwać. Wstawienie tekstu nie wysyła go automatycznie. Selektor emoji wstawia wybrane emoji w miejscu kursora.</p>
@@ -6785,10 +6936,22 @@ class MainWindow(QMainWindow):
 
         labels = {
             "connections": ui_text("Verbindungen"),
+            "callsigns": ui_text("Rufzeichen"),
             "legend": ui_text("Legende"),
             "off": ui_text("Aus"),
             "on": ui_text("Ein"),
-            "legend_text": ui_text("Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
+            "position": ui_text("Position"),
+            "distance": ui_text("Entfernung"),
+            "last_activity": ui_text("Letzte Aktivität"),
+            "battery": ui_text("Akkustand"),
+            "node_type": ui_text("Node-Typ"),
+            "firmware": ui_text("Firmware"),
+            "own_station": ui_text("Eigene Station"),
+            "active": ui_text("Aktiv"),
+            "normal": ui_text("Normal"),
+            "older": ui_text("Älter"),
+            "inactive": ui_text("Inaktiv"),
+            "legend_text": ui_text("Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge."),
             "connection_count": ui_text("Verbindung(en)"),
             "from": ui_text("von"),
             "mesh_path": ui_text("MeshCom-Pfad"),
@@ -6799,15 +6962,22 @@ class MainWindow(QMainWindow):
         html_page = r"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><style>
 html,body,#map{height:100%;margin:0}
-#mapControls{position:absolute;z-index:1000;top:10px;right:10px;background:rgba(20,30,42,.94);padding:7px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.35);font:13px sans-serif;color:#fff}
-#mapControls button{border:0;border-radius:7px;padding:7px 11px;background:#26384b;color:#fff;cursor:pointer;margin-right:3px}
+#mapControls{position:absolute;z-index:1000;top:10px;right:10px;background:rgba(20,30,42,.94);padding:7px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.35);font:13px sans-serif;color:#fff;min-width:122px}
+#mapControls button{display:block;width:100%;border:0;border-radius:7px;padding:7px 11px;background:#26384b;color:#fff;cursor:pointer;margin:0 0 4px;text-align:left}
 #mapControls button.active{background:#1677d2}
 #connectionInfo{margin-top:5px;color:#c8d4df;font-size:11px}
-.leaflet-popup-content{font-size:13px}
+.leaflet-popup-content{font-size:13px;line-height:1.45}
+.node-wrap{position:relative;width:34px;height:42px}
+.node-pin{position:absolute;left:6px;top:3px;width:22px;height:22px;border-radius:50% 50% 50% 0;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);transform:rotate(-45deg)}
+.node-pin::after{content:'';position:absolute;left:6px;top:6px;width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
+.node-blue{background:#1677d2}.node-green{background:#25a244}.node-orange{background:#e69a00}.node-gray{background:#666}.node-red{background:#d62f2f}
+.callsign-label{position:absolute;left:22px;top:-5px;white-space:nowrap;background:rgba(255,255,255,.95);color:#17202a;border:1px solid rgba(40,50,60,.28);border-radius:5px;padding:2px 5px;font:600 11px/1.2 sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+.info-table{border-collapse:collapse;width:100%;min-width:210px}.info-table td{padding:2px 4px}.info-table td:first-child{font-weight:600;color:#4a5560;white-space:nowrap}.info-title{font-size:15px;font-weight:700;margin-bottom:5px}
 </style></head>
 <body><div id='map'></div>
 <div id='mapControls'>
 <button id='connectionsBtn' onclick='toggleConnections()'></button>
+<button id='callsignsBtn' onclick='toggleCallsigns()'></button>
 <button onclick='showLegend()'></button>
 <div id='connectionInfo'></div>
 </div>
@@ -6823,7 +6993,10 @@ let firstRender=true;
 let currentStations=[];
 let currentConnections=initialConnections||[];
 let connectionsVisible=false;
+let callsignsVisible=false;
 let selectedCallsign='';
+let openPopupCallsign='';
+let restoringPopup=false;
 
 function esc(v){return String(v??'').replace(/[&<>]/g,'');}
 function formatDistance(km){
@@ -6834,17 +7007,35 @@ function formatDistance(km){
 function stationByCall(c){
   return currentStations.find(s=>String(s.callsign).toUpperCase()===String(c).toUpperCase());
 }
+function ageInfo(s){
+  if(s.own) return {cls:'node-red', label:mapLabels.own_station};
+  const ts=Number(s.last_heard_ts||0);
+  if(!ts) return {cls:'node-gray', label:mapLabels.inactive};
+  const age=Math.max(0, Date.now()/1000-ts);
+  if(age<30*60) return {cls:'node-blue', label:mapLabels.active};
+  if(age<120*60) return {cls:'node-green', label:mapLabels.normal};
+  if(age<12*3600) return {cls:'node-orange', label:mapLabels.older};
+  return {cls:'node-gray', label:mapLabels.inactive};
+}
 function updateControls(){
   const btn=document.getElementById('connectionsBtn');
+  const calls=document.getElementById('callsignsBtn');
   const buttons=document.querySelectorAll('#mapControls button');
   if(btn) btn.textContent='🔗 '+mapLabels.connections;
-  if(buttons[1]) buttons[1].textContent='☷ '+mapLabels.legend;
+  if(calls) calls.textContent='👁 '+mapLabels.callsigns;
+  if(buttons[2]) buttons[2].textContent='☷ '+mapLabels.legend;
   const info=document.getElementById('connectionInfo');
   if(info) info.textContent=connectionsVisible ? (currentConnections.length+' '+mapLabels.connection_count) : mapLabels.off;
   if(btn) btn.classList.toggle('active',connectionsVisible);
+  if(calls) calls.classList.toggle('active',callsignsVisible);
 }
 function showLegend(){
-  alert(mapLabels.legend_text);
+  alert(mapLabels.legend_text+'\n\n'+
+    '🔵 '+mapLabels.active+'\n'+
+    '🟢 '+mapLabels.normal+'\n'+
+    '🟠 '+mapLabels.older+'\n'+
+    '⚫ '+mapLabels.inactive+'\n'+
+    '🔴 '+mapLabels.own_station);
 }
 function drawConnections(){
   connectionLayer.clearLayers();
@@ -6858,7 +7049,7 @@ function drawConnections(){
       String(c.b).toUpperCase()===selectedCallsign;
     if(!selected) return;
     const line=L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{
-      color:'#3388ff',weight:selectedCallsign?5:3,opacity:selectedCallsign?.9:.72
+      color:'#3388ff',weight:selectedCallsign?5:3,opacity:selectedCallsign ? .9 : .72
     });
     const rawSource=String(c.source||'');
     const sourceLabel = rawSource === 'Direkt gehört' ? mapLabels.direct_heard :
@@ -6880,35 +7071,73 @@ function toggleConnections(){
   if(!connectionsVisible) selectedCallsign='';
   drawConnections();
 }
-function renderStations(stations){
+function toggleCallsigns(){
+  callsignsVisible=!callsignsVisible;
+  renderStations(currentStations,false);
+}
+map.on('popupclose', e=>{
+  if(restoringPopup) return;
+  // Leaflet keeps the last popup object in map._popup even after it was
+  // closed. Therefore only the explicit openPopupCallsign state may decide
+  // whether a popup is restored on the next marker refresh.
+  if(e.popup && e.popup._meshStationCallsign &&
+     String(openPopupCallsign||'').toUpperCase() === String(e.popup._meshStationCallsign||'').toUpperCase()) {
+    openPopupCallsign='';
+  }
+});
+
+function popupHtml(s){
+  const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
+  const rows=[];
+  rows.push('<tr><td>'+esc(mapLabels.position)+'</td><td>'+Number(s.lat).toFixed(6)+', '+Number(s.lon).toFixed(6)+'</td></tr>');
+  if(distance && !s.own) rows.push('<tr><td>'+esc(mapLabels.distance)+'</td><td>'+esc(distance)+'</td></tr>');
+  if(s.last_heard) rows.push('<tr><td>'+esc(mapLabels.last_activity)+'</td><td>'+esc(s.last_heard)+'</td></tr>');
+  if(s.battery!==null && s.battery!==undefined && s.battery!=='') rows.push('<tr><td>'+esc(mapLabels.battery)+'</td><td>'+esc(String(s.battery))+(String(s.battery).includes('%')?'':' %')+'</td></tr>');
+  rows.push('<tr><td>'+esc(mapLabels.node_type)+'</td><td>'+esc(s.node_type || '-')+'</td></tr>');
+  if(s.firmware) rows.push('<tr><td>'+esc(mapLabels.firmware)+'</td><td>'+esc(s.firmware)+'</td></tr>');
+  if(s.own) rows.push('<tr><td colspan="2"><b>'+esc(mapLabels.own_station)+'</b></td></tr>');
+  return '<div class="info-title">'+esc(s.callsign)+'</div><table class="info-table">'+rows.join('')+'</table>';
+}
+function renderStations(stations,doFit=true){
   currentStations=stations||[];
   const hadStations=markerLayer.getLayers().length>0;
+  // Merke das aktuell geöffnete Marker-Infofenster. Beim regelmäßigen
+  // Kartenupdate wird die Marker-Layer neu aufgebaut; das Popup soll dabei
+  // nicht verschwinden.
+  // Do not inspect map._popup here: Leaflet retains a closed popup object,
+  // which would incorrectly reopen a popup after every map refresh.
+  const popupToRestore=openPopupCallsign || '';
   markerLayer.clearLayers();
   currentStations.forEach(s=>{
-    const m=L.marker([s.lat,s.lon]).addTo(markerLayer);
-    const heard=s.last_heard?'<br><b>Zuletzt gehört:</b> '+esc(s.last_heard):'';
-    const distance=s.distance_km!==null && s.distance_km!==undefined ? formatDistance(Number(s.distance_km)) : '';
-    const distanceText=distance && !s.own ? '<br><b>Entfernung:</b> '+esc(distance) : '';
-    m.on('click',()=>{if(connectionsVisible)selectNode(s.callsign);});
-    m.bindPopup('<b>'+esc(s.callsign)+'</b>'+distanceText+
-      '<br>Breite: '+Number(s.lat).toFixed(6)+'<br>Länge: '+Number(s.lon).toFixed(6)+heard+
-      (s.own?'<br><b>Eigene Station</b>':'')+
-      (connectionsVisible?'<br><br>🔗':''));
+    const status=ageInfo(s);
+    const label=callsignsVisible?'<div class="callsign-label">'+esc(s.callsign)+'</div>':'';
+    const icon=L.divIcon({className:'',html:'<div class="node-wrap"><div class="node-pin '+status.cls+'"></div>'+label+'</div>',iconSize:[34,42],iconAnchor:[17,21],popupAnchor:[0,-16]});
+    const m=L.marker([s.lat,s.lon],{icon}).addTo(markerLayer);
+    m.on('click',()=>{
+      openPopupCallsign=String(s.callsign||'');
+      if(connectionsVisible)selectNode(s.callsign);
+    });
+    m.bindPopup(popupHtml(s));
+    m.getPopup()._meshStationCallsign=String(s.callsign||'');
+    if(popupToRestore && String(s.callsign||'').toUpperCase()===String(popupToRestore).toUpperCase()){
+      m.openPopup();
+    }
   });
+  openPopupCallsign=popupToRestore && currentStations.some(s=>String(s.callsign||'').toUpperCase()===String(popupToRestore).toUpperCase()) ? popupToRestore : '';
   setTimeout(()=>map.invalidateSize(),50);
-  if(firstRender && !hadStations){
+  if(doFit && firstRender && !hadStations){
     const bounds=currentStations.map(s=>[s.lat,s.lon]);
     if(bounds.length===1) map.setView(bounds[0],10);
     else if(bounds.length>1) map.fitBounds(bounds,{padding:[30,30]});
   }
-  firstRender=false;
+  if(doFit) firstRender=false;
   drawConnections();
 }
-window.updateStations=function(stations){renderStations(stations||[]);};
+window.updateStations=function(stations){renderStations(stations||[],true);};
 window.updateConnections=function(connections){currentConnections=connections||[];drawConnections();};
-window.updateMapLanguage=function(labels){mapLabels=labels||mapLabels;updateControls();drawConnections();};
+window.updateMapLanguage=function(labels){mapLabels=labels||mapLabels;updateControls();renderStations(currentStations,false);};
 updateControls();
-renderStations(initialStations);
+renderStations(initialStations,true);
 </script></body></html>"""
         return (html_page
                 .replace('__STATIONS__', station_json)
@@ -6976,11 +7205,24 @@ renderStations(initialStations);
             distance = None
             if self.own_lat is not None and self.own_lon is not None:
                 distance = distance_km(self.own_lat, self.own_lon, lat, lon)
-            stations.append({"callsign":callsign,"lat":lat,"lon":lon,"own":callsign.upper()==self.own_callsign.upper(),"last_heard":self.station_last_heard.get(callsign.upper(),""),"distance_km":distance})
+            mh = self.mh_stations.get(callsign) or self.mh_stations.get(str(callsign).upper()) or {}
+            key = callsign.upper()
+            stations.append({
+                "callsign":callsign,
+                "lat":lat,
+                "lon":lon,
+                "own":key==self.own_callsign.upper(),
+                "last_heard":self.station_last_heard.get(key, mh.get("last_heard", "")),
+                "last_heard_ts":self.station_last_heard_ts.get(key, mh.get("last_heard_ts", 0.0)),
+                "distance_km":distance,
+                "battery":mh.get("battery", ""),
+                "firmware":mh.get("firmware", ""),
+                "node_type":mh.get("node_type", ""),
+            })
         if self.own_lat is not None and self.own_lon is not None:
             own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
-            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0})
+            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0,"last_heard":"","last_heard_ts":time.time(),"battery":self.own_battery,"firmware":self.own_firmware,"node_type":self.own_node_type})
         # Die Karte wird nicht neu geladen. Ein 5-Sekunden-Refresh darf aber
         # auch nicht die komplette Leaflet-Marker-Schicht neu erzeugen.
         # Das wäre beim Zoomen und während der Texteingabe deutlich spürbar.
@@ -6994,6 +7236,8 @@ renderStations(initialStations);
                     item.get("lat"), item.get("lon"),
                     str(item.get("last_heard", "")),
                     item.get("distance_km"), bool(item.get("own", False)),
+                    item.get("last_heard_ts"), item.get("battery"),
+                    item.get("firmware"), item.get("node_type"),
                 )
                 for item in stations
             ),
@@ -7114,6 +7358,7 @@ renderStations(initialStations);
                         heard = self._timestamp_from_block(block)
                         if heard:
                             self.station_last_heard[key] = heard
+                        self.station_last_heard_ts[key] = time.time()
             self._update_map()
 
             self._ensure_room_tabs()

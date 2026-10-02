@@ -48,7 +48,7 @@
   "Typ": "Type",
   "Von": "De",
   "Nach": "À",
-  "Rufzeichen": "Indicatif",
+  "Rufzeichen": "Indicatifs",
   "Entfernung": "Distance",
   "Batterie": "Batterie",
   "Zuletzt gehört": "Dernière réception",
@@ -190,7 +190,7 @@
   "Länge:": "Longitude :",
   "Höhe:": "Altitude :",
   "Batteriekapazität:": "Capacité de la batterie :",
-  "Eigene Station": "Station personnelle",
+  "Eigene Station": "Propre station",
   "Zuletzt gehört:": "Dernière réception :",
   "Entfernung:": "Distance :",
   "Noch ": "Encore ",
@@ -292,5 +292,13 @@
   "MeshCom-Pfad": "Chemin MeshCom",
   "Direkt gehört": "Reçu directement",
   "Bild hochladen": "Télécharger une image",
-  "polish": "Polonais"
+  "polish": "Polonais",
+  "Letzte Aktivität": "Dernière activité",
+  "Akkustand": "Batterie",
+  "Node-Typ": "Type de nœud",
+  "Aktiv": "Actif",
+  "Normal": "Normal",
+  "Älter": "Plus ancien",
+  "Inaktiv": "Inactif",
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Couleurs : bleu = actif, vert = normal, orange = ancien, gris = inactif, rouge = propre station. Les indicatifs peuvent être affichés ou masqués. Les lignes montrent les chemins MeshCom réellement reçus ou les réceptions LoRa locales directes."
 }
