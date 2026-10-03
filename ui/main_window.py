@@ -975,6 +975,7 @@ class MainWindow(QMainWindow):
         self.own_node_type = ""
         self.own_firmware = ""
         self.own_battery = ""
+        self.own_temperature = ""
         self.udpPacketReceived.connect(self._handle_udp_packet)
         self.own_callsign = settings.get("own_callsign", "").strip().upper()
         try:
@@ -1533,7 +1534,7 @@ class MainWindow(QMainWindow):
         row = self.mh_stations.setdefault(callsign, {
             "callsign": callsign, "lat": None, "lon": None,
             "rssi": None, "snr": None, "battery": None,
-            "last_heard": now, "last_heard_ts": now_ts, "alt": None, "firmware": "", "node_type": "",
+            "last_heard": now, "last_heard_ts": now_ts, "alt": None, "firmware": "", "node_type": "", "temperature": None,
         })
         row["last_heard"] = now
         row["last_heard_ts"] = now_ts
@@ -1565,6 +1566,19 @@ class MainWindow(QMainWindow):
             row["alt"] = alt
         if batt not in (None, ""):
             row["battery"] = batt
+
+        # Temperatur aus TEL/Telemetry für die Karten-Info übernehmen.
+        if ptype in {"tel", "tele", "telemetry", "status"}:
+            tel_data = self._monitor_telemetry_data(packet, self._monitor_value(packet, "msg", "message") or "")
+            temp = ""
+            for key in ("temp", "temperature", "temp1"):
+                value = packet.get(key, tel_data.get(key, ""))
+                if value not in (None, ""):
+                    temp = value
+                    break
+            if temp not in (None, ""):
+                row["temperature"] = temp
+
         fw = self._monitor_value(packet, "firmware", "fw", "version")
         fw_sub = self._monitor_value(packet, "fw_sub", "fwsub", "firmware_sub", "firmware_suffix")
         if fw not in (None, ""):
@@ -1850,6 +1864,16 @@ class MainWindow(QMainWindow):
             batt = self._monitor_value(packet, "batt", "battery")
             if batt not in (None, ""):
                 self.own_battery = batt
+
+        # Eigene Telemetrie separat übernehmen, damit die Temperatur im Karten-
+        # Infofenster auch dann aktualisiert wird, wenn kein neues POS-Paket kommt.
+        if callsign and callsign.upper() == str(self.own_callsign or "").upper() and ptype in {"tel", "tele", "telemetry", "status"}:
+            tel_data = self._monitor_telemetry_data(packet, self._monitor_value(packet, "msg", "message") or "")
+            for key in ("temp", "temperature", "temp1"):
+                temp = packet.get(key, tel_data.get(key, ""))
+                if temp not in (None, ""):
+                    self.own_temperature = temp
+                    break
 
         # Punkt 2 – ausschließlich den EXTUDP-MSG-Strom für die Sendebestätigung
         # auswerten. POS/Koordinaten bleiben darunter unverändert.
@@ -5002,6 +5026,7 @@ class MainWindow(QMainWindow):
                 "battery": ui_text("Akkustand"),
                 "node_type": ui_text("Node-Typ"),
                 "firmware": ui_text("Firmware"),
+                "temperature": ui_text("Temperatur"),
                 "own_station": ui_text("Eigene Station"),
                 "active": ui_text("Aktiv"),
                 "normal": ui_text("Normal"),
@@ -5316,7 +5341,7 @@ class MainWindow(QMainWindow):
             <p><b>Wichtig:</b> Die Linien zeigen keine RSSI- oder SNR-Werte pro einzelner Teilstrecke. Die Werte eines empfangenen Frames beschreiben nur den Empfang dieses Frames an der eigenen Station.</p>
             <h3>📍 Kartenmarker und Rufzeichen</h3>
             <p>Die Kartenmarker verwenden jetzt Farben für den Aktivitätsstatus: <b>Blau</b> = aktiv (unter 30 Minuten), <b>Grün</b> = normal (30–120 Minuten), <b>Orange</b> = älter (2–12 Stunden), <b>Grau</b> = inaktiv (über 12 Stunden) und <b>Rot</b> = eigene Station.</p>
-            <p>Mit <b>👁 Rufzeichen</b> direkt unter <b>🔗 Verbindungen</b> können die Rufzeichen auf der Karte ein- und ausgeblendet werden. Beim Anklicken eines Markers zeigt das Infofenster nur die wichtigsten Daten: Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ und Firmware.</p>
+            <p>Mit <b>👁 Rufzeichen</b> direkt unter <b>🔗 Verbindungen</b> können die Rufzeichen auf der Karte ein- und ausgeblendet werden. Beim Anklicken eines Markers zeigt das Infofenster nur die wichtigsten Daten: Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ, Firmware und Temperatur.</p>
 <h3>🌤 Wetterdaten</h3>
             <p>Die WX-Anzeige zeigt Temperatur, Luftfeuchte, QFE und QNH, sofern der WebService diese Werte liefert. Wetter kann aktualisiert und an das aktuell ausgewählte Ziel gesendet werden.</p>
             <h3>⚡ Schnelltexte und 😊 Emojis</h3>
@@ -5345,7 +5370,7 @@ class MainWindow(QMainWindow):
             <p><b>Important:</b> The lines do not show RSSI or SNR values for individual path segments. The values of a received frame describe only reception of that frame at your own station.</p>
             <h3>📍 Map markers and callsigns</h3>
             <p>Map markers now use colors for activity status: <b>blue</b> = active (under 30 minutes), <b>green</b> = normal (30–120 minutes), <b>orange</b> = older (2–12 hours), <b>gray</b> = inactive (over 12 hours), and <b>red</b> = own station.</p>
-            <p>The <b>👁 Callsigns</b> button directly below <b>🔗 Connections</b> shows or hides callsigns on the map. Clicking a marker opens a compact information window with position, distance, last activity and, when available, battery level, node type and firmware.</p>
+            <p>The <b>👁 Callsigns</b> button directly below <b>🔗 Connections</b> shows or hides callsigns on the map. Clicking a marker opens a compact information window with position, distance, last activity and, when available, battery level, node type, firmware and temperature.</p>
 <h3>🌤 Weather</h3><p>WX can display temperature, humidity, QFE and QNH when supplied by the WebService. Weather can be refreshed and sent to the currently selected target.</p>
             <h3>⚡ Quick texts and 😊 Emojis</h3><p>Quick texts can be inserted, edited, added and deleted. Inserting a quick text does not send it automatically. The emoji picker inserts the selected emoji at the cursor position.</p>
             <h3>🎨 Chat colors and 🔊 Sound</h3><p>Under <b>Settings → Chat colors …</b> you can configure the background, the text color for “All”, and the color of clickable callsigns and Internet links. Sound, volume and light/dark theme are also configurable.</p>
@@ -5371,7 +5396,7 @@ class MainWindow(QMainWindow):
             <p><b>Importante:</b> le linee non mostrano valori RSSI o SNR per i singoli tratti del percorso. I valori di un frame ricevuto descrivono solo la ricezione di quel frame presso la propria stazione.</p>
             <h3>📍 Marker della mappa e nominativi</h3>
             <p>I marker della mappa ora usano colori per lo stato di attività: <b>blu</b> = attivo (meno di 30 minuti), <b>verde</b> = normale (30–120 minuti), <b>arancione</b> = più vecchio (2–12 ore), <b>grigio</b> = inattivo (oltre 12 ore) e <b>rosso</b> = stazione propria.</p>
-            <p>Il pulsante <b>👁 Nominativi</b>, direttamente sotto <b>🔗 Connessioni</b>, mostra o nasconde i nominativi sulla mappa. Facendo clic su un marker si apre una finestra compatta con posizione, distanza, ultima attività e, se disponibili, batteria, tipo di nodo e firmware.</p>
+            <p>Il pulsante <b>👁 Nominativi</b>, direttamente sotto <b>🔗 Connessioni</b>, mostra o nasconde i nominativi sulla mappa. Facendo clic su un marker si apre una finestra compatta con posizione, distanza, ultima attività e, se disponibili, batteria, tipo di nodo, firmware e temperatura.</p>
 <h3>🌤 Meteo, ⚡ Testi rapidi e 😊 Emoji</h3><p>La WX mostra temperatura, umidità, QFE e QNH quando disponibili. I testi rapidi possono essere inseriti e modificati senza invio automatico. Il selettore emoji inserisce l'emoji nella posizione del cursore.</p>
             <h3>🎨 Colori chat e 🔊 Suono</h3><p>I colori della chat, dei nominativi/link cliccabili, il suono, il volume e il tema chiaro/scuro possono essere configurati nelle impostazioni.</p>
             <h3>Node Info</h3><p><b>Info nodo</b> mostra le informazioni del WebService MeshCom collegato.</p>
@@ -5396,7 +5421,7 @@ class MainWindow(QMainWindow):
             <p><b>Belangrijk:</b> De lijnen tonen geen RSSI- of SNR-waarden per afzonderlijk deel van het pad. De waarden van een ontvangen frame beschrijven alleen de ontvangst van dat frame bij het eigen station.</p>
             <h3>📍 Kaartmarkeringen en roepnamen</h3>
             <p>De kaartmarkeringen gebruiken nu kleuren voor de activiteitsstatus: <b>blauw</b> = actief (minder dan 30 minuten), <b>groen</b> = normaal (30–120 minuten), <b>oranje</b> = ouder (2–12 uur), <b>grijs</b> = inactief (meer dan 12 uur) en <b>rood</b> = eigen station.</p>
-            <p>Met de knop <b>👁 Roepnamen</b>, direct onder <b>🔗 Verbindingen</b>, kun je roepnamen op de kaart tonen of verbergen. Klik op een marker voor een compact infovenster met positie, afstand, laatste activiteit en, indien beschikbaar, batterij, node-type en firmware.</p>
+            <p>Met de knop <b>👁 Roepnamen</b>, direct onder <b>🔗 Verbindingen</b>, kun je roepnamen op de kaart tonen of verbergen. Klik op een marker voor een compact infovenster met positie, afstand, laatste activiteit en, indien beschikbaar, batterij, node-type, firmware en temperatuur.</p>
 <h3>🌤 Weer, ⚡ Snelteksten en 😊 Emoji's</h3><p>WX toont temperatuur, luchtvochtigheid, QFE en QNH indien beschikbaar. Snelteksten worden ingevoegd zonder automatisch verzenden. De emoji-kiezer plaatst de emoji op de cursorpositie.</p>
             <h3>🎨 Chatkleuren en 🔊 Geluid</h3><p>Chatkleuren, kleuren voor klikbare roepnamen/links, geluid, volume en licht/donker-thema zijn instelbaar.</p>
             <h3>Node-info</h3><p><b>Node-info</b> toont de informatie van de verbonden MeshCom-WebService.</p>
@@ -5462,7 +5487,7 @@ class MainWindow(QMainWindow):
             <p><b>Importante:</b> las líneas no muestran valores RSSI o SNR para cada tramo individual de la ruta. Los valores de una trama recibida describen únicamente la recepción de esa trama en la propia estación.</p>
             <h3>📍 Marcadores del mapa e indicativos</h3>
             <p>Los marcadores del mapa ahora usan colores para el estado de actividad: <b>azul</b> = activo (menos de 30 minutos), <b>verde</b> = normal (30–120 minutos), <b>naranja</b> = antiguo (2–12 horas), <b>gris</b> = inactivo (más de 12 horas) y <b>rojo</b> = estación propia.</p>
-            <p>El botón <b>👁 Indicativos</b>, directamente debajo de <b>🔗 Conexiones</b>, permite mostrar u ocultar los indicativos en el mapa. Al hacer clic en un marcador se abre una ventana compacta con posición, distancia, última actividad y, cuando están disponibles, batería, tipo de nodo y firmware.</p>
+            <p>El botón <b>👁 Indicativos</b>, directamente debajo de <b>🔗 Conexiones</b>, permite mostrar u ocultar los indicativos en el mapa. Al hacer clic en un marcador se abre una ventana compacta con posición, distancia, última actividad y, cuando están disponibles, batería, tipo de nodo, firmware y temperatura.</p>
 <h3>🌤 Tiempo</h3>
             <p>La información WX muestra temperatura, humedad, QFE y QNH cuando el WebService proporciona estos valores. El tiempo puede actualizarse y enviarse al destino seleccionado.</p>
             <h3>⚡ Textos rápidos y 😊 Emojis</h3>
@@ -5508,7 +5533,7 @@ class MainWindow(QMainWindow):
             <p><b>Viktigt:</b> Linjerna visar inte RSSI- eller SNR-värden för enskilda delsträckor. Värdena för en mottagen ram beskriver endast mottagningen av den ramen vid den egna stationen.</p>
             <h3>📍 Kartmarkörer och anropssignaler</h3>
             <p>Kartmarkörerna använder nu färger för aktivitetsstatus: <b>blå</b> = aktiv (under 30 minuter), <b>grön</b> = normal (30–120 minuter), <b>orange</b> = äldre (2–12 timmar), <b>grå</b> = inaktiv (över 12 timmar) och <b>röd</b> = egen station.</p>
-            <p>Knappen <b>👁 Anropssignaler</b>, direkt under <b>🔗 Anslutningar</b>, visar eller döljer anropssignaler på kartan. Klicka på en markör för ett kompakt informationsfönster med position, avstånd, senaste aktivitet och, när det finns, batteri, nodtyp och firmware.</p>
+            <p>Knappen <b>👁 Anropssignaler</b>, direkt under <b>🔗 Anslutningar</b>, visar eller döljer anropssignaler på kartan. Klicka på en markör för ett kompakt informationsfönster med position, avstånd, senaste aktivitet och, när det finns, batteri, nodtyp, firmware och temperatur.</p>
 <h3>🌤 Väder</h3>
             <p>WX-informationen visar temperatur, luftfuktighet, QFE och QNH när WebService levererar dessa värden. Vädret kan uppdateras och skickas till det valda målet.</p>
             <h3>⚡ Snabbtexter och 😊 Emojis</h3>
@@ -5546,7 +5571,7 @@ class MainWindow(QMainWindow):
             <p>Opcja <b>🔗 Połączenia</b> pokazuje rzeczywiście odebrane ścieżki MeshCom i bezpośrednie lokalne odbiory LoRa jako linie. Linie nie są tworzone na podstawie samej odległości, pozycji ani przypuszczalnego zasięgu radiowego.</p>
                         <h3>📍 Markery mapy i znaki wywoławcze</h3>
             <p>Markery mapy używają teraz kolorów określających aktywność: <b>niebieski</b> = aktywny (mniej niż 30 minut), <b>zielony</b> = normalny (30–120 minut), <b>pomarańczowy</b> = starszy (2–12 godzin), <b>szary</b> = nieaktywny (ponad 12 godzin) i <b>czerwony</b> = własna stacja.</p>
-            <p>Przycisk <b>👁 Znaki wywoławcze</b>, bezpośrednio pod <b>🔗 Połączenia</b>, pozwala pokazywać lub ukrywać znaki wywoławcze na mapie. Kliknięcie markera otwiera kompaktowe okno z pozycją, odległością, ostatnią aktywnością oraz – jeśli dostępne – baterią, typem węzła i firmware.</p>
+            <p>Przycisk <b>👁 Znaki wywoławcze</b>, bezpośrednio pod <b>🔗 Połączenia</b>, pozwala pokazywać lub ukrywać znaki wywoławcze na mapie. Kliknięcie markera otwiera kompaktowe okno z pozycją, odległością, ostatnią aktywnością oraz – jeśli dostępne – baterią, typem węzła, firmware i temperaturą.</p>
 <h3>🌤 Pogoda</h3>
             <p>Dane WX mogą zawierać temperaturę, wilgotność, QFE i QNH. Dane można odświeżyć i wysłać do wybranego celu.</p>
             <h3>⚡ Szybkie teksty i 😊 Emoji</h3>
@@ -6946,6 +6971,7 @@ class MainWindow(QMainWindow):
             "battery": ui_text("Akkustand"),
             "node_type": ui_text("Node-Typ"),
             "firmware": ui_text("Firmware"),
+            "temperature": ui_text("Temperatur"),
             "own_station": ui_text("Eigene Station"),
             "active": ui_text("Aktiv"),
             "normal": ui_text("Normal"),
@@ -6966,13 +6992,13 @@ html,body,#map{height:100%;margin:0}
 #mapControls button{display:block;width:100%;border:0;border-radius:7px;padding:7px 11px;background:#26384b;color:#fff;cursor:pointer;margin:0 0 4px;text-align:left}
 #mapControls button.active{background:#1677d2}
 #connectionInfo{margin-top:5px;color:#c8d4df;font-size:11px}
-.leaflet-popup-content{font-size:13px;line-height:1.45}
+.leaflet-popup-content{font-size:12px;line-height:1.25;margin:10px 12px}
 .node-wrap{position:relative;width:34px;height:42px}
 .node-pin{position:absolute;left:6px;top:3px;width:22px;height:22px;border-radius:50% 50% 50% 0;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);transform:rotate(-45deg)}
 .node-pin::after{content:'';position:absolute;left:6px;top:6px;width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
 .node-blue{background:#1677d2}.node-green{background:#25a244}.node-orange{background:#e69a00}.node-gray{background:#666}.node-red{background:#d62f2f}
 .callsign-label{position:absolute;left:22px;top:-5px;white-space:nowrap;background:rgba(255,255,255,.95);color:#17202a;border:1px solid rgba(40,50,60,.28);border-radius:5px;padding:2px 5px;font:600 11px/1.2 sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
-.info-table{border-collapse:collapse;width:100%;min-width:210px}.info-table td{padding:2px 4px}.info-table td:first-child{font-weight:600;color:#4a5560;white-space:nowrap}.info-title{font-size:15px;font-weight:700;margin-bottom:5px}
+.info-table{border-collapse:collapse;width:100%;min-width:190px}.info-table td{padding:1px 3px}.info-table td:first-child{font-weight:600;color:#4a5560;white-space:nowrap}.info-title{font-size:14px;font-weight:700;margin-bottom:3px}
 </style></head>
 <body><div id='map'></div>
 <div id='mapControls'>
@@ -7003,6 +7029,11 @@ function formatDistance(km){
   if(km===null || km===undefined || !isFinite(km)) return '';
   if(km<1) return Math.round(km*1000)+' m';
   return km.toFixed(1)+' km';
+}
+function formatTemperature(value){
+  if(value===null || value===undefined || value==='') return '';
+  const n=Number(value);
+  return isFinite(n) ? n.toFixed(1)+' °C' : String(value)+' °C';
 }
 function stationByCall(c){
   return currentStations.find(s=>String(s.callsign).toUpperCase()===String(c).toUpperCase());
@@ -7095,37 +7126,54 @@ function popupHtml(s){
   if(s.battery!==null && s.battery!==undefined && s.battery!=='') rows.push('<tr><td>'+esc(mapLabels.battery)+'</td><td>'+esc(String(s.battery))+(String(s.battery).includes('%')?'':' %')+'</td></tr>');
   rows.push('<tr><td>'+esc(mapLabels.node_type)+'</td><td>'+esc(s.node_type || '-')+'</td></tr>');
   if(s.firmware) rows.push('<tr><td>'+esc(mapLabels.firmware)+'</td><td>'+esc(s.firmware)+'</td></tr>');
+  if(s.temperature!==null && s.temperature!==undefined && s.temperature!=='') rows.push('<tr><td>'+esc(mapLabels.temperature)+'</td><td>'+esc(formatTemperature(s.temperature))+'</td></tr>');
   if(s.own) rows.push('<tr><td colspan="2"><b>'+esc(mapLabels.own_station)+'</b></td></tr>');
   return '<div class="info-title">'+esc(s.callsign)+'</div><table class="info-table">'+rows.join('')+'</table>';
 }
 function renderStations(stations,doFit=true){
   currentStations=stations||[];
-  const hadStations=markerLayer.getLayers().length>0;
-  // Merke das aktuell geöffnete Marker-Infofenster. Beim regelmäßigen
-  // Kartenupdate wird die Marker-Layer neu aufgebaut; das Popup soll dabei
-  // nicht verschwinden.
-  // Do not inspect map._popup here: Leaflet retains a closed popup object,
-  // which would incorrectly reopen a popup after every map refresh.
-  const popupToRestore=openPopupCallsign || '';
-  markerLayer.clearLayers();
+  const existing=new Map();
+  markerLayer.getLayers().forEach(m=>{
+    if(m._meshCallsign) existing.set(String(m._meshCallsign).toUpperCase(),m);
+  });
+  const wanted=new Set();
+
   currentStations.forEach(s=>{
+    const key=String(s.callsign||'').toUpperCase();
+    if(!key) return;
+    wanted.add(key);
     const status=ageInfo(s);
     const label=callsignsVisible?'<div class="callsign-label">'+esc(s.callsign)+'</div>':'';
-    const icon=L.divIcon({className:'',html:'<div class="node-wrap"><div class="node-pin '+status.cls+'"></div>'+label+'</div>',iconSize:[34,42],iconAnchor:[17,21],popupAnchor:[0,-16]});
-    const m=L.marker([s.lat,s.lon],{icon}).addTo(markerLayer);
-    m.on('click',()=>{
-      openPopupCallsign=String(s.callsign||'');
-      if(connectionsVisible)selectNode(s.callsign);
-    });
-    m.bindPopup(popupHtml(s));
-    m.getPopup()._meshStationCallsign=String(s.callsign||'');
-    if(popupToRestore && String(s.callsign||'').toUpperCase()===String(popupToRestore).toUpperCase()){
-      m.openPopup();
+    const iconHtml='<div class="node-wrap"><div class="node-pin '+status.cls+'"></div>'+label+'</div>';
+    let m=existing.get(key);
+    if(!m){
+      const icon=L.divIcon({className:'',html:iconHtml,iconSize:[34,42],iconAnchor:[17,21],popupAnchor:[0,-16]});
+      m=L.marker([s.lat,s.lon],{icon}).addTo(markerLayer);
+      m._meshCallsign=String(s.callsign||'');
+      m.on('click',()=>{
+        openPopupCallsign=String(m._meshCallsign||'');
+        if(connectionsVisible)selectNode(m._meshCallsign);
+      });
+      m.bindPopup(popupHtml(s));
+      m.getPopup()._meshStationCallsign=String(s.callsign||'');
+    } else {
+      const pos=m.getLatLng();
+      if(Number(pos.lat)!==Number(s.lat) || Number(pos.lng)!==Number(s.lon)) m.setLatLng([s.lat,s.lon]);
+      m.setIcon(L.divIcon({className:'',html:iconHtml,iconSize:[34,42],iconAnchor:[17,21],popupAnchor:[0,-16]}));
+      // Nur den Inhalt des bestehenden Popups aktualisieren. Ist es offen,
+      // bleibt das Leaflet-Popup geöffnet und wird nicht neu erzeugt.
+      m.setPopupContent(popupHtml(s));
+      m.getPopup()._meshStationCallsign=String(s.callsign||'');
     }
   });
-  openPopupCallsign=popupToRestore && currentStations.some(s=>String(s.callsign||'').toUpperCase()===String(popupToRestore).toUpperCase()) ? popupToRestore : '';
+
+  markerLayer.getLayers().slice().forEach(m=>{
+    if(m._meshCallsign && !wanted.has(String(m._meshCallsign).toUpperCase())) markerLayer.removeLayer(m);
+  });
+
+  openPopupCallsign=openPopupCallsign && wanted.has(String(openPopupCallsign).toUpperCase()) ? openPopupCallsign : '';
   setTimeout(()=>map.invalidateSize(),50);
-  if(doFit && firstRender && !hadStations){
+  if(doFit && firstRender && currentStations.length){
     const bounds=currentStations.map(s=>[s.lat,s.lon]);
     if(bounds.length===1) map.setView(bounds[0],10);
     else if(bounds.length>1) map.fitBounds(bounds,{padding:[30,30]});
@@ -7133,6 +7181,7 @@ function renderStations(stations,doFit=true){
   if(doFit) firstRender=false;
   drawConnections();
 }
+
 window.updateStations=function(stations){renderStations(stations||[],true);};
 window.updateConnections=function(connections){currentConnections=connections||[];drawConnections();};
 window.updateMapLanguage=function(labels){mapLabels=labels||mapLabels;updateControls();renderStations(currentStations,false);};
@@ -7218,11 +7267,12 @@ renderStations(initialStations,true);
                 "battery":mh.get("battery", ""),
                 "firmware":mh.get("firmware", ""),
                 "node_type":mh.get("node_type", ""),
+                "temperature":mh.get("temperature", ""),
             })
         if self.own_lat is not None and self.own_lon is not None:
             own_call=self.own_callsign
             stations=[s for s in stations if s["callsign"].upper()!=own_call.upper()]
-            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0,"last_heard":"","last_heard_ts":time.time(),"battery":self.own_battery,"firmware":self.own_firmware,"node_type":self.own_node_type})
+            stations.insert(0,{"callsign":own_call,"lat":self.own_lat,"lon":self.own_lon,"own":True,"distance_km":0.0,"last_heard":"","last_heard_ts":time.time(),"battery":self.own_battery,"firmware":self.own_firmware,"node_type":self.own_node_type,"temperature":self.own_temperature})
         # Die Karte wird nicht neu geladen. Ein 5-Sekunden-Refresh darf aber
         # auch nicht die komplette Leaflet-Marker-Schicht neu erzeugen.
         # Das wäre beim Zoomen und während der Texteingabe deutlich spürbar.
@@ -7237,7 +7287,7 @@ renderStations(initialStations,true);
                     str(item.get("last_heard", "")),
                     item.get("distance_km"), bool(item.get("own", False)),
                     item.get("last_heard_ts"), item.get("battery"),
-                    item.get("firmware"), item.get("node_type"),
+                    item.get("firmware"), item.get("node_type"), item.get("temperature"),
                 )
                 for item in stations
             ),

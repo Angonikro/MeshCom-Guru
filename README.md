@@ -1,18 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.8**
+**Aktuelle Version: 0.4.9**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -37,16 +28,25 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.8 aktualisiert:
+Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.9 aktualisiert:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.8_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.8_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.8_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.8_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.8_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.8_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.8_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.8_PL.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.9_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.9_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.9_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.9_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.9_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.9_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
+
+## Version 0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
+
+- 🌡️ **Temperatur im Karten-Infofenster:** Wenn ein Node einen Temperaturwert über die Telemetrie liefert, wird dieser jetzt direkt im Marker-Infofenster angezeigt.
+- 🌐 **Alle acht Sprachen:** Die neue Temperaturzeile ist in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch übersetzt.
+- 🪟 **Popup ohne sichtbaren Neuaufbau:** Das geöffnete Karten-Infofenster bleibt beim normalen Karten-Refresh geöffnet. Sein Inhalt wird aktualisiert, ohne den Marker bzw. das Popup jedes Mal zu löschen und neu zu erzeugen. Dadurch wird das bisher leichte Blinken deutlich reduziert.
+- ⚡ **Karten-Refresh optimiert:** Bestehende Leaflet-Marker werden weiterverwendet; nur geänderte Positionen, Icons und Popup-Inhalte werden aktualisiert.
+- 🛡️ **Bestehende Funktionen erhalten:** Rufzeichen, Markerfarben, Node-Typ, Firmware, Akkustand, Verbindungen und die bisherigen Karten-/WebService-Funktionen bleiben erhalten.
+- 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
 
 ## Version 0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
 
@@ -414,7 +414,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.8**
+**Version 0.4.9**
 
 **By Goldisoft 2026**
 
@@ -476,6 +476,10 @@ Dabei werden insbesondere folgende Daten verwendet:
 - Rufzeichen
 
 Die Positionsdaten stammen aus den empfangenen MeshCom-Daten.
+
+### Kartenmarker-Infofenster
+
+Beim Anklicken eines Markers zeigt das Infofenster Position, Entfernung und letzte Aktivität. Wenn Telemetriedaten vorhanden sind, werden zusätzlich Akkustand, Node-Typ, Firmware und **Temperatur** angezeigt. Das geöffnete Infofenster bleibt bei normalen Kartenaktualisierungen geöffnet und wird ohne kompletten Neuaufbau aktualisiert.
 
 ---
 
@@ -554,7 +558,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.8**  
+**MeshCom-Guru v0.4.9**  
 **By Goldisoft 2026**
 
 
@@ -566,11 +570,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.8-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.9-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

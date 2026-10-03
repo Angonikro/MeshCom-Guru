@@ -1,3 +1,12 @@
+## v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
+
+- 🌡️ **Temperatur im Karten-Infofenster:** Temperaturwerte aus der Node-Telemetrie werden bei vorhandenen Daten direkt im Kartenmarker-Infofenster angezeigt.
+- 🌐 **8-sprachig:** Die neue Anzeige ist in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch übersetzt.
+- 🪟 **Popup-Refresh ohne sichtbares Blinken:** Beim Karten-Refresh werden bestehende Marker und geöffnete Popups wiederverwendet. Der Inhalt des Infofensters wird aktualisiert, ohne das Fenster zu schließen und neu zu öffnen.
+- ⚡ **Marker-Performance:** Kein unnötiger kompletter Neuaufbau der Leaflet-Marker-Layer bei normalen Datenaktualisierungen; geänderte Marker werden gezielt aktualisiert.
+- 🛡️ **Keine Änderungen an den bestehenden Nachrichten-/Empfangspfaden:** Die bisherigen stabilen Funktionen bleiben erhalten.
+- 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
+
 ## v0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
 
 - 🗺️ **Eigene Station:** Das Karten-Infofenster zeigt jetzt auch bei der eigenen Station den erkannten **Node-Typ** und die **Firmware**, sofern diese Daten aus dem eigenen POS/EXTUDP-Paket vorliegen.

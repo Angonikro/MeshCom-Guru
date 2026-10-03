@@ -91,5 +91,6 @@
   "Normal": "Normal",
   "Älter": "Older",
   "Inaktiv": "Inactive",
-  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Colors: blue = active, green = normal, orange = older, gray = inactive, red = own station. Callsigns can be shown or hidden. Lines show actually received MeshCom paths or direct local LoRa receptions."
+  "Farben: Blau = aktiv, Grün = normal, Orange = älter, Grau = inaktiv, Rot = eigene Station. Rufzeichen können ein- und ausgeblendet werden. Linien zeigen tatsächlich empfangene MeshCom-Pfade oder direkte lokale LoRa-Empfänge.": "Colors: blue = active, green = normal, orange = older, gray = inactive, red = own station. Callsigns can be shown or hidden. Lines show actually received MeshCom paths or direct local LoRa receptions.",
+  "Temperatur": "Temperature"
 }

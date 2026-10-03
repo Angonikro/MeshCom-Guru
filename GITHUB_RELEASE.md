@@ -1,16 +1,26 @@
-# MeshCom-Guru v0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
+# MeshCom-Guru v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
 
-## Änderungen
+## Neu in v0.4.9
 
-- 🗺️ **Eigene Station:** Das kompakte Karten-Infofenster zeigt jetzt auch für die eigene Station den erkannten **Node-Typ** und die **Firmware**, sofern diese Informationen aus dem eigenen POS/EXTUDP-Paket vorliegen.
-- 🧩 **Einheitliche Darstellung:** Die eigene Station verwendet dieselbe Node-Typ-/Firmware-Aufbereitung wie die übrigen Kartenmarker.
-- 🛡️ **Bestehende Kartenfunktionen erhalten:** Marker-Farben, Rufzeichen-Anzeige, Entfernung und die übrigen Karteninformationen bleiben unverändert.
-- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit, ACK/UDP und die bisherigen Performance-/Stabilitäts-Fixes bleiben auf dem getesteten v0.4.7-Stand.
-- 📖 **Dokumentation:** Die vorhandenen acht PDF-Handbücher bleiben unverändert auf dem Dokumentationsstand v0.4.7.
+- 🌡️ Temperaturwerte aus der Node-Telemetrie werden im Karten-Infofenster angezeigt, wenn ein Wert vorhanden ist.
+- 🌐 Die Temperaturanzeige ist in allen 8 unterstützten Sprachen übersetzt.
+- 🪟 Geöffnete Karten-Infofenster bleiben beim Refresh geöffnet und werden inhaltlich aktualisiert, statt neu erzeugt zu werden. Das reduziert das bisher leichte Blinken.
+- ⚡ Bestehende Leaflet-Marker werden wiederverwendet; unnötige komplette Marker-Neuaufbauten wurden entfernt.
+- 🛡️ Rufzeichen, Markerfarben, Node-Typ, Firmware, Akkustand, Verbindungen und die bisherigen WebService-/Nachrichtenfunktionen bleiben erhalten.
+- 📖 Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
 
-## Release-Stand
+## Dokumentation
 
-**Version:** 0.4.8  
-**Projekt:** MeshCom-Guru  
-**Ordner im ZIP:** `MeshCom/`
+Im Release sind acht PDF-Handbücher enthalten, jeweils auf dem Stand v0.4.9:
 
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.9_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.9_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.9_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.9_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.9_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.9_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
+
+**Version:** 0.4.9  
+**Basis:** v0.4.8
