@@ -1,18 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.4.9**
+**Aktuelle Version: 0.5.0**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -48,13 +39,23 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
 
-## Version 0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
+## Version 0.5.0 – 120-Sekunden-Statusfenster und Hard-Freeze
 
-- 🌡️ **Temperatur im Karten-Infofenster:** Wenn ein Node einen Temperaturwert über die Telemetrie liefert, wird dieser jetzt direkt im Marker-Infofenster angezeigt.
-- 🌐 **Alle acht Sprachen:** Die neue Temperaturzeile ist in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch übersetzt.
-- 🪟 **Popup ohne sichtbaren Neuaufbau:** Das geöffnete Karten-Infofenster bleibt beim normalen Karten-Refresh geöffnet. Sein Inhalt wird aktualisiert, ohne den Marker bzw. das Popup jedes Mal zu löschen und neu zu erzeugen. Dadurch wird das bisher leichte Blinken deutlich reduziert.
-- ⚡ **Karten-Refresh optimiert:** Bestehende Leaflet-Marker werden weiterverwendet; nur geänderte Positionen, Icons und Popup-Inhalte werden aktualisiert.
-- 🛡️ **Bestehende Funktionen erhalten:** Rufzeichen, Markerfarben, Node-Typ, Firmware, Akkustand, Verbindungen und die bisherigen Karten-/WebService-Funktionen bleiben erhalten.
+- ⏳ **120-Sekunden-Bestätigungsfenster:** Eine neu gesendete oder empfangene Nachricht darf bis zu 120 Sekunden ihren Status aktualisieren. Dadurch haben auch weiter entfernte Stationen mehr Zeit für Echo und ACK.
+- 🔒 **Hard-Freeze nach 120 Sekunden:** Nach Ablauf des Zeitfensters wird die Nachricht vollständig eingefroren. Spätere ACKs, Echos, Refreshs oder Neuaufbauten dürfen ihren Status nicht mehr verändern.
+- 🧊 **Kein späterer Status-Neuaufbau:** Bereits eingefrorene Nachrichten werden bei späteren Aktualisierungen nicht erneut in einen offenen Status zurückgesetzt.
+- ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige Begrenzung auf 100 Nachrichten bleibt entfernt.
+- 🧭 **Navigation erhalten:** Der funktionierende ursprüngliche Chat-Aufbau und die Navigation zwischen „Alle“, Räumen und privaten Chats bleiben erhalten.
+- 🛡️ **Stabilitätsprinzip:** Die Änderung beschränkt sich auf das Status-Zeitfenster; die übrigen getesteten Funktionen werden nicht verändert.
+- 📖 **Dokumentation:** Die vorhandenen PDF-Handbücher bleiben unverändert auf dem Stand v0.4.9.
+
+## v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
+
+- 🌡️ **Temperatur im Karten-Infofenster:** Temperaturwerte aus der Node-Telemetrie werden bei vorhandenen Daten direkt im Kartenmarker-Infofenster angezeigt.
+- 🌐 **8-sprachig:** Die neue Anzeige ist in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch übersetzt.
+- 🪟 **Popup-Refresh ohne sichtbares Blinken:** Beim Karten-Refresh werden bestehende Marker und geöffnete Popups wiederverwendet. Der Inhalt des Infofensters wird aktualisiert, ohne das Fenster zu schließen und neu zu öffnen.
+- ⚡ **Marker-Performance:** Kein unnötiger kompletter Neuaufbau der Leaflet-Marker-Layer bei normalen Datenaktualisierungen; geänderte Marker werden gezielt aktualisiert.
+- 🛡️ **Keine Änderungen an den bestehenden Nachrichten-/Empfangspfaden:** Die bisherigen stabilen Funktionen bleiben erhalten.
 - 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
 
 ## Version 0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
@@ -423,7 +424,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.4.9**
+**Version 0.5.0**
 
 **By Goldisoft 2026**
 
@@ -567,7 +568,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.4.9**  
+**MeshCom-Guru v0.5.0**  
 **By Goldisoft 2026**
 
 
@@ -585,5 +586,3 @@ Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprac
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

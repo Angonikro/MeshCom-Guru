@@ -1,3 +1,13 @@
+## v0.5.0 – 120-Sekunden-Statusfenster und endgültiger Hard-Freeze
+
+- ⏳ **120-Sekunden-Bestätigungsfenster:** Der Status einer neu gesendeten oder empfangenen Nachricht darf bis zu 120 Sekunden aktualisiert werden. Dadurch haben auch weiter entfernte Stationen mehr Zeit für Echo und ACK.
+- 🔒 **Hard-Freeze nach 120 Sekunden:** Nach Ablauf des Zeitfensters wird die Nachricht vollständig eingefroren. Spätere ACKs, Echos, Refreshs oder Neuaufbauten dürfen ihren Status nicht mehr verändern.
+- 🧊 **Kein späterer Status-Neuaufbau:** Bereits eingefrorene Nachrichten werden bei späteren Aktualisierungen nicht erneut in einen offenen Status zurückgesetzt.
+- ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige Begrenzung auf 100 Nachrichten bleibt entfernt.
+- 🧭 **Navigation erhalten:** Der funktionierende ursprüngliche Chat-Aufbau und die Navigation zwischen „Alle“, Räumen und privaten Chats bleiben erhalten.
+- 🛡️ **Stabilitätsprinzip:** Die Änderung beschränkt sich auf das Status-Zeitfenster; die übrigen getesteten Funktionen werden nicht verändert.
+- 📖 **Dokumentation:** Die vorhandenen PDF-Handbücher bleiben unverändert auf dem Stand v0.4.9.
+
 ## v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
 
 - 🌡️ **Temperatur im Karten-Infofenster:** Temperaturwerte aus der Node-Telemetrie werden bei vorhandenen Daten direkt im Kartenmarker-Infofenster angezeigt.

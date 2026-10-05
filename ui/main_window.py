@@ -6528,36 +6528,38 @@ class MainWindow(QMainWindow):
         return self._outgoing_target_matches(block, outgoing.get("target", ""))
 
     def _mark_outgoing_echo(self, clean_text, seq, packet_target=""):
-        for msg in reversed(self.outgoing_messages):
-            if msg.get("status") != "pending":
-                continue
-            if clean_text and clean_text.casefold() != str(msg.get("text", "")).strip().casefold():
-                continue
-            expected = str(msg.get("target", "")).strip().upper()
-            actual = str(packet_target or "").strip().upper()
-            if expected and actual and expected != actual:
-                if actual not in {"*", "ALL", "CQCQCQ"} or expected not in {"", "*", "ALL", "CQCQCQ"}:
-                    continue
-            msg["seq"] = str(seq)
-            # In privaten Chats bleibt die Sanduhr auch nach dem eigenen
-            # Node-Echo stehen. Erst ein echter Empfänger-ACK darf auf ✓✓
-            # wechseln. In den normalen Räumen bleibt das bisherige Verhalten
-            # mit ✓ nach dem Echo unverändert.
-            target_type = str(msg.get("target", "")).strip()
-            if target_type and not target_type.isdigit():
-                msg["status"] = "pending"
-            else:
-                msg["status"] = "sent"
-            return msg
-        return None
+        # IMPORTANT: only the most recently entered own message is allowed to
+        # change its send status. Older messages are frozen permanently.
+        if not self.outgoing_messages:
+            return None
+        msg = self.outgoing_messages[-1]
+        if msg.get("status") != "pending":
+            return None
+        if clean_text and clean_text.casefold() != str(msg.get("text", "")).strip().casefold():
+            return None
+        expected = str(msg.get("target", "")).strip().upper()
+        actual = str(packet_target or "").strip().upper()
+        if expected and actual and expected != actual:
+            if actual not in {"*", "ALL", "CQCQCQ"} or expected not in {"", "*", "ALL", "CQCQCQ"}:
+                return None
+        msg["seq"] = str(seq)
+        target_type = str(msg.get("target", "")).strip()
+        if target_type and not target_type.isdigit():
+            msg["status"] = "pending"
+        else:
+            msg["status"] = "sent"
+        return msg
 
     def _mark_outgoing_ack(self, seq):
-        for msg in reversed(self.outgoing_messages):
-            if str(msg.get("seq", "")) == str(seq):
-                msg["status"] = "delivered"
-                msg["ack"] = True
-                return msg
-        return None
+        # ACKs belonging to an older message must never alter its status.
+        if not self.outgoing_messages:
+            return None
+        msg = self.outgoing_messages[-1]
+        if str(msg.get("seq", "")) != str(seq):
+            return None
+        msg["status"] = "delivered"
+        msg["ack"] = True
+        return msg
 
     def _bubble_link_activated(self, url):
         """Handle links clicked inside room/private message bubbles.
@@ -7857,10 +7859,12 @@ renderStations(initialStations,true);
                     body = " "
                 outgoing = bool(own and sender.upper() == own)
                 status = ""
-                for outgoing_msg in reversed(self.outgoing_messages):
-                    if outgoing and str(outgoing_msg.get("text", "")).strip().casefold() == body.casefold():
+                # Only the newest message may be re-rendered with a changed
+                # status. Older bubbles keep their already rendered status.
+                if outgoing and block is blocks[-1] and self.outgoing_messages:
+                    outgoing_msg = self.outgoing_messages[-1]
+                    if str(outgoing_msg.get("text", "")).strip().casefold() == body.casefold():
                         status = {"pending":"⏳", "sent":"✓", "delivered":"✓✓"}.get(outgoing_msg.get("status", ""), "")
-                        break
                 icon = "✈" if outgoing else "📡"
                 icon_html = f"<span style='font-size:28px; line-height:32px; vertical-align:middle;'>{icon}</span>"
                 status_html = (f" <span style='font-size:28px; font-weight:900; line-height:32px; vertical-align:middle;'>{status}</span>" if status else "")
@@ -7880,6 +7884,29 @@ renderStations(initialStations,true);
                             f"{(' &nbsp;•&nbsp; ' + meta_html) if meta_html else ''}</div>"
                             f"<div style='margin-top:5px;font-size:14px;'><b>{body_html}</b></div>")
                 unique.append({"html": html_msg, "outgoing": outgoing})
+
+            # HARD 120-SECOND FREEZE: after the live window expires, a periodic
+            # refresh, late ACK/ECHO, or redraw must not touch this chat.
+            unique_ids = [self._message_identity(block) for block in blocks]
+            old_ids = list(getattr(view, "_bubble_message_ids", []))
+            now_mono = time.monotonic()
+            live_until = getattr(view, "_bubble_live_until", 0.0)
+            if old_ids and unique_ids == old_ids and live_until and now_mono >= live_until:
+                return
+            if not old_ids or unique_ids != old_ids:
+                view._bubble_live_until = now_mono + 120.0
+
+            # Freeze every already-rendered message. Only a newly appended
+            # last message or the existing last message may be regenerated.
+            old_items = list(getattr(view, "_bubble_items", []))
+            prefix_len = min(len(old_items), len(unique), len(old_ids), max(0, len(unique) - 1))
+            if (prefix_len > 0 and
+                    old_ids[:prefix_len] == unique_ids[:prefix_len]):
+                for i in range(prefix_len):
+                    unique[i] = dict(old_items[i])
+
+            view._bubble_message_ids = unique_ids
+
             # Keep a digest for both unread handling AND the rendered bubble
             # state.  update_messages() runs every 5 seconds.  Rebuilding the
             # complete QWidget bubble tree on every refresh forces Qt to remove
@@ -8134,7 +8161,6 @@ renderStations(initialStations,true);
                 "status": "pending",
                 "ack": False,
             })
-            self.outgoing_messages = self.outgoing_messages[-100:]
 
             # Punkt 3 Monitor: eigene Nachricht sofort anzeigen.
             self._monitor_add_local_message(text, target)

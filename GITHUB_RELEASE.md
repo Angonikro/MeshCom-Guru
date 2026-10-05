@@ -1,17 +1,17 @@
-# MeshCom-Guru v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
+# MeshCom-Guru v0.5.0 – 120-Sekunden-Statusfenster und Hard-Freeze
 
-## Neu in v0.4.9
+## Neu in v0.5.0
 
-- 🌡️ Temperaturwerte aus der Node-Telemetrie werden im Karten-Infofenster angezeigt, wenn ein Wert vorhanden ist.
-- 🌐 Die Temperaturanzeige ist in allen 8 unterstützten Sprachen übersetzt.
-- 🪟 Geöffnete Karten-Infofenster bleiben beim Refresh geöffnet und werden inhaltlich aktualisiert, statt neu erzeugt zu werden. Das reduziert das bisher leichte Blinken.
-- ⚡ Bestehende Leaflet-Marker werden wiederverwendet; unnötige komplette Marker-Neuaufbauten wurden entfernt.
-- 🛡️ Rufzeichen, Markerfarben, Node-Typ, Firmware, Akkustand, Verbindungen und die bisherigen WebService-/Nachrichtenfunktionen bleiben erhalten.
-- 📖 Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
+- ⏳ **120-Sekunden-Bestätigungsfenster:** Eine neu gesendete oder empfangene Nachricht darf bis zu 120 Sekunden ihren Status aktualisieren.
+- 📡 **Mehr Zeit für entfernte Stationen:** Echo und ACK können auch bei längeren Übertragungswegen innerhalb des offenen Zeitfensters eintreffen.
+- 🔒 **Hard-Freeze:** Nach 120 Sekunden wird der Status der Nachricht endgültig eingefroren. Spätere ACKs, Echos, Refreshs oder Neuaufbauten verändern ihn nicht mehr.
+- ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige 100-Nachrichten-Begrenzung bleibt entfernt.
+- 🧭 **Navigation unverändert:** Die funktionierende Navigation zwischen „Alle“, Räumen und privaten Chats bleibt erhalten.
+- 🛡️ **Bestehende Funktionen erhalten:** Die Änderung betrifft ausschließlich das Status-Zeitfenster und den anschließenden Freeze.
 
 ## Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten, jeweils auf dem Stand v0.4.9:
+Die acht vorhandenen PDF-Handbücher bleiben bewusst unverändert auf dem bisherigen Stand v0.4.9.
 
 - 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.9_DE.pdf`
 - 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.9_EN.pdf`
@@ -22,5 +22,5 @@ Im Release sind acht PDF-Handbücher enthalten, jeweils auf dem Stand v0.4.9:
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
 
-**Version:** 0.4.9  
-**Basis:** v0.4.8
+**Version:** 0.5.0  
+**Basis:** v0.4.9 mit 120-Sekunden-Hard-Freeze
