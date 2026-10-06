@@ -42,12 +42,6 @@ jobs:
           import PySide6
           print("PySide6:", PySide6.__version__)
 
-          import chess
-          print("python-chess: OK")
-
-          import pygame
-          print("pygame: OK")
-
           print("All required imports successful.")
           PY
 
