@@ -1,0 +1,85 @@
+name: macOS Build Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-macos:
+    name: Build MeshCom-Guru on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          else
+            echo "ERROR: requirements.txt not found"
+            exit 1
+          fi
+
+      - name: Check Python imports
+        run: |
+          python - <<'PY'
+          import sys
+          print("Python:", sys.version)
+
+          import PySide6
+          print("PySide6:", PySide6.__version__)
+
+          import chess
+          print("python-chess: OK")
+
+          import pygame
+          print("pygame: OK")
+
+          print("All required imports successful.")
+          PY
+
+      - name: Check Guru files
+        run: |
+          echo "Repository:"
+          pwd
+          echo
+          echo "Top-level files:"
+          ls -la
+          echo
+          echo "Python files:"
+          find . -maxdepth 2 -name "*.py" -print
+
+      - name: Test main.py syntax
+        run: |
+          python -m py_compile main.py
+          echo "main.py syntax check successful."
+
+      - name: Build artifact
+        run: |
+          mkdir -p macos-test
+          cp -R . macos-test/MeshCom-Guru
+          rm -rf macos-test/MeshCom-Guru/.git
+          rm -rf macos-test/MeshCom-Guru/macos-test
+          
+          cd macos-test
+          zip -r ../MeshCom-Guru-macOS-test.zip MeshCom-Guru
+
+      - name: Upload macOS test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeshCom-Guru-macOS-test
+          path: MeshCom-Guru-macOS-test.zip
+          if-no-files-found: error
