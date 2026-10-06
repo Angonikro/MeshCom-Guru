@@ -26,12 +26,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f requirements.txt ]; then
-            python -m pip install -r requirements.txt
-          else
-            echo "ERROR: requirements.txt not found"
-            exit 1
-          fi
+          python -m pip install -r requirements.txt
+
+      - name: Install PyInstaller
+        run: |
+          python -m pip install pyinstaller
 
       - name: Check Python imports
         run: |
@@ -42,38 +41,41 @@ jobs:
           import PySide6
           print("PySide6:", PySide6.__version__)
 
-          print("All required imports successful.")
+          print("All required Guru imports successful.")
           PY
-
-      - name: Check Guru files
-        run: |
-          echo "Repository:"
-          pwd
-          echo
-          echo "Top-level files:"
-          ls -la
-          echo
-          echo "Python files:"
-          find . -maxdepth 2 -name "*.py" -print
 
       - name: Test main.py syntax
         run: |
           python -m py_compile main.py
           echo "main.py syntax check successful."
 
-      - name: Build artifact
+      - name: Build MeshCom-Guru.app
         run: |
-          mkdir -p macos-test
-          cp -R . macos-test/MeshCom-Guru
-          rm -rf macos-test/MeshCom-Guru/.git
-          rm -rf macos-test/MeshCom-Guru/macos-test
-          
-          cd macos-test
-          zip -r ../MeshCom-Guru-macOS-test.zip MeshCom-Guru
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --windowed \
+            --name "MeshCom-Guru" \
+            main.py
 
-      - name: Upload macOS test artifact
+      - name: Verify macOS application
+        run: |
+          test -d "dist/MeshCom-Guru.app"
+          echo "MeshCom-Guru.app successfully created."
+          echo
+          ls -lah "dist/MeshCom-Guru.app"
+          echo
+          file "dist/MeshCom-Guru.app/Contents/MacOS/MeshCom-Guru" || true
+
+      - name: Create macOS package
+        run: |
+          cd dist
+          zip -r "../MeshCom-Guru-macOS-arm64.app.zip" "MeshCom-Guru.app"
+
+      - name: Upload macOS application
         uses: actions/upload-artifact@v4
         with:
-          name: MeshCom-Guru-macOS-test
-          path: MeshCom-Guru-macOS-test.zip
+          name: MeshCom-Guru-macOS-arm64
+          path: MeshCom-Guru-macOS-arm64.app.zip
           if-no-files-found: error
+          retention-days: 30
