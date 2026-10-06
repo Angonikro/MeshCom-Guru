@@ -1,18 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.0**
+**Aktuelle Version: 0.5.1**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -37,16 +28,27 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.4.9 aktualisiert:
+Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.5.1 aktualisiert:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.4.9_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.4.9_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.4.9_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.4.9_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.4.9_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.4.9_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.5.1_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.5.1_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.5.1_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.5.1_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.5.1_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.1_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.1_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.1_PL.pdf`
+
+## Version 0.5.1 – Favoriten und Online-Status
+
+- ⭐ **Favoriten:** Rufzeichen können direkt aus „Alle“ sowie im Favoriten-Manager zu den Favoriten hinzugefügt und wieder entfernt werden.
+- 🟢 **Online-Favoriten:** Ein dauerhaft sichtbarer **🟢 Online**-Button zeigt neu online gekommene Favoriten.
+- 🎨 **Statusfarben:** Der Online-Status kann über frei einstellbare Zeitgrenzen für Grün, Gelb und Orange bewertet werden; danach wird der Favorit als 🔴 offline dargestellt.
+- 🔔 **Signalton:** Für das erstmalige Online-Kommen eines Favoriten kann der bereits in MeshCom-Guru eingestellte Signalton verwendet oder deaktiviert werden.
+- 🪟 **Online-Popup:** Beim neuen Online-Kommen eines Favoriten erscheint ein Popup. Die Anzeigedauer ist von 0 bis 60 Sekunden einstellbar; 0 deaktiviert das Popup.
+- 🕒 **Direkte Zeitreferenz:** Beim Hinzufügen eines Rufzeichens aus „Alle“ wird die Zeit der angeklickten Nachricht als letzte Aktivität übernommen. Beim manuellen Hinzufügen wird vorhandene lokale Empfangsaktivität als Referenz verwendet.
+- 🌍 **Acht Sprachen:** Die neuen Favoriten-, Online-, Popup- und Statusfunktionen sind in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch dokumentiert.
+- 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.5.1 erweitert.
 
 ## Version 0.5.0 – 120-Sekunden-Statusfenster und Hard-Freeze
 
@@ -56,130 +58,7 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige Begrenzung auf 100 Nachrichten bleibt entfernt.
 - 🧭 **Navigation erhalten:** Der funktionierende ursprüngliche Chat-Aufbau und die Navigation zwischen „Alle“, Räumen und privaten Chats bleiben erhalten.
 - 🛡️ **Stabilitätsprinzip:** Die Änderung beschränkt sich auf das Status-Zeitfenster; die übrigen getesteten Funktionen werden nicht verändert.
-- 📖 **Dokumentation:** Die vorhandenen PDF-Handbücher bleiben unverändert auf dem Stand v0.4.9.
-
-## v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
-
-- 🌡️ **Temperatur im Karten-Infofenster:** Temperaturwerte aus der Node-Telemetrie werden bei vorhandenen Daten direkt im Kartenmarker-Infofenster angezeigt.
-- 🌐 **8-sprachig:** Die neue Anzeige ist in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch übersetzt.
-- 🪟 **Popup-Refresh ohne sichtbares Blinken:** Beim Karten-Refresh werden bestehende Marker und geöffnete Popups wiederverwendet. Der Inhalt des Infofensters wird aktualisiert, ohne das Fenster zu schließen und neu zu öffnen.
-- ⚡ **Marker-Performance:** Kein unnötiger kompletter Neuaufbau der Leaflet-Marker-Layer bei normalen Datenaktualisierungen; geänderte Marker werden gezielt aktualisiert.
-- 🛡️ **Keine Änderungen an den bestehenden Nachrichten-/Empfangspfaden:** Die bisherigen stabilen Funktionen bleiben erhalten.
-- 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.9 aktualisiert.
-
-## Version 0.4.8 – Kartenmarker: Node-Typ und Firmware der eigenen Station
-
-- 🗺️ **Eigene Station:** Das kompakte Karten-Infofenster zeigt jetzt auch für die eigene Station den erkannten **Node-Typ** und die **Firmware**, sofern diese Informationen aus dem eigenen POS/EXTUDP-Paket vorliegen.
-- 🧩 **Einheitliche Darstellung:** Die eigene Station verwendet dabei dieselbe Node-Typ-/Firmware-Aufbereitung wie die übrigen Kartenmarker.
-- 👁️ **Rufzeichen auf der Karte:** Die Rufzeichen der Stationen können direkt unter **🔗 Verbindungen** auf der Karte ein- und ausgeblendet werden.
-- 🛡️ **Bestehende Kartenfunktionen erhalten:** Marker-Farben, Rufzeichen-Anzeige, Entfernungsanzeige und die übrigen Karteninformationen bleiben unverändert.
-- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit, ACK/UDP und die bisherigen Performance-Fixes bleiben auf dem getesteten v0.4.7-Stand.
-- 📖 **Dokumentation:** Alle acht PDF-Handbücher wurden auf v0.4.8 aktualisiert und enthalten die neuen Kartenmarker-/Rufzeichen-Funktionen an der passenden Stelle im Kartenabschnitt.
-
-## Version 0.4.7 – WebService-Hintergrundabruf
-
-- 🗺️ **Kartenmarker:** Stationsmarker werden abhängig von der letzten Aktivität farblich dargestellt: Blau (unter 30 Min.), Grün (30–120 Min.), Orange (2–12 Std.), Grau (über 12 Std.); die eigene Station bleibt Rot.
-- 👁️ **Rufzeichen ein-/ausblendbar:** Direkt unter **🔗 Verbindungen** kann die Anzeige der Rufzeichen auf der Karte ein- und ausgeschaltet werden.
-- ℹ️ **Kompaktes Marker-Infofenster:** Beim Anklicken eines Markers werden Position, Entfernung, letzte Aktivität sowie – sofern vorhanden – Akkustand, Node-Typ und Firmware angezeigt.
-- 🌍 **Mehrsprachige Kartenanzeige:** Neue Kartenbeschriftungen und Statusbezeichnungen sind in allen acht unterstützten Sprachen verfügbar.
-- 📖 **Dokumentation:** Die integrierte Anleitung und alle acht PDF-Handbücher wurden um die neuen Kartenmarker- und Rufzeichen-Funktionen ergänzt.
-- ⚡ **WebService-Abruf im Hintergrund:** Der blockierende HTTP-Abruf läuft jetzt in einem eigenen Qt-Worker-Thread und blockiert den GUI-Thread nicht mehr.
-- 🧩 **Nachrichtenverarbeitung unverändert:** Die bestehende Cache-, Sortier-, Raum-, Privat-, „Alle“-, Karten- und Statistiklogik bleibt im GUI-Thread und wurde nicht neu aufgebaut.
-- ✅ **ACK/UDP unverändert:** Der direkte ACK-/UDP-Empfangspfad bleibt getrennt vom WebService-Worker.
-- 🔄 **Verbindungstest/Reconnect:** Auch der erste Verbindungsabruf und automatische Reconnects verwenden den Hintergrund-Worker.
-- 🛡️ **Bestehende Funktionen erhalten:** Die getesteten Funktionen und bisherigen Performance-/ACK-Fixes aus v0.4.6 und den vorherigen Versionen bleiben erhalten.
-
-## Version 0.4.6 – Chat-Zeichen-Darstellung
-
-- 💬 **Chat-Zeichen:** Sonderzeichen wie `'`, `<` und `>` werden in den Chatansichten wieder als normale Zeichen dargestellt, statt als sichtbare HTML-Zeichenreferenzen.
-- 🏠 **Raum-Chats:** Die funktionierende Zeichenbehandlung der Raum-/Privatchats bleibt erhalten.
-- 💬 **Alle-Chat:** Die Textaufbereitung im Bereich **„Alle“** wurde an den sicheren Textpfad angepasst, sodass Unicode- und Sonderzeichen korrekt angezeigt werden.
-- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit sowie die bestehenden Performance- und ACK-Fixes bleiben erhalten.
-
-## Version 0.4.5 – WebService-Performance und direkte ACK-Bestätigung
-
-- ⚡ **WebService im Hintergrund:** Das Abrufen und Verarbeiten der WebService-Daten läuft nicht mehr im GUI-Thread. Dadurch bleibt die Oberfläche auch bei längeren Laufzeiten reaktionsfähiger.
-- 🧹 **Weniger unnötige Aktualisierungen:** Unveränderte WebService-Daten werden nicht wiederholt vollständig verarbeitet und dargestellt.
-- ✅ **ACK-Bestätigung direkt aktualisiert:** Sobald ein ACK empfangen wurde, wird der Status der gesendeten Nachricht direkt in der sichtbaren Chatansicht aktualisiert. Die Bestätigung muss dadurch nicht mehr auf den nächsten regulären Nachrichten-Refresh warten.
-- 🗺️ **Eigener Kartenmarker:** Die Anzeige des eigenen Positionsmarkers bleibt erhalten.
-- 🛡️ **Bestehende Funktionen erhalten:** Nachrichten, Räume, private Chats, Monitor, MH, Karte, Weltweit und die bisherigen Stabilitäts-/Performance-Fixes bleiben erhalten.
-
-## Version 0.4.4 – Chat-Aufbau ohne sichtbaren Neuaufbau
-
-- 💬 **Alle-Chat:** Der Bereich **„Alle“** wird beim Neuaufbau zunächst vollständig aufgebaut und erst danach sichtbar angezeigt. Dadurch ist der Aufbau von der ältesten zur neuesten Nachricht nicht mehr sichtbar.
-- 🛡️ **Nachrichtenweg unverändert:** Nachrichtenlogik, Sortierung sowie Empfang und Senden bleiben unverändert. Die Räume und privaten Chats wurden durch diesen Fix nicht verändert.
-- ⚡ **Langzeit-Performance bleibt erhalten:** Die Performance-Optimierungen aus v0.4.3 bleiben vollständig erhalten.
-
-## Version 0.4.3 – Performance-Optimierung und Raumanzeige
-
-- ⚡ **Langzeit-Performance:** Die bestehende Chat-Sortierung wird nur noch neu berechnet, wenn tatsächlich neue Nachrichten eingegangen sind. Dadurch entfällt die wiederholte Vollsortierung des wachsenden Nachrichtenbestands bei jedem Refresh.
-- 💬 **Nachrichtenanzeige unverändert:** Senden, Echo, ACK und die Darstellung eigener Nachrichten bleiben auf dem bisherigen funktionierenden Pfad.
-- 🏠 **Raumauswahl:** Beim Wechsel des Raums bleibt nur der aktuell ausgewählte Raum-Button blau markiert; die übrigen Raum-Buttons werden wieder normal dargestellt.
-- 🛡️ **Cache:** Der Nachrichten-Cache bleibt weiterhin unbegrenzt; es werden keine alten Nachrichten aufgrund einer festen Cache-Grenze entfernt.
-
-## Version 0.4.2 – Unterstützung für 6 Räume
-
-- 🏠 **Sechs Räume:** Raumfilter, Raumverwaltung und Dashboard unterstützen jetzt bis zu **6 gespeicherte Räume**.
-- 💬 **Raum-Chats:** Alle sechs gespeicherten Räume werden als eigene anklickbare Raum-Chats angezeigt.
-- 🌐 **Mehrsprachige Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.4.2 aktualisiert.
-- 📚 **Dokumentation:** README, CHANGELOG und GitHub-Release-Dokumentation auf v0.4.2 aktualisiert.
-
-## Version 0.4.1 – Vollständiger Mitternachts-Sortierfix
-
-- 🕛 **Mitternachts-Sortierung:** Gespeicherte Chat-Nachrichten und der Chat-Export werden bei vorhandenen vollständigen Zeitstempeln nach Datum **und** Uhrzeit sortiert.
-- 🔄 **00:00-Umsprung:** Nachrichten von `23:xx` und `00:xx` des Folgetages werden nicht mehr allein nach der Uhrzeit verglichen.
-- 🛡️ **Live-„Alle“ unverändert:** Der funktionierende Live-Empfangsweg von v0.4.0 wurde nicht verändert.
-- 🧩 **Rückwärtskompatibilität:** Ältere Karten ohne vollständiges Datum verwenden weiterhin die reine Uhrzeit als Fallback.
-
-## Version 0.4.0 – Raum-Chat Bottom-Anchor Fix
-
-- 💬 Raum-/Privat-Chats bleiben beim Wechsel zwischen gespeicherten Räumen zuverlässig unten ausgerichtet.
-- 🔄 Der Wechsel zwischen Räumen benötigt keinen zweiten Klick mehr, um die letzte Nachricht unten anzuzeigen.
-- 🛠️ Das Chat-Layout verwendet den freien Bereich oberhalb der Nachrichten statt unterhalb.
-- 🛡️ Die Performance-Optimierungen und Stabilitätsfixes aus v0.3.99 bleiben erhalten.
-
-## Version 0.3.99 – Performance-Optimierung
-
-- ⚡ **Flüssigere Oberfläche:** Unnötige vollständige Aktualisierungen der Kartenansicht wurden reduziert.
-- 🗺️ **Karte:** Marker werden nicht mehr bei jedem 5-Sekunden-Refresh vollständig gelöscht und neu aufgebaut, wenn sich die Kartendaten nicht geändert haben.
-- 💬 **„Alle“:** Das komplette Chat-Dokument wird nicht mehr bei jedem Refresh neu erzeugt, wenn keine neuen Daten vorliegen.
-- 📊 **Statistik:** Unveränderte Statistikdaten werden nicht mehr unnötig neu dargestellt.
-- 🔄 **Weniger doppelte Aktualisierungen:** Überflüssige zweite Refresh-Durchläufe für Karte und Statistik wurden entfernt.
-- 🛡️ **Funktionen erhalten:** Empfang, Senden, Räume, Private Chats, Monitor, MH, Karte, Weltweit, Wetter, Picrd-Vorschau und die bisherigen Stabilitätsfixes bleiben erhalten.
-- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
-
-## Version 0.3.98 – Final
-
-- 🔄 **„Alle“ mit eigenem Live-Datenbereich:** Beim Wechsel zu „Alle“ werden die aktuellen Daten direkt aus dem eigenen Live-Puffer aufgebaut.
-- ⚡ **Sofortige Darstellung:** Empfangene MSG/POS/TEL/ACK-Daten erscheinen ohne Warten auf einen zusätzlichen WebService-Refresh.
-- 🌡️ **Wetter-/TEL-Daten:** Beim Wechsel zu „Alle“ müssen aktuelle Telemetriedaten nicht mehr auf den nächsten Refresh warten.
-- 📤 **Eigene Nachrichten:** Gesendete Nachrichten werden ebenfalls direkt in „Alle“ übernommen.
-- 🛡️ **Getrennter Empfangspfad:** Die bestehende Monitor-/UDP-Verarbeitung bleibt von der „Alle“-Darstellung getrennt.
-- 🇵🇱 **Polnisch:** Die in v0.3.97 ergänzte polnische Sprache bleibt Bestandteil des finalen Releases.
-- 🖼️ **Picrd-Vorschau:** Die in v0.3.96 eingeführte Bildvorschau bleibt Bestandteil des finalen Releases.
-- 🕛 **Mitternachts-Fix:** Die zeitliche Verarbeitung bleibt auch beim Wechsel über 00:00 Uhr korrekt und hängt nicht mehr allein von der Uhrzeit ab.
-- 🧪 **Langzeittest:** Der finale Stand wurde über 12 Stunden ohne erneutes Auftreten des zuvor beobachteten Fehlers getestet.
-- 🧹 **Release-Bereinigung:** Keine `__pycache__`-Ordner oder `.pyc`-Dateien im GitHub-ZIP bzw. Debian-Paket.
-
-## Version 0.3.97 – Polnische Sprache
-
-- 🇵🇱 **Polnische Benutzeroberfläche:** Polski ergänzt und in die bestehende Sprachumschaltung integriert.
-- 📖 **Integrierte Anleitung:** Die Hilfe/Anleitung ist auch vollständig auf Polnisch verfügbar.
-- 📄 **Polnisches PDF-Handbuch:** Neues polnisches Benutzerhandbuch unter `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.8_PL.pdf`.
-- 🛡️ **Bestehende Funktionen unverändert:** Empfang, Senden, Räume, Private Chats, „Alle“, Monitor, MH, Karte, Weltweit, Picrd-Vorschau und Update-Prüfung wurden nicht durch einen neuen Nachrichtenweg ersetzt.
-- 🧩 **Sprachmechanismus:** Polnisch ist Teil der normalen gespeicherten Spracheinstellung in `~/.MeshCom/settings.ini`.
-
-## Version 0.3.96
-
-### Neu in v0.3.96 – Picrd-Bildvorschau
-
-- 🖼️ **Bildvorschau für Picrd-Links:** Bildlinks werden erkannt und direkt im Chat als Vorschau angezeigt.
-- 🔗 **Original-Link bleibt erhalten:** Ein Klick auf den Link öffnet weiterhin die ursprüngliche Adresse im Standard-Webbrowser.
-- 🌐 **Normale Internetlinks:** Links ohne Bildziel werden wie bisher als anklickbare Links dargestellt.
-- 🔄 **Keine doppelten Vorschauen:** Bereits angezeigte Bildvorschauen werden bei späteren Chat-Aktualisierungen nicht erneut eingefügt.
-- 📡 **Nachrichtenweg unverändert:** Empfang, Senden, Räume, Private Chats und „Alle“ bleiben funktional unverändert.
-- 🌐 **Mehrsprachig:** Die neue Funktion ist in der integrierten Anleitung in Deutsch, English, Italiano, Nederlands, Français, Español, Svenska und Polski dokumentiert.
-- 📄 **PDF-Handbücher:** Alle sieben Handbücher enthalten die Ergänzung zu v0.3.96.
+- 📖 **Dokumentation:** Die v0.5.0-Funktionsbeschreibung bleibt Bestandteil der aktuellen Dokumentation.
 
 # Sprache / Language
 
@@ -433,7 +312,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.0**
+**Version 0.5.1**
 
 **By Goldisoft 2026**
 
@@ -577,7 +456,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.0**  
+**MeshCom-Guru v0.5.1**  
 **By Goldisoft 2026**
 
 
@@ -589,11 +468,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.4.9-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.5.1-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

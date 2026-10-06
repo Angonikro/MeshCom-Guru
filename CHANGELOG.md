@@ -1,3 +1,14 @@
+## v0.5.1 – Favoriten und Online-Status
+
+- ⭐ **Favoriten:** Rufzeichen können direkt aus „Alle“ und über den Favoriten-Manager hinzugefügt oder entfernt werden.
+- 🟢 **Online-Favoriten:** Neuer dauerhaft sichtbarer Online-Button für neu online gekommene Favoriten.
+- 🎨 **Statusfarben:** Einstellbare Zeitgrenzen für Grün, Gelb und Orange; danach wird der Favorit als offline bewertet.
+- 🔔 **Signalton:** Optionaler Signalton beim Beginn einer neuen Online-Periode; verwendet den bereits eingestellten Guru-Signalton.
+- 🪟 **Online-Popup:** Optionales Popup beim neuen Online-Kommen eines Favoriten mit einstellbarer Anzeigedauer.
+- 🕒 **Zeitreferenz:** Beim Hinzufügen aus „Alle“ wird der Zeitstempel der angeklickten Nachricht übernommen. Beim manuellen Hinzufügen wird vorhandene lokale Empfangsaktivität als Referenz verwendet.
+- 🌍 **8 Sprachen:** Neue Funktionen und integrierte Anleitung in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch.
+- 📄 **Dokumentation:** Alle acht PDF-Handbücher wurden für v0.5.1 erweitert.
+
 ## v0.5.0 – 120-Sekunden-Statusfenster und endgültiger Hard-Freeze
 
 - ⏳ **120-Sekunden-Bestätigungsfenster:** Der Status einer neu gesendeten oder empfangenen Nachricht darf bis zu 120 Sekunden aktualisiert werden. Dadurch haben auch weiter entfernte Stationen mehr Zeit für Echo und ACK.

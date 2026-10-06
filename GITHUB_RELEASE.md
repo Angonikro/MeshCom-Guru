@@ -1,6 +1,6 @@
-# MeshCom-Guru v0.5.0 – 120-Sekunden-Statusfenster und Hard-Freeze
+# MeshCom-Guru v0.5.1 – 120-Sekunden-Statusfenster und Hard-Freeze
 
-## Neu in v0.5.0
+## Neu in v0.5.1
 
 - ⏳ **120-Sekunden-Bestätigungsfenster:** Eine neu gesendete oder empfangene Nachricht darf bis zu 120 Sekunden ihren Status aktualisieren.
 - 📡 **Mehr Zeit für entfernte Stationen:** Echo und ACK können auch bei längeren Übertragungswegen innerhalb des offenen Zeitfensters eintreffen.
@@ -22,5 +22,12 @@ Die acht vorhandenen PDF-Handbücher bleiben bewusst unverändert auf dem bisher
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.4.9_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.4.9_PL.pdf`
 
-**Version:** 0.5.0  
+**Version:** 0.5.1  
 **Basis:** v0.4.9 mit 120-Sekunden-Hard-Freeze
+
+## v0.5.1 – Favoriten und Online-Status
+
+- Favoriten-Manager und Online-Status mit einstellbaren Zeitgrenzen.
+- Optionaler Signalton und Online-Popup mit einstellbarer Dauer.
+- Direkte Aktivitätszeit-Übernahme beim Hinzufügen aus „Alle“ und beim manuellen Hinzufügen aus lokal bekannter Empfangsaktivität.
+- Dokumentation und PDF-Handbücher in 8 Sprachen.
