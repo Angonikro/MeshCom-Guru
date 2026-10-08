@@ -1,3 +1,15 @@
+## v0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
+- 🧊 **5-Sekunden-Zucken beseitigt:** Der WebService wird weiterhin alle 5 Sekunden abgefragt, aber eine unveränderte Antwort verlässt den GUI-Verarbeitungspfad sofort. Dadurch werden vorhandene Chatblasen, Raum-Tabs und die übrige Chatdarstellung nicht mehr alle fünf Sekunden unnötig neu verarbeitet.
+- ⭐ **Favoriten mit Namen:** Zu einem Favoriten kann jetzt neben dem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden in der Online-Anzeige und im Online-Popup gemeinsam dargestellt.
+
+- ⚡ **5-Sekunden-Refresh entlastet:** Der WebService wird weiterhin alle 5 Sekunden geprüft, aber der lokale Nachrichtenbestand wird bei unveränderten Daten nicht jedes Mal vollständig neu sortiert.
+- 💤 **Weniger GUI-Arbeit:** Unveränderte sichtbare Chatinhalte werden nicht erneut als Bubble-Ansicht aufgebaut. Das reduziert die wiederkehrende Arbeit bei vielen Nachrichten in **Alle** und den Räumen.
+- ✓ **ACK/Echo als eigenes Ereignis:** Eine Statusänderung einer vorhandenen Nachricht wird unabhängig von einer neuen Chatnachricht verarbeitet. Dadurch können **✓/✓✓** ohne eine zusätzliche Nachricht sichtbar werden.
+- 🏠 **ACK/Echo über mehrere Räume:** Offene Sendungen werden über die passende Sequenz bzw. den passenden Nachrichteninhalt zugeordnet; eine spätere Nachricht in einem anderen Raum kann die Bestätigung nicht mehr verschlucken.
+- 📡 **Monitor bleibt unabhängig:** Eine sichtbare ACK-Zeile im Monitor ist nicht Voraussetzung für die Chat-Bestätigung.
+- 🛡️ **Stabilitätsprinzip:** 120-Sekunden-Statusfenster und Hard-Freeze bleiben erhalten; die Änderung konzentriert sich auf Refresh- und Statusverarbeitung.
+- 📖 **Dokumentation:** Alle acht PDF-Handbücher wurden für v0.5.2 neu strukturiert; der Favoriten-/Namensabschnitt ist logisch im Handbuch eingeordnet.
+
 ## v0.5.1 – Favoriten und Online-Status
 
 - ⭐ **Favoriten:** Rufzeichen können direkt aus „Alle“ und über den Favoriten-Manager hinzugefügt oder entfernt werden.
@@ -17,7 +29,7 @@
 - ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige Begrenzung auf 100 Nachrichten bleibt entfernt.
 - 🧭 **Navigation erhalten:** Der funktionierende ursprüngliche Chat-Aufbau und die Navigation zwischen „Alle“, Räumen und privaten Chats bleiben erhalten.
 - 🛡️ **Stabilitätsprinzip:** Die Änderung beschränkt sich auf das Status-Zeitfenster; die übrigen getesteten Funktionen werden nicht verändert.
-- 📖 **Dokumentation:** Die vorhandenen PDF-Handbücher bleiben unverändert auf dem Stand v0.4.9.
+- 📖 **Dokumentation:** Die acht PDF-Handbücher sind auf dem jeweiligen Release-Stand strukturiert und enthalten den Favoriten-/Namensabschnitt an der passenden Stelle.
 
 ## v0.4.9 – Temperatur im Karten-Infofenster und ruhige Popup-Aktualisierung
 

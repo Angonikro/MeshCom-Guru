@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QSlider,
     QSpinBox,
     QSizePolicy,
@@ -904,6 +905,15 @@ class MainWindow(QMainWindow):
             _callsign = self._normalize_callsign(_value)
             if _callsign and _callsign not in self.favorites:
                 self.favorites.append(_callsign)
+        # Namen der Favoriten dauerhaft separat speichern. Die Zuordnung
+        # bleibt auch dann erhalten, wenn ein Favorit ohne Namen angelegt wurde.
+        self.favorite_names = {}
+        for _callsign in self.favorites:
+            _key = f"favorite_name_{_callsign}"
+            _name = str(settings.get(_key, "") or "").strip()
+            if _name:
+                self.favorite_names[_callsign] = _name
+
         # Neue Online-Aktivitäten von Favoriten. Die Anzeige ist unabhängig
         # von MH/Chat und reagiert ausschließlich auf echte lokale UDP-LoRa-
         # bzw. Node-Pakete. Nach 10 Minuten ohne Aktivität gilt ein Favorit
@@ -941,6 +951,10 @@ class MainWindow(QMainWindow):
         self.last_private_sent = None
         # Punkt 2: eigene Sendungen nur für die Sendebestätigung merken.
         self.outgoing_messages = []
+        # Signature of the last WebService message set.  The 5-second poll
+        # remains active, but identical responses must not rebuild/process the
+        # chat GUI again.
+        self._last_webservice_message_signature = None
         # Schnelltexte: aus settings.ini laden und dauerhaft speichern.
         self.quick_texts = self._load_quick_texts(settings)
         # Nur für den Gesamtstrom „Alle“: eigene Sendungen lokal merken.
@@ -4825,6 +4839,16 @@ class MainWindow(QMainWindow):
         section["favorite_status_yellow_minutes"] = str(self.favorite_status_yellow_minutes)
         section["favorite_status_orange_minutes"] = str(self.favorite_status_orange_minutes)
         section["favorites"] = ",".join(self.favorites)
+        # Favoritennamen als eigene settings.ini-Schlüssel speichern.
+        # Alte/entfernte Namensschlüssel werden bereinigt.
+        for _key in list(section.keys()):
+            if _key.startswith("favorite_name_"):
+                del section[_key]
+        for _callsign, _name in getattr(self, "favorite_names", {}).items():
+            _callsign = self._normalize_callsign(_callsign)
+            _name = str(_name or "").strip()
+            if _callsign and _name and _callsign in self.favorites:
+                section[f"favorite_name_{_callsign}"] = _name[:80]
         # Schnelltexte dauerhaft in settings.ini speichern.
         for i in range(1, 51):
             key = f"quick_text{i}"
@@ -5432,7 +5456,7 @@ class MainWindow(QMainWindow):
             <p>Die bis zu <b>sechs gespeicherten Räume</b> werden im Dashboard links direkt als anklickbare <b>Raum-Chats</b> angezeigt. Ein Klick auf einen Raum öffnet ausschließlich diesen Raum. <b>Alle</b> ist eine eigene Ansicht und kann jederzeit wieder angeklickt werden.</p>
             <p><b>Private Chats</b> stehen getrennt darunter. Ein Klick auf einen privaten Chat öffnet die private Unterhaltung und wechselt nicht ungewollt zurück zu „Alle“. Neue private Nachrichten werden in der privaten Unterhaltung und im Bereich „Alle“ berücksichtigt.</p>
             <p><b>Rufzeichen anklicken:</b> Ein anklickbares Rufzeichen öffnet ein kleines Menü mit <b>Privater Chat</b> und <b>QRZ.com</b>. Für QRZ.com wird automatisch nur das reine Rufzeichen verwendet, also z. B. <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favoriten und 🟢 Online-Status</h3><p>Rufzeichen können direkt aus <b>Alle</b> oder über <b>⭐ Favoriten</b> verwaltet werden. Beim Hinzufügen aus „Alle“ wird die Zeit der angeklickten Nachricht als letzte Aktivität übernommen. Beim manuellen Hinzufügen wird bereits bekannte lokale Empfangsaktivität verwendet, sofern vorhanden.</p><p>Der <b>🟢 Online</b>-Button zeigt neu online gekommene Favoriten. Die Statusfarben 🟢 Grün, 🟡 Gelb und 🟠 Orange können im Favoriten-Manager über frei wählbare Zeitgrenzen eingestellt werden; danach ist der Favorit 🔴 rot/offline.</p><p>Optional kann beim Beginn einer neuen Online-Periode ein <b>Signalton</b> abgespielt werden. Verwendet wird der bereits eingestellte Guru-Signalton. Das <b>Online-Popup</b> kann ebenfalls aktiviert und für 0 bis 60 Sekunden angezeigt werden; 0 deaktiviert es.</p><h3>Verbindung und Einstellungen</h3>
+            <h3>⭐ Favoriten und 🟢 Online-Status</h3><p>Rufzeichen können direkt aus <b>Alle</b> oder über <b>⭐ Favoriten</b> verwaltet werden. Beim Hinzufügen aus „Alle“ wird die Zeit der angeklickten Nachricht als letzte Aktivität übernommen. Beim manuellen Hinzufügen wird bereits bekannte lokale Empfangsaktivität verwendet, sofern vorhanden.</p><p>Im Bereich <b>⭐ Favoriten</b> können Sie zu jedem Rufzeichen zusätzlich einen <b>Namen</b> eingeben. Der Name ist optional, wird zusammen mit dem Rufzeichen gespeichert und kann jederzeit geändert werden. Im Favoriten-Manager werden Name und Rufzeichen gemeinsam angezeigt. Wenn der Favorit online kommt, zeigt auch das <b>🟢 Online-Popup</b> den Namen zusammen mit dem Rufzeichen an.</p><p>Der <b>🟢 Online</b>-Button zeigt neu online gekommene Favoriten. Die Statusfarben 🟢 Grün, 🟡 Gelb und 🟠 Orange können im Favoriten-Manager über frei wählbare Zeitgrenzen eingestellt werden; danach ist der Favorit 🔴 rot/offline.</p><p>Optional kann beim Beginn einer neuen Online-Periode ein <b>Signalton</b> abgespielt werden. Verwendet wird der bereits eingestellte Guru-Signalton. Das <b>Online-Popup</b> kann ebenfalls aktiviert und für 0 bis 60 Sekunden angezeigt werden; 0 deaktiviert es.</p><h3>Verbindung und Einstellungen</h3>
             <p><b>Hotspot-IP:</b> IP-Adresse des MeshCom-WebService eintragen.</p>
             <p><b>Eigene Station / GPS:</b> Eigenes Rufzeichen sowie optional Breitengrad und Längengrad eintragen.</p>
             <p><b>Einstellungen speichern:</b> Speichert persönliche Einstellungen unter <code>~/.MeshCom/settings.ini</code>.</p>
@@ -5472,7 +5496,7 @@ class MainWindow(QMainWindow):
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Quick guide</h3>
             <h3>🎛 Display: Classic or Dashboard</h3><p>Under <b>Settings → Display</b>, choose between <b>Classic</b> and the new <b>Dashboard</b>. Both views use the same MeshCom data and functions. The selection is saved and restored at the next start.</p><p>The Dashboard combines connection, rooms, chat, map, worldwide activity, monitor, MH and statistics in one view. The classic interface remains fully available.</p>
             <h3>💬 Room Chats and 👤 Private Chats</h3><p>The up to <b>six saved rooms</b> appear on the left as directly clickable <b>Room Chats</b>. Clicking a room opens that room only. <b>All</b> is a separate view and can always be selected again.</p><p><b>Private Chats</b> are listed separately below. Clicking a private chat opens that conversation and does not jump back to “All”. New private messages are reflected in the private conversation and in “All”.</p><p><b>Clicking a callsign:</b> A clickable callsign opens a small menu with <b>Private Chat</b> and <b>QRZ.com</b>. For QRZ.com, only the base callsign is used automatically, for example <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favorites and 🟢 Online status</h3><p>Callsigns can be managed directly from <b>All</b> or via <b>⭐ Favorites</b>. When added from “All”, the timestamp of the clicked message is used as the last activity. Manual additions use known local receive activity when available.</p><p>The <b>🟢 Online</b> button shows favorites that have newly come online. The favorites manager lets you configure 🟢 green, 🟡 yellow and 🟠 orange status limits; afterwards the favorite is 🔴 red/offline.</p><p>An optional <b>sound</b> can play when a new online period starts, using the already configured Guru sound. The <b>online popup</b> can also be enabled for 0–60 seconds; 0 disables it.</p><h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>⭐ Favorites and 🟢 Online status</h3><p>Callsigns can be managed directly from <b>All</b> or via <b>⭐ Favorites</b>. When added from “All”, the timestamp of the clicked message is used as the last activity. Manual additions use known local receive activity when available.</p><p>In <b>⭐ Favorites</b>, you can optionally enter a <b>name</b> for each callsign. The name is saved together with the callsign and can be changed at any time. The favorites manager shows the name and callsign together. When a favorite comes online, the <b>🟢 online popup</b> also shows the name together with the callsign.</p><p>The <b>🟢 Online</b> button shows favorites that have newly come online. The favorites manager lets you configure 🟢 green, 🟡 yellow and 🟠 orange status limits; afterwards the favorite is 🔴 red/offline.</p><p>An optional <b>sound</b> can play when a new online period starts, using the already configured Guru sound. The <b>online popup</b> can also be enabled for 0–60 seconds; 0 disables it.</p><h3>Connection and settings</h3><p><b>Hotspot IP:</b> Enter the MeshCom WebService IP address.</p><p><b>Own station / GPS:</b> Enter your callsign and optionally latitude and longitude.</p><p><b>Save settings:</b> Personal settings are stored in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connect / Disconnect / Auto-Reconnect</h3><p>Use <b>Connect</b> to connect to the MeshCom WebService. After a manual connection, automatic reconnection is armed. If a temporary network, hotspot or WebService error occurs, MeshCom-Guru tries to reconnect automatically. <b>Disconnect</b> deliberately disables automatic reconnection.</p>
             <h3>Sending messages</h3><p>In the Dashboard, simply press <b>Enter</b> to send. No separate Send button is needed, leaving more room for the message field.</p><p>Messages are limited to <b>149 characters</b> and the live counter shows the current length.</p>
             <h3>📡 Monitor, 📋 Stations / MH and 📊 Statistics</h3><p><b>Monitor</b> shows MeshCom UDP packets on <b>port 1799</b> with type, callsign, target, RSSI, SNR and information. The information column remains readable and can be scrolled when necessary.</p><p><b>Stations / MH</b> shows recently heard stations with callsign, distance, RSSI and SNR without an unnecessary horizontal scrollbar.</p><p><b>Statistics</b> shows live session counters for messages, nodes, positions, private messages, monitor entries and messages by room.</p>
@@ -5498,7 +5522,7 @@ class MainWindow(QMainWindow):
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guida rapida</h3>
             <h3>🎛 Visualizzazione: Classica o Dashboard</h3><p>In <b>Impostazioni → Visualizzazione</b> è possibile scegliere tra <b>Classica</b> e la nuova <b>Dashboard</b>. Entrambe usano gli stessi dati e le stesse funzioni MeshCom. La scelta viene salvata.</p><p>La Dashboard riunisce connessione, stanze, chat, mappa, attività mondiale, monitor, MH e statistiche in un'unica vista.</p>
             <h3>💬 Chat delle stanze e 👤 Chat privati</h3><p>Le <b>sei stanze salvate</b> vengono mostrate a sinistra come <b>chat delle stanze</b> selezionabili. Facendo clic su una stanza si apre solo quella stanza. <b>Tutti</b> è una vista separata e può essere selezionata in qualsiasi momento.</p><p>I <b>chat privati</b> sono elencati separatamente. Facendo clic su un chat privato si apre la conversazione privata senza tornare a “Tutti”.</p><p><b>Facendo clic su un nominativo:</b> un nominativo cliccabile apre un piccolo menu con <b>Chat privato</b> e <b>QRZ.com</b>. Per QRZ.com viene utilizzato automaticamente solo il nominativo base, ad esempio <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Preferiti e stato 🟢 online</h3><p>I nominativi possono essere gestiti da <b>Tutti</b> o tramite <b>⭐ Preferiti</b>. Quando si aggiunge da “Tutti”, il timestamp del messaggio selezionato viene usato come ultima attività. Gli inserimenti manuali usano l’attività locale già ricevuta, se disponibile.</p><p>Il pulsante <b>🟢 Online</b> mostra i preferiti appena tornati online. Nel gestore si configurano i limiti per 🟢 verde, 🟡 giallo e 🟠 arancione; dopo il limite il preferito diventa 🔴 rosso/offline.</p><p>È possibile riprodurre un <b>segnale acustico</b> all’inizio di un nuovo periodo online, usando il suono già configurato in Guru. Il <b>popup online</b> può essere attivato per 0–60 secondi; 0 lo disattiva.</p><h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> inserire l'indirizzo IP del WebService MeshCom. <b>Stazione/GPS:</b> inserire il proprio nominativo e, se necessario, latitudine e longitudine. Le impostazioni personali sono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>⭐ Preferiti e stato 🟢 online</h3><p>I nominativi possono essere gestiti da <b>Tutti</b> o tramite <b>⭐ Preferiti</b>. Quando si aggiunge da “Tutti”, il timestamp del messaggio selezionato viene usato come ultima attività. Gli inserimenti manuali usano l’attività locale già ricevuta, se disponibile.</p><p>In <b>⭐ Preferiti</b> è possibile inserire facoltativamente un <b>nome</b> per ogni nominativo. Il nome viene salvato insieme al nominativo e può essere modificato in qualsiasi momento. Il gestore dei preferiti mostra insieme nome e nominativo. Quando un preferito torna online, anche il <b>popup 🟢 Online</b> mostra il nome insieme al nominativo.</p><p>Il pulsante <b>🟢 Online</b> mostra i preferiti appena tornati online. Nel gestore si configurano i limiti per 🟢 verde, 🟡 giallo e 🟠 arancione; dopo il limite il preferito diventa 🔴 rosso/offline.</p><p>È possibile riprodurre un <b>segnale acustico</b> all’inizio di un nuovo periodo online, usando il suono già configurato in Guru. Il <b>popup online</b> può essere attivato per 0–60 secondi; 0 lo disattiva.</p><h3>Connessione e impostazioni</h3><p><b>IP hotspot:</b> inserire l'indirizzo IP del WebService MeshCom. <b>Stazione/GPS:</b> inserire il proprio nominativo e, se necessario, latitudine e longitudine. Le impostazioni personali sono salvate in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connetti / Disconnetti / Riconnessione automatica</h3><p><b>Connetti</b> stabilisce la connessione. Dopo una connessione manuale la riconnessione automatica è attiva. <b>Disconnetti</b> la disattiva intenzionalmente.</p>
             <h3>Invio dei messaggi</h3><p>Nella Dashboard basta premere <b>Invio</b> per spedire il messaggio. Non serve un pulsante Invia separato. Il limite è di <b>149 caratteri</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH e 📊 Statistiche</h3><p>Il <b>Monitor</b> mostra i pacchetti UDP MeshCom sulla <b>porta 1799</b> con tipo, nominativo, destinazione, RSSI, SNR e informazioni. La colonna informazioni può essere fatta scorrere.</p><p><b>Stations / MH</b> mostra le stazioni ascoltate recentemente con nominativo, distanza, RSSI e SNR senza una barra orizzontale inutile. Le <b>Statistiche</b> mostrano i contatori della sessione.</p>
@@ -5523,7 +5547,7 @@ class MainWindow(QMainWindow):
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Korte handleiding</h3>
             <h3>🎛 Weergave: Klassiek of Dashboard</h3><p>Onder <b>Instellingen → Weergave</b> kun je kiezen tussen <b>Klassiek</b> en het nieuwe <b>Dashboard</b>. Beide weergaven gebruiken dezelfde MeshCom-gegevens en functies. De keuze wordt opgeslagen.</p><p>Het Dashboard combineert verbinding, ruimtes, chat, kaart, wereldwijde activiteit, monitor, MH en statistieken.</p>
             <h3>💬 Ruimtechats en 👤 Privéchats</h3><p>De <b>zes opgeslagen ruimtes</b> staan links als direct aanklikbare <b>ruimtechats</b>. Klik op een ruimte om alleen die ruimte te openen. <b>Alle</b> is een aparte weergave en kan altijd opnieuw worden gekozen.</p><p><b>Privéchats</b> staan apart. Een klik opent de privéconversatie en springt niet terug naar “Alle”.</p><p><b>Op een roepnaam klikken:</b> een aanklikbare roepnaam opent een klein menu met <b>Privéchat</b> en <b>QRZ.com</b>. Voor QRZ.com wordt automatisch alleen de basisroepnaam gebruikt, bijvoorbeeld <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favorieten en 🟢 online-status</h3><p>Roepnamen kunnen vanuit <b>Alle</b> of via <b>⭐ Favorieten</b> worden beheerd. Bij toevoegen vanuit “Alle” wordt de tijd van het aangeklikte bericht als laatste activiteit gebruikt. Handmatige toevoegingen gebruiken bekende lokale ontvangstactiviteit wanneer die beschikbaar is.</p><p>De knop <b>🟢 Online</b> toont favorieten die nieuw online zijn. In de favorietenmanager stel je de grenzen voor 🟢 groen, 🟡 geel en 🟠 oranje in; daarna wordt de favoriet 🔴 rood/offline.</p><p>Een optioneel <b>geluid</b> kan worden afgespeeld wanneer een nieuwe online-periode begint. Het reeds ingestelde Guru-geluid wordt gebruikt. De <b>online-popup</b> kan 0–60 seconden worden getoond; 0 schakelt hem uit.</p><h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> voer het IP-adres van de MeshCom-WebService in. <b>Eigen station/GPS:</b> voer je roepnaam en eventueel breedte- en lengtegraad in. Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>⭐ Favorieten en 🟢 online-status</h3><p>Roepnamen kunnen vanuit <b>Alle</b> of via <b>⭐ Favorieten</b> worden beheerd. Bij toevoegen vanuit “Alle” wordt de tijd van het aangeklikte bericht als laatste activiteit gebruikt. Handmatige toevoegingen gebruiken bekende lokale ontvangstactiviteit wanneer die beschikbaar is.</p><p>Bij <b>⭐ Favorieten</b> kun je naast elke roepnaam optioneel een <b>naam</b> invoeren. De naam wordt samen met de roepnaam opgeslagen en kan op elk moment worden gewijzigd. De favorietenmanager toont naam en roepnaam samen. Wanneer een favoriet online komt, toont ook de <b>🟢 online-popup</b> de naam samen met de roepnaam.</p><p>De knop <b>🟢 Online</b> toont favorieten die nieuw online zijn. In de favorietenmanager stel je de grenzen voor 🟢 groen, 🟡 geel en 🟠 oranje in; daarna wordt de favoriet 🔴 rood/offline.</p><p>Een optioneel <b>geluid</b> kan worden afgespeeld wanneer een nieuwe online-periode begint. Het reeds ingestelde Guru-geluid wordt gebruikt. De <b>online-popup</b> kan 0–60 seconden worden getoond; 0 schakelt hem uit.</p><h3>Verbinding en instellingen</h3><p><b>Hotspot-IP:</b> voer het IP-adres van de MeshCom-WebService in. <b>Eigen station/GPS:</b> voer je roepnaam en eventueel breedte- en lengtegraad in. Persoonlijke instellingen worden opgeslagen in <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Verbinden / Verbinding verbreken / Automatische herverbinding</h3><p>Met <b>Verbinden</b> maak je verbinding met de MeshCom-WebService. Na een handmatige verbinding is automatische herverbinding actief. <b>Verbinding verbreken</b> schakelt dit bewust uit.</p>
             <h3>Berichten verzenden</h3><p>In het Dashboard druk je gewoon op <b>Enter</b> om te verzenden. Een aparte knop Verzenden is niet nodig. Berichten zijn beperkt tot <b>149 tekens</b>.</p>
             <h3>📡 Monitor, 📋 Stations / MH en 📊 Statistieken</h3><p>De <b>Monitor</b> toont MeshCom-UDP-pakketten op <b>poort 1799</b> met type, roepnaam, doel, RSSI, SNR en informatie. De informatiekolom kan worden gescrold.</p><p><b>Stations / MH</b> toont recent gehoorde stations met roepnaam, afstand, RSSI en SNR zonder onnodige horizontale scrollbar. <b>Statistieken</b> tonen de actuele sessietellers.</p>
@@ -5548,7 +5572,7 @@ class MainWindow(QMainWindow):
             <h2>MeshCom-Guru v{VERSION}</h2><h3>Guide rapide</h3>
             <h3>🎛 Affichage : Classique ou Tableau de bord</h3><p>Dans <b>Paramètres → Affichage</b>, choisissez entre <b>Classique</b> et le nouveau <b>Tableau de bord</b>. Les deux vues utilisent les mêmes données et fonctions MeshCom. Le choix est enregistré.</p><p>Le Tableau de bord réunit connexion, salons, chat, carte, activité mondiale, moniteur, MH et statistiques dans une seule vue.</p>
             <h3>💬 Chats de salons et 👤 Chats privés</h3><p>Les <b>six salons enregistrés</b> sont affichés à gauche comme <b>chats de salons</b> cliquables. Un clic ouvre uniquement ce salon. <b>Tous</b> est une vue séparée et peut être sélectionnée à tout moment.</p><p>Les <b>chats privés</b> sont affichés séparément. Un clic ouvre la conversation privée sans revenir à « Tous ».</p><p><b>Cliquer sur un indicatif :</b> un indicatif cliquable ouvre un petit menu avec <b>Chat privé</b> et <b>QRZ.com</b>. Pour QRZ.com, seul l'indicatif de base est utilisé automatiquement, par exemple <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favoris et statut 🟢 en ligne</h3><p>Les indicatifs peuvent être gérés depuis <b>Tous</b> ou via <b>⭐ Favoris</b>. Lorsqu’un indicatif est ajouté depuis « Tous », l’heure du message sélectionné devient la dernière activité. Les ajouts manuels utilisent l’activité locale déjà reçue si elle existe.</p><p>Le bouton <b>🟢 En ligne</b> affiche les favoris nouvellement en ligne. Le gestionnaire permet de régler les limites 🟢 vert, 🟡 jaune et 🟠 orange ; ensuite le favori devient 🔴 rouge/hors ligne.</p><p>Un <b>signal sonore</b> optionnel peut être joué au début d’une nouvelle période en ligne avec le son déjà configuré dans Guru. La <b>fenêtre popup en ligne</b> peut être affichée 0–60 secondes ; 0 la désactive.</p><h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> saisir l'adresse IP du WebService MeshCom. <b>Station/GPS :</b> saisir votre indicatif et, si nécessaire, latitude et longitude. Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
+            <h3>⭐ Favoris et statut 🟢 en ligne</h3><p>Les indicatifs peuvent être gérés depuis <b>Tous</b> ou via <b>⭐ Favoris</b>. Lorsqu’un indicatif est ajouté depuis « Tous », l’heure du message sélectionné devient la dernière activité. Les ajouts manuels utilisent l’activité locale déjà reçue si elle existe.</p><p>Dans <b>⭐ Favoris</b>, vous pouvez saisir facultativement un <b>nom</b> pour chaque indicatif. Le nom est enregistré avec l’indicatif et peut être modifié à tout moment. Le gestionnaire des favoris affiche le nom et l’indicatif ensemble. Lorsqu’un favori passe en ligne, la <b>fenêtre popup 🟢 en ligne</b> affiche également le nom avec l’indicatif.</p><p>Le bouton <b>🟢 En ligne</b> affiche les favoris nouvellement en ligne. Le gestionnaire permet de régler les limites 🟢 vert, 🟡 jaune et 🟠 orange ; ensuite le favori devient 🔴 rouge/hors ligne.</p><p>Un <b>signal sonore</b> optionnel peut être joué au début d’une nouvelle période en ligne avec le son déjà configuré dans Guru. La <b>fenêtre popup en ligne</b> peut être affichée 0–60 secondes ; 0 la désactive.</p><h3>Connexion et paramètres</h3><p><b>IP du hotspot :</b> saisir l'adresse IP du WebService MeshCom. <b>Station/GPS :</b> saisir votre indicatif et, si nécessaire, latitude et longitude. Les paramètres personnels sont enregistrés dans <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Connecter / Déconnecter / Reconnexion automatique</h3><p><b>Connecter</b> établit la connexion au WebService MeshCom. Après une connexion manuelle, la reconnexion automatique est activée. <b>Déconnecter</b> la désactive volontairement.</p>
             <h3>Envoi des messages</h3><p>Dans le Tableau de bord, appuyez simplement sur <b>Entrée</b> pour envoyer. Aucun bouton Envoyer séparé n'est nécessaire. Les messages sont limités à <b>149 caractères</b>.</p>
             <h3>📡 Moniteur, 📋 Stations / MH et 📊 Statistiques</h3><p>Le <b>Moniteur</b> affiche les paquets UDP MeshCom sur le <b>port 1799</b> avec type, indicatif, destination, RSSI, SNR et informations. La colonne d'informations peut être parcourue.</p><p><b>Stations / MH</b> affiche les stations entendues récemment avec indicatif, distance, RSSI et SNR sans barre de défilement horizontale inutile. Les <b>Statistiques</b> affichent les compteurs de session.</p>
@@ -5578,7 +5602,7 @@ class MainWindow(QMainWindow):
             <p>Las hasta <b>seis salas guardadas</b> aparecen a la izquierda como <b>chats de sala</b> seleccionables. Al hacer clic en una sala se abre únicamente esa sala. <b>Todos</b> es una vista independiente y puede seleccionarse de nuevo en cualquier momento.</p>
             <p>Los <b>chats privados</b> aparecen por separado. Al hacer clic en uno se abre la conversación privada y no se vuelve accidentalmente a «Todos». Los mensajes privados nuevos aparecen en la conversación privada y en «Todos».</p>
             <p><b>Hacer clic en un indicativo:</b> un indicativo seleccionable abre un pequeño menú con <b>Chat privado</b> y <b>QRZ.com</b>. Para QRZ.com se utiliza automáticamente solo el indicativo base, por ejemplo <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favoritos y estado 🟢 en línea</h3><p>Los indicativos se pueden gestionar desde <b>Todos</b> o mediante <b>⭐ Favoritos</b>. Al añadir desde “Todos”, la hora del mensaje seleccionado se usa como última actividad. Las adiciones manuales usan la actividad local recibida si está disponible.</p><p>El botón <b>🟢 En línea</b> muestra los favoritos que acaban de conectarse. El gestor permite configurar los límites 🟢 verde, 🟡 amarillo y 🟠 naranja; después el favorito aparece 🔴 rojo/sin conexión.</p><p>Se puede reproducir un <b>sonido</b> opcional al comenzar un nuevo periodo en línea usando el sonido de Guru ya configurado. El <b>popup en línea</b> puede mostrarse durante 0–60 segundos; 0 lo desactiva.</p><h3>Conexión y ajustes</h3>
+            <h3>⭐ Favoritos y estado 🟢 en línea</h3><p>Los indicativos se pueden gestionar desde <b>Todos</b> o mediante <b>⭐ Favoritos</b>. Al añadir desde “Todos”, la hora del mensaje seleccionado se usa como última actividad. Las adiciones manuales usan la actividad local recibida si está disponible.</p><p>En <b>⭐ Favoritos</b> puedes introducir opcionalmente un <b>nombre</b> para cada indicativo. El nombre se guarda junto con el indicativo y puede modificarse en cualquier momento. El gestor de favoritos muestra juntos el nombre y el indicativo. Cuando un favorito se conecta, el <b>popup 🟢 en línea</b> también muestra el nombre junto con el indicativo.</p><p>El botón <b>🟢 En línea</b> muestra los favoritos que acaban de conectarse. El gestor permite configurar los límites 🟢 verde, 🟡 amarillo y 🟠 naranja; después el favorito aparece 🔴 rojo/sin conexión.</p><p>Se puede reproducir un <b>sonido</b> opcional al comenzar un nuevo periodo en línea usando el sonido de Guru ya configurado. El <b>popup en línea</b> puede mostrarse durante 0–60 segundos; 0 lo desactiva.</p><h3>Conexión y ajustes</h3>
             <p><b>IP del hotspot:</b> introduce la dirección IP del WebService de MeshCom.</p>
             <p><b>Estación propia / GPS:</b> introduce tu indicativo y, opcionalmente, latitud y longitud.</p>
             <p><b>Guardar ajustes:</b> los ajustes personales se guardan en <code>~/.MeshCom/settings.ini</code>.</p>
@@ -5624,7 +5648,7 @@ class MainWindow(QMainWindow):
             <p>Upp till <b>sex sparade rum</b> visas till vänster som klickbara <b>rumschattar</b>. Klicka på ett rum för att öppna endast det rummet. <b>Alla</b> är en separat vy och kan alltid väljas igen.</p>
             <p><b>Privata chattar</b> visas separat. Ett klick öppnar den privata konversationen och hoppar inte tillbaka till ”Alla”. Nya privata meddelanden visas i den privata konversationen och i ”Alla”.</p>
             <p><b>Klicka på en anropssignal:</b> en klickbar anropssignal öppnar en liten meny med <b>Privat chatt</b> och <b>QRZ.com</b>. För QRZ.com används automatiskt bara grundanropssignalen, till exempel <code>DO1ABC-12</code> → <code>DO1ABC</code>.</p>
-            <h3>⭐ Favoriter och 🟢 onlinestatus</h3><p>Anropssignaler kan hanteras från <b>Alla</b> eller via <b>⭐ Favoriter</b>. När en station läggs till från ”Alla” används tiden för det klickade meddelandet som senaste aktivitet. Manuella tillägg använder känd lokal mottagningsaktivitet om den finns.</p><p>Knappen <b>🟢 Online</b> visar favoriter som nyligen blivit online. I favorithanteraren ställs gränserna för 🟢 grön, 🟡 gul och 🟠 orange in; därefter visas favoriten som 🔴 röd/offline.</p><p>Ett valfritt <b>ljud</b> kan spelas när en ny onlineperiod börjar med det redan inställda Guru-ljudet. <b>Online-popupen</b> kan visas i 0–60 sekunder; 0 stänger av den.</p><h3>Anslutning och inställningar</h3>
+            <h3>⭐ Favoriter och 🟢 onlinestatus</h3><p>Anropssignaler kan hanteras från <b>Alla</b> eller via <b>⭐ Favoriter</b>. När en station läggs till från ”Alla” används tiden för det klickade meddelandet som senaste aktivitet. Manuella tillägg använder känd lokal mottagningsaktivitet om den finns.</p><p>I <b>⭐ Favoriter</b> kan du ange ett valfritt <b>namn</b> för varje anropssignal. Namnet sparas tillsammans med anropssignalen och kan ändras när som helst. Favorithanteraren visar namn och anropssignal tillsammans. När en favorit blir online visar även <b>🟢 online-popupen</b> namnet tillsammans med anropssignalen.</p><p>Knappen <b>🟢 Online</b> visar favoriter som nyligen blivit online. I favorithanteraren ställs gränserna för 🟢 grön, 🟡 gul och 🟠 orange in; därefter visas favoriten som 🔴 röd/offline.</p><p>Ett valfritt <b>ljud</b> kan spelas när en ny onlineperiod börjar med det redan inställda Guru-ljudet. <b>Online-popupen</b> kan visas i 0–60 sekunder; 0 stänger av den.</p><h3>Anslutning och inställningar</h3>
             <p><b>Hotspot-IP:</b> ange IP-adressen till MeshCom-WebService.</p>
             <p><b>Egen station / GPS:</b> ange din anropssignal och vid behov latitud och longitud.</p>
             <p><b>Spara inställningar:</b> personliga inställningar sparas i <code>~/.MeshCom/settings.ini</code>.</p>
@@ -5668,7 +5692,7 @@ class MainWindow(QMainWindow):
             <h3>💬 Czaty pokoi i 👤 czaty prywatne</h3>
             <p>Można zapisać do <b>sześciu pokoi</b>. Pokoje są dostępne jako osobne czaty. Widok <b>Wszystkie</b> pokazuje wiadomości zgodnie z ustawieniami filtra. Czaty prywatne są oddzielone od czatów pokoi.</p>
             <p><b>Kliknięcie znaku wywoławczego:</b> otwiera menu z czatem prywatnym i stroną QRZ.com. Przy otwieraniu QRZ używany jest podstawowy znak wywoławczy.</p>
-            <h3>⭐ Ulubione i status 🟢 online</h3><p>Znaki wywoławcze można zarządzać w <b>Wszystkie</b> lub przez <b>⭐ Ulubione</b>. Po dodaniu z „Wszystkie” czas klikniętej wiadomości jest używany jako ostatnia aktywność. Ręczne dodanie wykorzystuje znaną lokalną aktywność odbioru, jeśli jest dostępna.</p><p>Przycisk <b>🟢 Online</b> pokazuje ulubione stacje, które właśnie pojawiły się online. W menedżerze można ustawić granice dla 🟢 zielonego, 🟡 żółtego i 🟠 pomarańczowego; później ulubiony jest 🔴 czerwony/offline.</p><p>Opcjonalny <b>dźwięk</b> może być odtwarzany na początku nowego okresu online z użyciem już skonfigurowanego dźwięku Guru. <b>Popup online</b> może być wyświetlany przez 0–60 sekund; 0 go wyłącza.</p><h3>Połączenie i ustawienia</h3>
+            <h3>⭐ Ulubione i status 🟢 online</h3><p>Znaki wywoławcze można zarządzać w <b>Wszystkie</b> lub przez <b>⭐ Ulubione</b>. Po dodaniu z „Wszystkie” czas klikniętej wiadomości jest używany jako ostatnia aktywność. Ręczne dodanie wykorzystuje znaną lokalną aktywność odbioru, jeśli jest dostępna.</p><p>W sekcji <b>⭐ Ulubione</b> można opcjonalnie wpisać <b>nazwę</b> dla każdego znaku wywoławczego. Nazwa jest zapisywana razem ze znakiem wywoławczym i można ją w każdej chwili zmienić. Menedżer ulubionych pokazuje nazwę i znak wywoławczy razem. Gdy ulubiona stacja pojawi się online, <b>popup 🟢 Online</b> również pokazuje nazwę wraz ze znakiem wywoławczym.</p><p>Przycisk <b>🟢 Online</b> pokazuje ulubione stacje, które właśnie pojawiły się online. W menedżerze można ustawić granice dla 🟢 zielonego, 🟡 żółtego i 🟠 pomarańczowego; później ulubiony jest 🔴 czerwony/offline.</p><p>Opcjonalny <b>dźwięk</b> może być odtwarzany na początku nowego okresu online z użyciem już skonfigurowanego dźwięku Guru. <b>Popup online</b> może być wyświetlany przez 0–60 sekund; 0 go wyłącza.</p><h3>Połączenie i ustawienia</h3>
             <p><b>IP hotspotu:</b> wpisz adres IP MeshCom-WebService. W <b>Własna stacja / GPS</b> można podać własny znak wywoławczy oraz opcjonalnie współrzędne.</p>
             <p>Ustawienia osobiste są zapisywane w <code>~/.MeshCom/settings.ini</code>.</p>
             <h3>Połącz / Rozłącz i automatyczne ponowne połączenie</h3>
@@ -6173,6 +6197,16 @@ class MainWindow(QMainWindow):
                     self._play_notification_sound()
                 self._show_favorite_online_popup(callsign)
 
+    def _favorite_display_name(self, callsign):
+        """Return the configured favorite name, or an empty string."""
+        callsign = self._normalize_callsign(callsign)
+        return str(getattr(self, "favorite_names", {}).get(callsign, "") or "").strip()
+
+    def _favorite_display_label(self, callsign):
+        callsign = self._normalize_callsign(callsign)
+        name = self._favorite_display_name(callsign)
+        return f"{name} ({callsign})" if name else callsign
+
     def _show_favorite_online_popup(self, callsign):
         """Show a small transient popup when a favorite starts a new online period."""
         seconds = max(0, min(60, int(getattr(self, "favorite_online_popup_seconds", 5))))
@@ -6194,7 +6228,8 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(14, 10, 14, 10)
         title = QLabel(ui_text("⭐ Favorit online"))
         title.setStyleSheet("font-weight: 700; font-size: 14px;")
-        name = QLabel(f"🟢 {callsign}")
+        display = self._favorite_display_label(callsign)
+        name = QLabel(f"🟢 {display}")
         name.setStyleSheet("font-weight: 700; font-size: 17px;")
         subtitle = QLabel(ui_text("gerade eben"))
         subtitle.setStyleSheet("color: palette(mid); font-size: 12px;")
@@ -6255,7 +6290,8 @@ class MainWindow(QMainWindow):
                     when = ui_text("vor {minutes} Min.").format(minutes=age_minutes)
                 else:
                     when = ui_text("vor {hours} Std.").format(hours=age_seconds // 3600)
-                action = menu.addAction(f"{icon} {callsign}   {ui_text(when)}")
+                display = self._favorite_display_label(callsign)
+                action = menu.addAction(f"{icon} {display}   {ui_text(when)}")
                 action.triggered.connect(
                     lambda _checked=False, c=callsign: self._show_callsign_context_menu(c, include_favorite=False)
                 )
@@ -6388,6 +6424,7 @@ class MainWindow(QMainWindow):
             return
         if callsign in self.favorites:
             self.favorites.remove(callsign)
+            getattr(self, "favorite_names", {}).pop(callsign, None)
             self.status.setText(ui_text("Favorit entfernt: ") + callsign)
         else:
             self.favorites.append(callsign)
@@ -6398,17 +6435,28 @@ class MainWindow(QMainWindow):
     def open_favorites_manager(self):
         dialog = QDialog(self)
         dialog.setWindowTitle(ui_text("⭐ Favoriten verwalten"))
-        dialog.setMinimumWidth(430)
+        dialog.setMinimumSize(560, 560)
         layout = QVBoxLayout(dialog)
 
-        layout.addWidget(QLabel(ui_text("Rufzeichen direkt eingeben oder Favoriten entfernen:")))
-        row = QHBoxLayout()
-        edit = QLineEdit()
-        edit.setPlaceholderText(ui_text("Rufzeichen, z. B. DO2QG-1"))
-        add_button = QPushButton(ui_text("＋ Hinzufügen"))
-        row.addWidget(edit, 1)
-        row.addWidget(add_button)
-        layout.addLayout(row)
+        layout.addWidget(QLabel(ui_text("Rufzeichen und Namen der Favoriten verwalten:")))
+
+        form = QGridLayout()
+        form.addWidget(QLabel(ui_text("Rufzeichen:")), 0, 0)
+        callsign_edit = QLineEdit()
+        callsign_edit.setPlaceholderText(ui_text("Rufzeichen, z. B. DO2QG-1"))
+        form.addWidget(callsign_edit, 0, 1)
+        form.addWidget(QLabel(ui_text("Name:")), 1, 0)
+        name_edit = QLineEdit()
+        name_edit.setPlaceholderText(ui_text("Name, z. B. Andreas"))
+        form.addWidget(name_edit, 1, 1)
+        layout.addLayout(form)
+
+        button_row = QHBoxLayout()
+        save_button = QPushButton(ui_text("＋ Hinzufügen / Speichern"))
+        clear_button = QPushButton(ui_text("↩ Eingabe leeren"))
+        button_row.addWidget(save_button)
+        button_row.addWidget(clear_button)
+        layout.addLayout(button_row)
 
         list_widget = QListWidget()
         layout.addWidget(list_widget, 1)
@@ -6416,32 +6464,70 @@ class MainWindow(QMainWindow):
         def refresh_list():
             list_widget.clear()
             for callsign in self.favorites:
-                list_widget.addItem(f"⭐ {callsign}")
+                name = self._favorite_display_name(callsign)
+                label = f"⭐ {name} — {callsign}" if name else f"⭐ {callsign}"
+                item = QListWidgetItem(label)
+                item.setData(Qt.ItemDataRole.UserRole, callsign)
+                list_widget.addItem(item)
 
-        def add_favorite():
-            callsign = self._normalize_callsign(edit.text())
+        def clear_inputs():
+            callsign_edit.clear()
+            name_edit.clear()
+            callsign_edit.setFocus()
+            list_widget.clearSelection()
+
+        def save_favorite():
+            callsign = self._normalize_callsign(callsign_edit.text())
+            name = name_edit.text().strip()[:80]
             if not callsign:
                 return
-            if callsign not in self.favorites:
+            is_new = callsign not in self.favorites
+            if is_new:
                 self.favorites.append(callsign)
                 self._seed_favorite_from_known_activity(callsign)
-                self._save_favorites()
-            edit.clear()
+            if name:
+                self.favorite_names[callsign] = name
+            else:
+                self.favorite_names.pop(callsign, None)
+            self._save_favorites()
             refresh_list()
+            # Ein neu angelegter Favorit bleibt ausgewählt, damit sein Name
+            # direkt kontrolliert bzw. weiter bearbeitet werden kann.
+            for i in range(list_widget.count()):
+                item = list_widget.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == callsign:
+                    list_widget.setCurrentItem(item)
+                    break
+            callsign_edit.setFocus()
+
+        def load_selected(item=None):
+            item = item or list_widget.currentItem()
+            if item is None:
+                return
+            callsign = self._normalize_callsign(item.data(Qt.ItemDataRole.UserRole) or "")
+            if not callsign:
+                return
+            callsign_edit.setText(callsign)
+            name_edit.setText(self._favorite_display_name(callsign))
 
         def remove_selected():
             item = list_widget.currentItem()
             if item is None:
                 return
-            callsign = self._normalize_callsign(item.text())
+            callsign = self._normalize_callsign(item.data(Qt.ItemDataRole.UserRole) or "")
             if callsign in self.favorites:
                 self.favorites.remove(callsign)
+                self.favorite_names.pop(callsign, None)
+                self.favorite_online_pending.pop(callsign, None)
+                self.favorite_last_heard_ts.pop(callsign, None)
                 self._save_favorites()
+            clear_inputs()
             refresh_list()
 
-        add_button.clicked.connect(add_favorite)
-        edit.returnPressed.connect(add_favorite)
-        list_widget.itemDoubleClicked.connect(lambda _item: remove_selected())
+        save_button.clicked.connect(save_favorite)
+        clear_button.clicked.connect(clear_inputs)
+        callsign_edit.returnPressed.connect(save_favorite)
+        list_widget.itemClicked.connect(load_selected)
 
         remove_button = QPushButton(ui_text("🗑 Entfernen"))
         remove_button.clicked.connect(remove_selected)
@@ -6520,7 +6606,7 @@ class MainWindow(QMainWindow):
         yellow_spin.valueChanged.connect(lambda _value: save_online_settings())
         orange_spin.valueChanged.connect(lambda _value: save_online_settings())
 
-        close_button = QPushButton("Schließen")
+        close_button = QPushButton(ui_text("Schließen"))
         close_button.clicked.connect(dialog.accept)
         layout.addWidget(close_button)
         refresh_list()
@@ -7076,21 +7162,32 @@ class MainWindow(QMainWindow):
         return self._outgoing_target_matches(block, outgoing.get("target", ""))
 
     def _mark_outgoing_echo(self, clean_text, seq, packet_target=""):
-        # IMPORTANT: only the most recently entered own message is allowed to
-        # change its send status. Older messages are frozen permanently.
+        # Echoes may arrive after another message has already been sent.
+        # Therefore NEVER assume that the last outgoing entry is the one
+        # acknowledged; first use the sequence number and then verify text/target.
         if not self.outgoing_messages:
             return None
-        msg = self.outgoing_messages[-1]
-        if msg.get("status") != "pending":
+        seq = str(seq)
+        candidates = [m for m in reversed(self.outgoing_messages)
+                      if str(m.get("seq", "")) in {"", seq} and m.get("status") == "pending"]
+        if not candidates:
             return None
+        msg = candidates[0]
         if clean_text and clean_text.casefold() != str(msg.get("text", "")).strip().casefold():
-            return None
+            # An empty seq on a newer pending message must not swallow an echo
+            # for an older message. Continue searching older pending entries.
+            for candidate in candidates[1:]:
+                if clean_text.casefold() == str(candidate.get("text", "")).strip().casefold():
+                    msg = candidate
+                    break
+            else:
+                return None
         expected = str(msg.get("target", "")).strip().upper()
         actual = str(packet_target or "").strip().upper()
         if expected and actual and expected != actual:
             if actual not in {"*", "ALL", "CQCQCQ"} or expected not in {"", "*", "ALL", "CQCQCQ"}:
                 return None
-        msg["seq"] = str(seq)
+        msg["seq"] = seq
         target_type = str(msg.get("target", "")).strip()
         if target_type and not target_type.isdigit():
             msg["status"] = "pending"
@@ -7099,15 +7196,17 @@ class MainWindow(QMainWindow):
         return msg
 
     def _mark_outgoing_ack(self, seq):
-        # ACKs belonging to an older message must never alter its status.
+        # ACKs can acknowledge any still-open outgoing message, not necessarily
+        # the newest one. Match the exact MeshCom sequence number.
         if not self.outgoing_messages:
             return None
-        msg = self.outgoing_messages[-1]
-        if str(msg.get("seq", "")) != str(seq):
-            return None
-        msg["status"] = "delivered"
-        msg["ack"] = True
-        return msg
+        seq = str(seq)
+        for msg in reversed(self.outgoing_messages):
+            if str(msg.get("seq", "")) == seq:
+                msg["status"] = "delivered"
+                msg["ack"] = True
+                return msg
+        return None
 
     def _bubble_link_activated(self, url):
         """Handle links clicked inside room/private message bubbles."""
@@ -7126,7 +7225,12 @@ class MainWindow(QMainWindow):
             QDesktopServices.openUrl(QUrl(value))
 
     def _refresh_visible_ack_states(self):
-        """Refresh visible chat bubbles from the local cache after echo/ACK."""
+        """Refresh open room/private bubbles once after a real echo/ACK event.
+
+        This is deliberately independent of the Monitor view and independent of
+        the 5-second WebService refresh. A status change is not a new message,
+        but it is still a visible chat change.
+        """
         if self.refresh_in_progress:
             return
 
@@ -7138,8 +7242,6 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
 
-        # ACK is already received via UDP. Do not trigger another WebService
-        # request here; update only the normal room/private chat views.
         for key in list(getattr(self, "tab_keys", [])):
             if not key or key[0] not in {"room", "private"}:
                 continue
@@ -7150,6 +7252,14 @@ class MainWindow(QMainWindow):
                 blocks = (self._room_blocks(cached_blocks, key[1])
                           if key[0] == "room"
                           else self._private_blocks(cached_blocks, key[1]))
+                view = self.tabs.widget(idx)
+                # An ACK/Echo is rare and is a genuine visual status change.
+                # Allow this one event to rebuild the already-visible bubble set
+                # even if the normal 120-second freeze has expired.
+                if isinstance(view, ChatView):
+                    view._bubble_live_until = time.monotonic() + 120.0
+                    view._bubble_message_ids = []
+                    view._bubble_items = []
                 self._update_tab_content(key, idx, blocks)
             except Exception:
                 continue
@@ -7918,6 +8028,50 @@ renderStations(initialStations,true);
                     # Keep compatibility with nodes that return the message HTML directly.
                     blocks = [page] if page.strip() else []
 
+            # PERFORMANCE: The WebService is still polled every 5 seconds so
+            # genuinely new MeshCom messages appear quickly.  However, an
+            # unchanged response must NOT run the complete GUI update path
+            # again.  With many messages that repeated processing was the
+            # source of the small visible 5-second "twitch" in the chat.
+            #
+            # ACK/ECHO status changes are deliberately excluded from this
+            # shortcut: they arrive through UDP and call
+            # _refresh_visible_ack_states() directly.  Therefore skipping an
+            # identical WebService response cannot hide a new ✓/✓✓ status.
+            # Der reine Performance-Vergleich darf niemals als Teil der
+            # Verbindungslogik fehlschlagen. Falls ein ungewöhnliches
+            # WebService-Format den Signaturvergleich nicht verarbeiten kann,
+            # wird der normale Aktualisierungspfad verwendet. Die Verbindung
+            # bleibt dabei ausdrücklich bestehen.
+            _skip_unchanged_response = False
+            try:
+                response_ids = []
+                for _block in blocks:
+                    _identity = self._message_identity(_block)
+                    if _identity:
+                        response_ids.append(_identity)
+                    else:
+                        response_ids.append(hashlib.sha1(
+                            self._normalized_plain(_block).encode("utf-8", errors="ignore")
+                        ).hexdigest())
+                response_signature = hashlib.sha1(
+                    "\n".join(response_ids).encode("utf-8", errors="ignore")
+                ).hexdigest()
+                previous_signature = getattr(self, "_last_webservice_message_signature", None)
+                self._last_webservice_message_signature = response_signature
+                _skip_unchanged_response = (
+                    previous_signature is not None
+                    and previous_signature == response_signature
+                    and self.initial_message_sync_done
+                )
+            except Exception:
+                # Never turn a cosmetic/performance optimisation into a
+                # connection failure. Process the response normally.
+                _skip_unchanged_response = False
+
+            if _skip_unchanged_response:
+                return
+
             # Positions werden ausschließlich direkt über die eigene UDP-
             # Schnittstelle übernommen.
             for block in blocks:
@@ -8381,12 +8535,18 @@ renderStations(initialStations,true);
                     body = " "
                 outgoing = bool(own and sender.upper() == own)
                 status = ""
-                # Only the newest message may be re-rendered with a changed
-                # status. Older bubbles keep their already rendered status.
-                if outgoing and block is blocks[-1] and self.outgoing_messages:
-                    outgoing_msg = self.outgoing_messages[-1]
-                    if str(outgoing_msg.get("text", "")).strip().casefold() == body.casefold():
+                # A status belongs to the matching outgoing message, not
+                # necessarily to the newest outgoing entry. This is important
+                # when Room A and Room B both have pending messages.
+                if outgoing and self.outgoing_messages:
+                    for outgoing_msg in reversed(self.outgoing_messages):
+                        if str(outgoing_msg.get("text", "")).strip().casefold() != body.casefold():
+                            continue
+                        expected = str(outgoing_msg.get("target", "")).strip().upper()
+                        if expected and target and expected != str(target).strip().upper():
+                            continue
                         status = {"pending":"⏳", "sent":"✓", "delivered":"✓✓"}.get(outgoing_msg.get("status", ""), "")
+                        break
                 icon = "✈" if outgoing else "📡"
                 icon_html = f"<span style='font-size:28px; line-height:32px; vertical-align:middle;'>{icon}</span>"
                 status_html = (f" <span style='font-size:28px; font-weight:900; line-height:32px; vertical-align:middle;'>{status}</span>" if status else "")

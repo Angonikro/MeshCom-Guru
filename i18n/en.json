@@ -119,5 +119,10 @@
   "Favorit hinzugefügt: ": "Favorite added: ",
   "Favorit entfernt: ": "Favorite removed: ",
   "Favoriten": "Favorites",
-  "Online": "Online"
+  "Online": "Online",
+  "Rufzeichen und Namen der Favoriten verwalten:": "Manage favorite callsigns and names:",
+  "Name:": "Name:",
+  "Name, z. B. Andreas": "Name, e.g. Andreas",
+  "＋ Hinzufügen / Speichern": "＋ Add / Save",
+  "↩ Eingabe leeren": "↩ Clear input"
 }

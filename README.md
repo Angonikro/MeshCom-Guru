@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.1**
+**Aktuelle Version: 0.5.2**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -39,16 +28,26 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 
 ### Dokumentation
 
-Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.5.1 aktualisiert:
+Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v0.5.2 aktualisiert und strukturell überarbeitet:
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.5.1_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.5.1_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.5.1_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.5.1_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.5.1_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.1_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.1_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.1_PL.pdf`
+- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.5.2_DE.pdf`
+- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.5.2_EN.pdf`
+- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.5.2_IT.pdf`
+- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.5.2_NL.pdf`
+- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.5.2_FR.pdf`
+- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.2_ES.pdf`
+- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
+- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
+
+## Version 0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
+
+- ⚡ **Weniger unnötige Arbeit bei 5-Sekunden-Refreshs:** Der WebService wird weiterhin regelmäßig abgefragt, aber der lokale Nachrichtenbestand wird nicht mehr bei jedem unveränderten Abruf erneut vollständig sortiert.
+- 💤 **Unveränderte Chatansichten:** Wenn sich der sichtbare Inhalt nicht geändert hat, werden die vorhandenen Chat-Bubbles nicht erneut aufgebaut. Das reduziert die GUI-Arbeit besonders bei vielen Nachrichten in **Alle** und den Räumen.
+- ✓ **Echo/ACK als eigene Statusänderung:** Eine Bestätigung ist keine neue Chatnachricht und wird deshalb separat behandelt. Der Status einer vorhandenen Nachricht kann dadurch auch ohne weitere Nachricht sichtbar auf **✓/✓✓** wechseln.
+- 🏠 **Mehrere offene Sendungen:** Echo und ACK werden der passenden offenen Nachricht zugeordnet und nicht nur der zuletzt gesendeten Nachricht. Dadurch funktionieren Bestätigungen auch bei Nachrichten in mehreren Räumen.
+- 📡 **Monitor unabhängig:** Die Chat-Bestätigung hängt nicht davon ab, ob im Monitor gerade eine ACK-Zeile sichtbar ist.
+- 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten/Online-Status, Karte und WebService bleiben erhalten.
+- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
 
 ## Version 0.5.1 – Favoriten und Online-Status
 
@@ -323,7 +322,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.1**
+**Version 0.5.2**
 
 **By Goldisoft 2026**
 
@@ -467,7 +466,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.1**  
+**MeshCom-Guru v0.5.2**  
 **By Goldisoft 2026**
 
 
@@ -479,11 +478,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.5.1-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher entsprechen dem aktuellen v0.5.2-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
