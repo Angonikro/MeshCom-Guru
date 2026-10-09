@@ -1,18 +1,17 @@
-# MeshCom-Guru v0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
+# MeshCom-Guru v0.5.3 – Optimierter 5-Sekunden-Poll
 
-## Neu in v0.5.2
+## Neu in v0.5.3
 
-- ⚡ **Weniger unnötige Arbeit:** Der WebService wird weiterhin alle 5 Sekunden abgefragt. Bei unveränderten Daten wird der lokale Nachrichtenbestand nicht mehr bei jedem Durchlauf vollständig neu sortiert.
-- 💤 **Leichtere Chat-Aktualisierung:** Wenn sich der sichtbare Inhalt nicht geändert hat, werden vorhandene Chat-Bubbles nicht erneut aufgebaut. Besonders bei vielen Nachrichten in **Alle** und den Räumen reduziert das die wiederkehrende GUI-Arbeit.
-- ✓ **ACK/Echo unabhängig von neuen Nachrichten:** Echo und ACK werden als eigene Statusänderung behandelt. Eine vorhandene Nachricht kann dadurch auf **✓** bzw. **✓✓** wechseln, ohne dass erst eine weitere Chatnachricht eintreffen muss.
-- 🏠 **Mehrere offene Sendungen:** Bestätigungen werden der passenden offenen Nachricht zugeordnet und nicht einfach der zuletzt gesendeten Nachricht. Dadurch bleiben Bestätigungen in mehreren Räumen getrennt.
-- 📡 **Monitor unabhängig:** Der Chatstatus hängt nicht davon ab, ob im Monitor gerade ein ACK-Eintrag angezeigt wird.
-- 🛡️ **Bestehende Statuslogik erhalten:** Das 120-Sekunden-Statusfenster und der anschließende Hard-Freeze bleiben unverändert.
-- ⭐ **Favoriten aus v0.5.1 erhalten:** Favoriten können weiterhin mit Namen verwaltet werden; Name und Rufzeichen werden in der Online-Anzeige und im Popup gemeinsam dargestellt.
+- ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird die unveränderte Rohantwort bereits vor dem Parsen der einzelnen Nachrichtenblöcke erkannt.
+- 🧊 **Weniger wiederkehrende Verarbeitung:** Bei unveränderten 5-Sekunden-Abfragen werden die vorhandenen Nachrichten nicht erneut vollständig analysiert. Das reduziert die Arbeit besonders bei einem großen Nachrichtenbestand.
+- 🖥️ **Weniger mögliche GUI-Belastung:** Der Poll verlässt den Verarbeitungspfad frühzeitig, wenn tatsächlich keine neuen WebService-Daten vorliegen.
+- ✓ **ACK/Echo bleibt unabhängig:** ACK- und Echo-Status werden weiterhin über den bestehenden UDP-/Statuspfad verarbeitet und sind von diesem Shortcut nicht abhängig.
+- 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor, Karte, WebService und der bisherige Nachrichten-Signaturcheck bleiben erhalten.
+- 🧩 **Bewusst kleiner Release:** „Alle“ und Monitor wurden in 0.5.3 noch nicht auf einen inkrementellen Aufbau („nur neue Einträge hinzufügen“) umgestellt.
 
 ## Dokumentation
 
-Die acht PDF-Handbücher wurden für **v0.5.2** neu strukturiert. Der Favoriten-/Namensabschnitt steht an der passenden Stelle im Handbuch; die neuen Refresh-/ACK-Optimierungen sind ebenfalls dokumentiert.
+Die vorhandenen acht PDF-Handbücher bleiben auf dem Stand **v0.5.2**, da v0.5.3 keine neue Bedienfunktion oder geänderte Benutzeroberfläche einführt.
 
 - 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.5.2_DE.pdf`
 - 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.5.2_EN.pdf`
@@ -23,5 +22,5 @@ Die acht PDF-Handbücher wurden für **v0.5.2** neu strukturiert. Der Favoriten-
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
-**Version:** 0.5.2  
-**Basis:** funktionierender v0.5.1-Stand mit Favoriten-Namen, 120-Sekunden-Statusfenster und Hard-Freeze
+**Version:** 0.5.3  
+**Basis:** v0.5.2 mit dem gezielten frühen Unverändert-Check für den 5-Sekunden-WebService-Poll

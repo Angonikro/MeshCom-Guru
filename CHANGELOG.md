@@ -1,3 +1,11 @@
+# Changelog
+
+## v0.5.3 – Optimierter 5-Sekunden-Poll
+- ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird jetzt bereits die unveränderte Rohantwort erkannt, bevor der komplette Nachrichtenbestand erneut geparst und pro Nachricht verarbeitet wird.
+- 🧊 **Weniger 5-Sekunden-GUI-Arbeit:** Unveränderte WebService-Abfragen verlassen den Verarbeitungspfad frühzeitig. Das reduziert insbesondere bei vielen vorhandenen Nachrichten die wiederkehrende Arbeit im GUI-Thread.
+- 🛡️ **Bestehende Funktionen unverändert:** ACK/Echo, 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor, Karte und der bisherige sekundäre Nachrichten-Signaturcheck bleiben erhalten.
+- 🧪 **Gezielter Performance-Fix:** In dieser Version wurde bewusst noch kein Umbau von „Alle“ oder Monitor auf inkrementelles Hinzufügen vorgenommen.
+
 ## v0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
 - 🧊 **5-Sekunden-Zucken beseitigt:** Der WebService wird weiterhin alle 5 Sekunden abgefragt, aber eine unveränderte Antwort verlässt den GUI-Verarbeitungspfad sofort. Dadurch werden vorhandene Chatblasen, Raum-Tabs und die übrige Chatdarstellung nicht mehr alle fünf Sekunden unnötig neu verarbeitet.
 - ⭐ **Favoriten mit Namen:** Zu einem Favoriten kann jetzt neben dem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden in der Online-Anzeige und im Online-Popup gemeinsam dargestellt.

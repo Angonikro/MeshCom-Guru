@@ -8017,6 +8017,44 @@ renderStations(initialStations,true);
             self.connect_button.setEnabled(False)
             self.disconnect_button.setEnabled(True)
 
+            # PERFORMANCE: The WebService is still polled every 5 seconds, but
+            # an identical HTTP response must be rejected BEFORE parsing all
+            # message blocks.  The previous optimisation compared a signature
+            # only after _extract_message_blocks() and the per-message identity
+            # work had already processed the complete response. With many
+            # messages that work itself could contribute to the visible
+            # 5-second GUI twitch.
+            #
+            # ACK/ECHO status changes are deliberately excluded from this
+            # shortcut: they arrive through UDP and call
+            # _refresh_visible_ack_states() directly. Therefore skipping an
+            # identical WebService response cannot hide a new ✓/✓✓ status.
+            _skip_unchanged_response = False
+            try:
+                # Hash the raw WebService payload first. This is deliberately
+                # cheap and happens before any HTML/message parsing.
+                response_page_signature = hashlib.sha1(
+                    str(page or "").encode("utf-8", errors="ignore")
+                ).hexdigest()
+                previous_page_signature = getattr(
+                    self, "_last_webservice_page_signature", None
+                )
+                self._last_webservice_page_signature = response_page_signature
+                _skip_unchanged_response = (
+                    previous_page_signature is not None
+                    and previous_page_signature == response_page_signature
+                    and self.initial_message_sync_done
+                )
+            except Exception:
+                # Never turn a cosmetic/performance optimisation into a
+                # connection failure. Process the response normally.
+                _skip_unchanged_response = False
+
+            if _skip_unchanged_response:
+                return
+
+            # Only changed responses reach the relatively expensive HTML
+            # extraction and per-message signature calculation below.
             # "No messages available." is a WebService status response, not a
             # MeshCom message. It must be discarded before the compatibility
             # fallback below can treat the complete response as a chat block.
@@ -8028,22 +8066,9 @@ renderStations(initialStations,true);
                     # Keep compatibility with nodes that return the message HTML directly.
                     blocks = [page] if page.strip() else []
 
-            # PERFORMANCE: The WebService is still polled every 5 seconds so
-            # genuinely new MeshCom messages appear quickly.  However, an
-            # unchanged response must NOT run the complete GUI update path
-            # again.  With many messages that repeated processing was the
-            # source of the small visible 5-second "twitch" in the chat.
-            #
-            # ACK/ECHO status changes are deliberately excluded from this
-            # shortcut: they arrive through UDP and call
-            # _refresh_visible_ack_states() directly.  Therefore skipping an
-            # identical WebService response cannot hide a new ✓/✓✓ status.
-            # Der reine Performance-Vergleich darf niemals als Teil der
-            # Verbindungslogik fehlschlagen. Falls ein ungewöhnliches
-            # WebService-Format den Signaturvergleich nicht verarbeiten kann,
-            # wird der normale Aktualisierungspfad verwendet. Die Verbindung
-            # bleibt dabei ausdrücklich bestehen.
-            _skip_unchanged_response = False
+            # Keep the existing message-level signature as a second safety net.
+            # It protects against equivalent responses whose raw HTML changes
+            # without changing the actual message identities.
             try:
                 response_ids = []
                 for _block in blocks:
@@ -8059,18 +8084,16 @@ renderStations(initialStations,true);
                 ).hexdigest()
                 previous_signature = getattr(self, "_last_webservice_message_signature", None)
                 self._last_webservice_message_signature = response_signature
-                _skip_unchanged_response = (
+                if (
                     previous_signature is not None
                     and previous_signature == response_signature
                     and self.initial_message_sync_done
-                )
+                ):
+                    return
             except Exception:
-                # Never turn a cosmetic/performance optimisation into a
-                # connection failure. Process the response normally.
-                _skip_unchanged_response = False
-
-            if _skip_unchanged_response:
-                return
+                # Process the response normally if the secondary comparison
+                # cannot be evaluated.
+                pass
 
             # Positions werden ausschließlich direkt über die eigene UDP-
             # Schnittstelle übernommen.
