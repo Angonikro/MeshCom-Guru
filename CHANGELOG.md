@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.5 – Bildvorschau nach dem Laden aktualisiert
+
+- 🖼️ **Doppelte Bildvorschau bereinigen:** Nach dem erfolgreichen Laden einer verlinkten Bildvorschau wird „Alle“ einmal neu aufgebaut, damit die Ansicht nicht bis zur nächsten Nachricht doppelte Bilder zeigt.
+- 🔄 **Raumfilter sofort aktualisiert:** Beim Aktivieren und Deaktivieren des Raumfilters wird „Alle“ unmittelbar neu aufgebaut; vorhandene Wetter-/Telemetriedaten werden ohne neue Nachricht erneut dargestellt.
+- ⚡ **POLL-FIX beibehalten:** Der frühe Unverändert-Check für identische 5-Sekunden-WebService-Antworten bleibt erhalten.
+- 🛡️ **Bestätigungen und Nachrichtenlogik:** Der Bild-Refresh nutzt das vorhandene Qt-Signal im GUI-Thread; ACK/Echo- und Nachrichtenverarbeitung wurden für diesen Release nicht absichtlich geändert.
+- 📦 **GitHub-Paket bereinigt:** Debian-Paket und Python-Cache-Dateien sind nicht Bestandteil der GitHub-ZIP.
+- 📖 **Dokumentation und Version:** README, GitHub-Release-Notizen, VERSION und version.py sind auf v0.5.5 aktualisiert. Die acht PDF-Handbücher bleiben auf v0.5.2.
+
 ## v0.5.4 – Sofortiger Neuaufbau beim Raumfilter
 - 🔄 **Raumfilter sofort aktualisiert:** Beim Aktivieren und Deaktivieren des Raumfilters wird die Ansicht „Alle“ unmittelbar neu aufgebaut.
 - 🌡️ **Wetterdaten ohne neue Nachricht:** Bereits vorhandene Wetter-/Telemetriezeilen werden beim Filterwechsel erneut dargestellt; es muss keine neue MeshCom-Nachricht eintreffen.

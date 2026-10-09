@@ -166,6 +166,15 @@ _CHAT_IMAGE_CACHE_MAX_FILES = 50
 _CHAT_IMAGE_CACHE_MAX_TOTAL_BYTES = 50 * 1024 * 1024
 
 
+class _ChatImageSignals(QObject):
+    # Emitted from the download worker after a preview has been cached.
+    # Qt queues the callback to the GUI thread, where "Alle" can be rebuilt.
+    ready = Signal(str)
+
+
+_CHAT_IMAGE_SIGNALS = _ChatImageSignals()
+
+
 def _cleanup_chat_image_cache():
     """Keep the on-disk chat preview cache bounded by age/size.
 
@@ -313,6 +322,12 @@ def _chat_image_download(url):
 
             with _CHAT_IMAGE_LOCK:
                 _CHAT_IMAGE_CACHE[url] = str(path)
+
+            # Notify the GUI after the image is really cached.  This replaces
+            # the old behaviour where the preview appeared only on the next
+            # unrelated message/refresh.  The connected slot rebuilds "Alle"
+            # once so its normal image-content deduplication can run.
+            _CHAT_IMAGE_SIGNALS.ready.emit(url)
 
             # Keep long-running installations from accumulating preview files.
             _cleanup_chat_image_cache()
@@ -867,6 +882,7 @@ class MainWindow(QMainWindow):
         # Nach einem Restore darf closeEvent die gerade wiederhergestellten
         # Dateien nicht mit dem alten In-Memory-Zustand überschreiben.
         self._skip_settings_write_on_close = False
+        _CHAT_IMAGE_SIGNALS.ready.connect(self._on_chat_image_ready)
 
         settings = load_settings()
         self.language = settings.get("language", "de") if settings.get("language", "de") in ("de", "en", "it", "nl", "fr", "es", "sv", "pl") else "de"
@@ -1363,6 +1379,24 @@ class MainWindow(QMainWindow):
         self.monitor_rows = self.monitor_rows[-500:]
         self.monitor_all_rows = self.monitor_all_rows[-500:]
         self._render_monitor()
+        self._refresh_all_live_view()
+
+    def _on_chat_image_ready(self, url):
+        """Refresh "Alle" once a linked image has finished downloading.
+
+        The download runs in a worker thread; this slot is delivered through
+        Qt's queued signal mechanism and therefore runs on the GUI thread.
+        Ignore images unrelated to the live "Alle" buffer.
+        """
+        url = str(url or "").strip()
+        if not url or not hasattr(self, "monitor_all_rows"):
+            return
+        if not any(url in str(row.get("detail", "")) for row in self.monitor_all_rows if isinstance(row, dict)):
+            return
+        # Clear only preview bookkeeping, not messages or delivery statuses.
+        # The following render can now apply the existing cross-message image
+        # deduplication with the newly cached image available.
+        MainWindow._ALL_IMAGE_PREVIEW_RENDERED.clear()
         self._refresh_all_live_view()
 
     def _refresh_all_live_view(self):

@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.4**
+**Aktuelle Version: 0.5.5**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -49,6 +38,14 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
+
+## Version 0.5.5 – Bildvorschau nach dem Laden aktualisiert
+
+- 🖼️ **Bildvorschau bereinigt:** Nach Abschluss des Ladens einer verlinkten Bildvorschau wird „Alle“ einmal neu aufgebaut, sodass die Darstellung nicht bis zur nächsten Nachricht doppelt bleibt.
+- 🔄 **Raumfilter-Fix erhalten:** Vorhandene Wetter-/Telemetriedaten werden beim Aktivieren und Deaktivieren des Filters sofort neu dargestellt.
+- ⚡ **POLL-FIX erhalten:** Unveränderte 5-Sekunden-WebService-Antworten verlassen den Verarbeitungspfad frühzeitig.
+- 🛡️ **Bestätigungslogik erhalten:** Der Bild-Refresh nutzt das vorhandene Qt-Signal; ACK/Echo und Nachrichtenverarbeitung wurden nicht absichtlich verändert.
+- 📦 **GitHub-ZIP bereinigt:** Kein Debian-Paket und keine Python-Cache-Dateien im Archiv.
 
 ## Version 0.5.4 – Sofortiger Neuaufbau beim Raumfilter
 
@@ -347,7 +344,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.4**
+**Version 0.5.5**
 
 **By Goldisoft 2026**
 
@@ -491,7 +488,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.4**  
+**MeshCom-Guru v0.5.5**  
 **By Goldisoft 2026**
 
 
@@ -503,11 +500,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand, da v0.5.4 lediglich das Aktualisieren der bestehenden Ansicht beim Filterwechsel korrigiert und keine neue Bedienfunktion einführt.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. In v0.5.5 bleibt der getestete Bild-Refresh-Fix aus v0.5.4 erhalten: Nach dem Laden einer Internet-Bildvorschau wird die Ansicht **Alle** einmal neu aufgebaut.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas
