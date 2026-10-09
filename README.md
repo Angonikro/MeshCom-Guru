@@ -57,7 +57,9 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🛡️ **Bestehende Statuslogik erhalten:** ACK/Echo, 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor und Karte bleiben unverändert.
 - 🧩 **Gezielte Performance-Änderung:** „Alle“ und Monitor wurden in dieser Version bewusst noch nicht auf einen inkrementellen Neuaufbau umgestellt.
 
-## Version 0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
+## Version 0.5.2 – ⭐ **Favoriten mit Namen:** 5-Sekunden-Refresh und ACK/Echo-Optimierung
+
+- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
 
 - ⚡ **Weniger unnötige Arbeit bei 5-Sekunden-Refreshs:** Der WebService wird weiterhin regelmäßig abgefragt, aber der lokale Nachrichtenbestand wird nicht mehr bei jedem unveränderten Abruf erneut vollständig sortiert.
 - 💤 **Unveränderte Chatansichten:** Wenn sich der sichtbare Inhalt nicht geändert hat, werden die vorhandenen Chat-Bubbles nicht erneut aufgebaut. Das reduziert die GUI-Arbeit besonders bei vielen Nachrichten in **Alle** und den Räumen.
@@ -65,7 +67,6 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🏠 **Mehrere offene Sendungen:** Echo und ACK werden der passenden offenen Nachricht zugeordnet und nicht nur der zuletzt gesendeten Nachricht. Dadurch funktionieren Bestätigungen auch bei Nachrichten in mehreren Räumen.
 - 📡 **Monitor unabhängig:** Die Chat-Bestätigung hängt nicht davon ab, ob im Monitor gerade eine ACK-Zeile sichtbar ist.
 - 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten/Online-Status, Karte und WebService bleiben erhalten.
-- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
 
 ## Version 0.5.1 – Favoriten und Online-Status
 
