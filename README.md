@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.3**
+**Aktuelle Version: 0.5.4**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -50,6 +39,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
+## Version 0.5.4 – Sofortiger Neuaufbau beim Raumfilter
+
+- 🔄 **Filterwechsel sofort sichtbar:** Beim Aktivieren und Deaktivieren des Raumfilters wird die Ansicht „Alle“ einmal neu aufgebaut.
+- 🌡️ **Wetter-/Telemetriedaten aktualisiert:** Bereits vorhandene Wetterdaten werden sofort entsprechend dem neuen Filterzustand dargestellt, ohne auf eine weitere Nachricht warten zu müssen.
+- 🛡️ **Status- und Poll-Logik erhalten:** Der 5-Sekunden-POLL-FIX sowie die vorhandene Echo-/ACK-Bestätigungslogik wurden nicht verändert.
+- 📄 **PDF-Handbücher:** Die acht mitgelieferten Handbücher bleiben auf v0.5.2, da sich keine neue Bedienfunktion oder Benutzeroberfläche geändert hat.
+
 ## Version 0.5.3 – Optimierter 5-Sekunden-Poll
 
 - ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird die Verarbeitung bereits anhand der unveränderten Rohantwort beendet, bevor die einzelnen Nachrichtenblöcke erneut geparst und signiert werden.
@@ -57,9 +53,7 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🛡️ **Bestehende Statuslogik erhalten:** ACK/Echo, 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor und Karte bleiben unverändert.
 - 🧩 **Gezielte Performance-Änderung:** „Alle“ und Monitor wurden in dieser Version bewusst noch nicht auf einen inkrementellen Neuaufbau umgestellt.
 
-## Version 0.5.2 – ⭐ **Favoriten mit Namen:** 5-Sekunden-Refresh und ACK/Echo-Optimierung
-
-- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
+## Version 0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
 
 - ⚡ **Weniger unnötige Arbeit bei 5-Sekunden-Refreshs:** Der WebService wird weiterhin regelmäßig abgefragt, aber der lokale Nachrichtenbestand wird nicht mehr bei jedem unveränderten Abruf erneut vollständig sortiert.
 - 💤 **Unveränderte Chatansichten:** Wenn sich der sichtbare Inhalt nicht geändert hat, werden die vorhandenen Chat-Bubbles nicht erneut aufgebaut. Das reduziert die GUI-Arbeit besonders bei vielen Nachrichten in **Alle** und den Räumen.
@@ -67,6 +61,7 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🏠 **Mehrere offene Sendungen:** Echo und ACK werden der passenden offenen Nachricht zugeordnet und nicht nur der zuletzt gesendeten Nachricht. Dadurch funktionieren Bestätigungen auch bei Nachrichten in mehreren Räumen.
 - 📡 **Monitor unabhängig:** Die Chat-Bestätigung hängt nicht davon ab, ob im Monitor gerade eine ACK-Zeile sichtbar ist.
 - 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten/Online-Status, Karte und WebService bleiben erhalten.
+- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
 
 ## Version 0.5.1 – Favoriten und Online-Status
 
@@ -341,7 +336,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.3**
+**Version 0.5.4**
 
 **By Goldisoft 2026**
 
@@ -485,7 +480,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.3**  
+**MeshCom-Guru v0.5.4**  
 **By Goldisoft 2026**
 
 
@@ -497,11 +492,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand, da v0.5.3 keine neue Bedienfunktion oder geänderte Benutzeroberfläche einführt.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand, da v0.5.4 lediglich das Aktualisieren der bestehenden Ansicht beim Filterwechsel korrigiert und keine neue Bedienfunktion einführt.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

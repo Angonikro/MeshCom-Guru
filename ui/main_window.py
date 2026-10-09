@@ -5256,7 +5256,16 @@ class MainWindow(QMainWindow):
         self.status.setText(ui_text("Filter gespeichert: " + (", ".join(rooms) if rooms else "keine Räume")))
 
     def _filter_toggled(self, _enabled):
+        """Rebuild the live 'Alle' view immediately when the room filter changes.
+
+        Weather/telemetry rows can already be present in monitor_all_rows even
+        when no new packet arrives.  Re-rendering here applies the new filter
+        state to the existing rows instead of waiting for the next incoming
+        message.  Keep the normal WebService refresh as well; ACK/POLL handling
+        and the message data themselves are not changed.
+        """
         self._write_settings()
+        self._refresh_all_live_view()
         self.update_messages()
 
     # ---------- Wetterdaten ----------

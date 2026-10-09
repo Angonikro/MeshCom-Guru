@@ -1,26 +1,19 @@
-# MeshCom-Guru v0.5.3 – Optimierter 5-Sekunden-Poll
+# MeshCom-Guru v0.5.4 – Raumfilter aktualisiert Wetterdaten sofort
 
-## Neu in v0.5.3
+## Neu in v0.5.4
 
-- ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird die unveränderte Rohantwort bereits vor dem Parsen der einzelnen Nachrichtenblöcke erkannt.
-- 🧊 **Weniger wiederkehrende Verarbeitung:** Bei unveränderten 5-Sekunden-Abfragen werden die vorhandenen Nachrichten nicht erneut vollständig analysiert. Das reduziert die Arbeit besonders bei einem großen Nachrichtenbestand.
-- 🖥️ **Weniger mögliche GUI-Belastung:** Der Poll verlässt den Verarbeitungspfad frühzeitig, wenn tatsächlich keine neuen WebService-Daten vorliegen.
-- ✓ **ACK/Echo bleibt unabhängig:** ACK- und Echo-Status werden weiterhin über den bestehenden UDP-/Statuspfad verarbeitet und sind von diesem Shortcut nicht abhängig.
-- 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor, Karte, WebService und der bisherige Nachrichten-Signaturcheck bleiben erhalten.
-- 🧩 **Bewusst kleiner Release:** „Alle“ und Monitor wurden in 0.5.3 noch nicht auf einen inkrementellen Aufbau („nur neue Einträge hinzufügen“) umgestellt.
+- 🔄 **Sofortiger Neuaufbau bei Filterwechsel:** Beim Aktivieren und Deaktivieren des Raumfilters wird die Ansicht „Alle“ einmal neu aufgebaut.
+- 🌡️ **Wetterdaten ohne neue Nachricht:** Bereits empfangene Wetter-/Telemetriedaten werden sofort erneut dargestellt. Die Anzeige muss nicht mehr auf die nächste eingehende Nachricht warten.
+- 🛡️ **Bestehende Logik erhalten:** Der 5-Sekunden-POLL-FIX, ACK/Echo-Bestätigungen, das 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten/Online-Status, Monitor und Karte bleiben erhalten.
+- 📖 **Dokumentation aktualisiert:** README, CHANGELOG, VERSION und version.py sind auf v0.5.4 gesetzt.
 
 ## Dokumentation
 
-Die vorhandenen acht PDF-Handbücher bleiben auf dem Stand **v0.5.2**, da v0.5.3 keine neue Bedienfunktion oder geänderte Benutzeroberfläche einführt.
+Die acht PDF-Handbücher bleiben auf dem Stand **v0.5.2**, weil dieser Release eine Aktualisierung der bestehenden Ansicht beim Filterwechsel korrigiert und keine neue Bedienfunktion einführt.
 
-- 🇩🇪 `docs/MeshCom-Guru_Benutzerhandbuch_v0.5.2_DE.pdf`
-- 🇬🇧 `docs/MeshCom-Guru_User_Manual_v0.5.2_EN.pdf`
-- 🇮🇹 `docs/MeshCom-Guru_Manuale_Utente_v0.5.2_IT.pdf`
-- 🇳🇱 `docs/MeshCom-Guru_Gebruikershandleiding_v0.5.2_NL.pdf`
-- 🇫🇷 `docs/MeshCom-Guru_Manuel_Utilisateur_v0.5.2_FR.pdf`
-- 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.2_ES.pdf`
-- 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
-- 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
+## Testhinweis
 
-**Version:** 0.5.3  
-**Basis:** v0.5.2 mit dem gezielten frühen Unverändert-Check für den 5-Sekunden-WebService-Poll
+Der Raumfilter-Fix wurde im Teststand erfolgreich ausprobiert: Beim Aktivieren und Deaktivieren wird die Ansicht unmittelbar neu aufgebaut, sodass vorhandene Wetterdaten ohne neue Nachricht neu dargestellt werden.
+
+**Version:** 0.5.4  
+**Basis:** v0.5.3 mit unverändertem frühem Unverändert-Check für den 5-Sekunden-WebService-Poll und dem bestätigten Raumfilter-Refresh-Fix.

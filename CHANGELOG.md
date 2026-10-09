@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.4 – Sofortiger Neuaufbau beim Raumfilter
+- 🔄 **Raumfilter sofort aktualisiert:** Beim Aktivieren und Deaktivieren des Raumfilters wird die Ansicht „Alle“ unmittelbar neu aufgebaut.
+- 🌡️ **Wetterdaten ohne neue Nachricht:** Bereits vorhandene Wetter-/Telemetriezeilen werden beim Filterwechsel erneut dargestellt; es muss keine neue MeshCom-Nachricht eintreffen.
+- 🛡️ **Gezielter UI-Fix:** Die Änderung betrifft den Filterwechsel und die Darstellung vorhandener Daten. Nachrichtenbestand, ACK/Echo-Bestätigungen und der 5-Sekunden-POLL-FIX bleiben unverändert.
+- 📖 **Dokumentation:** README und GitHub-Release-Notizen wurden aktualisiert. Die acht PDF-Handbücher bleiben auf v0.5.2, da keine neue Bedienfunktion hinzugefügt wurde.
+
 ## v0.5.3 – Optimierter 5-Sekunden-Poll
 - ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird jetzt bereits die unveränderte Rohantwort erkannt, bevor der komplette Nachrichtenbestand erneut geparst und pro Nachricht verarbeitet wird.
 - 🧊 **Weniger 5-Sekunden-GUI-Arbeit:** Unveränderte WebService-Abfragen verlassen den Verarbeitungspfad frühzeitig. Das reduziert insbesondere bei vielen vorhandenen Nachrichten die wiederkehrende Arbeit im GUI-Thread.
