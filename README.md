@@ -41,11 +41,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 
 ## Version 0.5.6 – Nachrichtenpfad-Anzeige in Chats
 
-- Unter Nachrichten in „Alle“, Raum-Chats und Privat-Chats wird die Pfadangabe aus dem jeweiligen Nachrichten-/EXTUDP-Datensatz angezeigt, soweit sie vorhanden ist.
-- Für eigene ausgehende Nachrichten kann bei fehlendem explizitem Pfad das aktuell in der App eingestellte Rufzeichen als Ursprung angezeigt werden.
-- Fehlende Pfadangaben fremder Nachrichten bleiben als „nicht übermittelt / unbekannt“ gekennzeichnet.
-- Kartenverbindungen werden nicht als tatsächlicher Weg einer einzelnen Nachricht ausgegeben.
-- POS- und TEL-Meldungen behalten ihre vorhandene Pfadanzeige; die Version basiert weiterhin auf dem funktionierenden Chat- und Poll-Verhalten von 0.5.5.
+- 📡 **Pfadübernahme:** Pfadinformationen aus den empfangenen EXTUDP-/WebService-Nachrichtendatensätzen werden der jeweiligen Chat-Nachricht zugeordnet, soweit die gelieferten Daten diese Information enthalten.
+- 📨 **Eigene Nachrichten:** Fehlt bei einer eigenen ausgehenden MSG ein expliziter Pfad, kann das aktuell in der App eingestellte Rufzeichen als Ursprung angezeigt werden.
+- 🧭 **Fremde Nachrichten:** Vorhandene Relay-Pfade haben Vorrang; fehlende Pfade werden nicht aus der Karten-Verbindungshistorie erfunden.
+- 🌦️ **POS/TEL:** Die Pfadanzeige für Positions- und Telemetriedaten bleibt erhalten.
+- 🎨 **Darstellung:** Die Pfadzeile nutzt die Chat-Textfarbe und wird nicht doppelt angehängt, wenn sie bereits im Nachrichtenblock enthalten ist.
+- 🛡️ **Bestehende Funktionen:** Die Versionsnummer bleibt 0.5.6; die bewährte Nachrichten-, ACK/Echo-, Monitor-, Karten- und Poll-Verarbeitung wurde nicht absichtlich umgebaut.
+- 📖 **Dokumentation:** README, GitHub-Release-Notizen und Versionsangaben sind auf 0.5.6 abgestimmt. Die PDF-Handbücher bleiben bewusst auf v0.5.2.
 
 ## Version 0.5.5 – Bildvorschau nach dem Laden aktualisiert
 
