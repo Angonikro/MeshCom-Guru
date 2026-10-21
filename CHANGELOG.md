@@ -1,4 +1,12 @@
-# Changelog
+## v0.5.6 – Nachrichtenpfade in „Alle“, Raum- und Privat-Chats
+
+- 📡 **Pfadübernahme:** Pfadinformationen aus den empfangenen EXTUDP-/WebService-Nachrichtendatensätzen werden der jeweiligen Chat-Nachricht zugeordnet, soweit die gelieferten Daten diese Information enthalten.
+- 📨 **Eigene Nachrichten:** Fehlt bei einer eigenen ausgehenden MSG ein expliziter Pfad, kann das aktuell in der App eingestellte Rufzeichen als Ursprung angezeigt werden.
+- 🧭 **Fremde Nachrichten:** Vorhandene Relay-Pfade haben Vorrang; fehlende Pfade werden nicht aus der Karten-Verbindungshistorie erfunden.
+- 🌦️ **POS/TEL:** Die Pfadanzeige für Positions- und Telemetriedaten bleibt erhalten.
+- 🎨 **Darstellung:** Die Pfadzeile nutzt die Chat-Textfarbe und wird nicht doppelt angehängt, wenn sie bereits im Nachrichtenblock enthalten ist.
+- 🛡️ **Bestehende Funktionen:** Die Versionsnummer bleibt 0.5.6; die bewährte Nachrichten-, ACK/Echo-, Monitor-, Karten- und Poll-Verarbeitung wurde nicht absichtlich umgebaut.
+- 📖 **Dokumentation:** README, GitHub-Release-Notizen und Versionsangaben sind auf 0.5.6 abgestimmt. Die PDF-Handbücher bleiben bewusst auf v0.5.2.
 
 ## v0.5.5 – Bildvorschau nach dem Laden aktualisiert
 
@@ -567,3 +575,4 @@
 - OSM-/Leaflet-Kartenansicht verbessert.
 - Node-Info-Seitenleiste verbessert.
 - GitHub- und Debian-Release-Struktur eingeführt.
+

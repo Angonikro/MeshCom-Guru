@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.5**
+**Aktuelle Version: 0.5.6**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -49,6 +38,14 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
+
+## Version 0.5.6 – Nachrichtenpfad-Anzeige in Chats
+
+- Unter Nachrichten in „Alle“, Raum-Chats und Privat-Chats wird die Pfadangabe aus dem jeweiligen Nachrichten-/EXTUDP-Datensatz angezeigt, soweit sie vorhanden ist.
+- Für eigene ausgehende Nachrichten kann bei fehlendem explizitem Pfad das aktuell in der App eingestellte Rufzeichen als Ursprung angezeigt werden.
+- Fehlende Pfadangaben fremder Nachrichten bleiben als „nicht übermittelt / unbekannt“ gekennzeichnet.
+- Kartenverbindungen werden nicht als tatsächlicher Weg einer einzelnen Nachricht ausgegeben.
+- POS- und TEL-Meldungen behalten ihre vorhandene Pfadanzeige; die Version basiert weiterhin auf dem funktionierenden Chat- und Poll-Verhalten von 0.5.5.
 
 ## Version 0.5.5 – Bildvorschau nach dem Laden aktualisiert
 
@@ -355,7 +352,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.5**
+**Version 0.5.6**
 
 **By Goldisoft 2026**
 
@@ -499,7 +496,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.5**  
+**MeshCom-Guru v0.5.6**  
 **By Goldisoft 2026**
 
 
@@ -511,11 +508,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. In v0.5.5 bleibt der getestete Bild-Refresh-Fix aus v0.5.4 erhalten: Nach dem Laden einer Internet-Bildvorschau wird die Ansicht **Alle** einmal neu aufgebaut.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.6 ergänzt die Pfadanzeige unter Chat-Nachrichten; der vorhandene Bild-Refresh-Fix bleibt erhalten.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

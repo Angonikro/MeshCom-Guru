@@ -808,6 +808,8 @@ class WebServiceWorker(QObject):
 
 
 class MainWindow(QMainWindow):
+    # EXTUDP relay paths indexed by message id, shared with chat renderers.
+    _message_routes_by_id = {}
     # Tracks previews that were already rendered for the exact same message
     # block in the consolidated "Alle" view.  This survives the 5-second
     # refresh and therefore prevents an asynchronously cached image from
@@ -1361,6 +1363,15 @@ class MainWindow(QMainWindow):
                         self._refresh_all_live_view()
                         return
 
+        # EXTUDP src is the packet's source/relay path. Keep it on this exact
+        # monitor row for MSG, POS and TEL alike; do not borrow another packet's route.
+        route_calls = self._callsigns_from_path(packet.get("src", ""))
+        # A locally-originated MSG may have an empty/placeholder EXTUDP src,
+        # although POS/TEL packets carry the node callsign. For our own text
+        # message the known source is the local node itself.
+        own_for_route = str(getattr(self, "own_callsign", "") or "").strip().upper()
+        if ptype == "MSG" and str(src).strip().upper() == own_for_route and own_for_route:
+            route_calls = [own_for_route]
         row = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": ptype,
@@ -1369,6 +1380,7 @@ class MainWindow(QMainWindow):
             "rssi": str(rssi) if rssi != "" else "-",
             "snr": str(snr) if snr != "" else "-",
             "detail": detail,
+            "route_calls": route_calls,
             "_received_ts": time.time(),
         }
         # Dasselbe Row-Objekt wird in beiden Puffern verwendet. Wenn das
@@ -1420,6 +1432,18 @@ class MainWindow(QMainWindow):
         # authoritative order for the live "Alle" view.
         self._update_tab_content(all_key, all_index, all_blocks)
 
+    @classmethod
+    def _route_row_html(cls, route_calls):
+        """Render only path data carried by this exact received packet."""
+        calls = [str(x).strip() for x in (route_calls or []) if str(x).strip()]
+        if calls:
+            label = " → ".join(calls)
+            value = cls._chat_escape(label)
+            return ("<div style='margin-top:6px;font-size:12px;color:inherit;'>"
+                    "<b>📡 Nachrichtenpfad:</b> " + value + "</div>")
+        return ("<div style='margin-top:6px;font-size:12px;color:inherit;'>"
+                "<b>📡 Nachrichtenpfad:</b> nicht übermittelt / unbekannt</div>")
+
     def _monitor_rows_to_all_blocks(self):
         """Render the same received UDP packets as monitor-compatible blocks for 'Alle'.
 
@@ -1436,6 +1460,23 @@ class MainWindow(QMainWindow):
             dst = str(row.get("dst", "-") or "-")
             stamp = str(row.get("time", "") or "")
             detail = str(row.get("detail", "") or "")
+            route_calls = row.get("route_calls", [])
+            # Eigene Textnachrichten können im lokalen Live-Puffer entstehen,
+            # bevor ein EXTUDP-Echo den Pfad ergänzt. In diesem Fall ist nur
+            # der eingestellte eigene Node als Ursprung bekannt; keine Relays raten.
+            # Read the current value from the visible settings field first;
+            # self.own_callsign can be stale if the user changed the field
+            # while the live UDP stream was already running.
+            own_call = ""
+            try:
+                own_call = str(self.own_callsign_input.text() or "").strip().upper()
+            except Exception:
+                own_call = str(getattr(self, "own_callsign", "") or "").strip().upper()
+            if not own_call:
+                own_call = str(getattr(self, "own_callsign", "") or "").strip().upper()
+            if (ptype == "MSG" and not route_calls and own_call
+                    and src.strip().upper() == own_call):
+                route_calls = [own_call]
             rssi = str(row.get("rssi", "-") or "-")
             snr = str(row.get("snr", "-") or "-")
 
@@ -1472,6 +1513,7 @@ class MainWindow(QMainWindow):
                 f'<div>{safe_time}</div>'
                 f'<div>{self._make_clickable(safe_body)}</div>'
                 f'<div>{meta}</div>'
+                + self._route_row_html(route_calls) +
                 '</div>'
             )
             blocks.append(block)
@@ -1910,6 +1952,16 @@ class MainWindow(QMainWindow):
         if not isinstance(packet, dict):
             return
         self._monitor_add_packet(packet)
+        # Keep the explicit EXTUDP source path for the matching chat message.
+        # `src` is the protocol's source_path and can contain comma-separated hops.
+        if str(packet.get("type", packet.get("packet_type", ""))).strip().lower() in {"msg", "message"}:
+            msg_id = str(packet.get("msg_id", packet.get("msgid", "")) or "").strip().upper()
+            src_path = self._callsigns_from_path(packet.get("src", ""))
+            if msg_id and src_path:
+                MainWindow._message_routes_by_id[msg_id] = src_path
+                # Bound the in-memory cache; message IDs can be reused over time.
+                if len(MainWindow._message_routes_by_id) > 2000:
+                    MainWindow._message_routes_by_id = dict(list(MainWindow._message_routes_by_id.items())[-1500:])
         # Favoriten werden vor der MH-Auswertung geprüft, damit auch das eigene
         # Rufzeichen oder andere lokal empfangene Favoriten erkannt werden.
         self._note_favorite_udp_activity(packet)
@@ -2008,7 +2060,8 @@ class MainWindow(QMainWindow):
                 f'<div>Jetzt {stamp} Von: {html.escape(callsign)} Ziel: all</div>'
                 f'<div><b>Breitengrad:</b> {coords[0]:.6f} {lat_dir}<br>'
                 f'<b>Längengrad:</b> {coords[1]:.6f} {lon_dir}'
-                + (f'<br>{extra_html}' if extra_html else '') + '</div></div>'
+                + (f'<br>{extra_html}' if extra_html else '')
+                + '</div>' + self._route_row_html(self._callsigns_from_path(packet.get("src", ""))) + '</div>'
             )
             if not any(f'data-msgid="{html.escape(signature)}"' in b for b in self.udp_position_blocks):
                 self.udp_position_blocks.append(block)
@@ -7340,7 +7393,18 @@ class MainWindow(QMainWindow):
                     if symbol:
                         ack_html = f' <span title="Sendestatus" style="font-weight:700;">{symbol}</span>'
                     break
-            rendered.append(content + ack_html)
+            plain_block = self._normalized_plain(block)
+            has_message = bool(re.search(r"(?:Nachricht\s*:|\b[A-Z]{1,3}[0-9][A-Z0-9-]{0,8}\s*>\s*(?:\d{1,8}|ALL|\*))", plain_block, re.IGNORECASE))
+            # The monitor-derived block already contains its path row. Do not
+            # append a second one in the consolidated "Alle" view.
+            has_path_row = "Nachrichtenpfad:" in plain_block or "Nachrichtenpfad:</b>" in content
+            own_call = str(getattr(self, "own_callsign", "") or "").strip().upper()
+            try:
+                own_call = str(self.own_callsign_input.text() or "").strip().upper() or own_call
+            except Exception:
+                pass
+            path_html = self._message_path_html(plain_block, own_call) if has_message and not has_path_row else ""
+            rendered.append(content + ack_html + path_html)
         return (
             "<html><body style='background:"
             + str(getattr(self, "chat_background", "#101722"))
@@ -8322,6 +8386,92 @@ renderStations(initialStations,true);
         return m.group(1).strip() if m else ""
 
     @classmethod
+    def _message_path_html(cls, plain, own_callsign="", force_own=False):
+        """Render this message's explicit path; only own outgoing messages may use local callsign."""
+        text = str(plain or "")
+        route_calls = []
+        msg_id = cls._chat_field(text, "MsgId") or cls._chat_field(text, "MSGID")
+        if msg_id:
+            route_calls = list(MainWindow._message_routes_by_id.get(msg_id.strip().upper(), []))
+
+        # Compatibility with WebService records that already include a labelled path.
+        if not route_calls:
+            for label in ("Nachrichtenpfad", "MessagePath", "RelayPath", "SourcePath", "Relay", "Relays", "Route", "Pfad", "Via", "Hops"):
+                match = re.search(
+                    rf"(?i)(?:^|[|;\n])\s*{re.escape(label)}\s*[:=]\s*([^|;\n]+)", text
+                )
+                if match:
+                    route_calls = cls._callsigns_from_path(match.group(1))
+                    if route_calls:
+                        break
+
+        # If this is our own outgoing message and no route was supplied, the
+        # local callsign is still a valid origin path (not a guessed relay).
+        own = str(own_callsign or "").strip().upper()
+        header = re.search(r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9-]{0,8}(?:\s*,\s*[A-Z]{1,3}[0-9][A-Z0-9-]{0,8})*)\s*>\s*(?:\d{1,8}|ALL|\*)", text, re.IGNORECASE)
+        if not route_calls and own and header and own in [x.strip().upper() for x in header.group("left").split(",")]:
+            route_calls = [own]
+
+        if route_calls:
+            route = " → ".join(route_calls)
+            value = cls._chat_escape(route)
+            return ("<div style='margin-top:6px;font-size:12px;color:inherit;'>"
+                    "<b>📡 Nachrichtenpfad:</b> " + value + "</div>")
+        return ("<div style='margin-top:6px;font-size:12px;color:inherit;'>"
+                "<b>📡 Nachrichtenpfad:</b> nicht übermittelt / unbekannt</div>")
+
+    def _message_path_html_for_chat(self, plain, sender, target, body, outgoing, own_callsign):
+        """Resolve a chat path from the exact MSG row when the chat block lacks it.
+
+        Keep the working consolidated "Alle" path logic untouched.  For normal
+        room/private cards, only use a monitor row that matches sender, target,
+        and message body; own messages may use the configured local callsign.
+        """
+        # Resolve incoming messages against the exact locally received UDP MSG
+        # row BEFORE trusting any path text embedded in the WebService/chat
+        # block. That block can contain the local callsign as a fallback even
+        # when UDP has the actual source/relay path. Keep the consolidated
+        # "Alle" renderer untouched; use its source data only for this chat.
+        own = str(own_callsign or "").strip().upper()
+        sender_key = str(sender or "").strip().upper()
+        target_key = str(target or "").strip().upper()
+        body_key = re.sub(r"^#\d{1,6}\s*", "", str(body or "").strip()).casefold()
+        if not outgoing and sender_key and body_key:
+            for row in reversed(list(getattr(self, "monitor_all_rows", []))):
+                if not isinstance(row, dict) or str(row.get("type", "")).upper() != "MSG":
+                    continue
+                if str(row.get("src", "")).strip().upper() != sender_key:
+                    continue
+                row_target = str(row.get("dst", "") or "").strip().upper()
+                if target_key and row_target and row_target != target_key:
+                    continue
+                row_body = re.sub(r"^#\d{1,6}\s*", "", str(row.get("detail", "") or "").strip()).casefold()
+                if row_body != body_key:
+                    continue
+                route_calls = row.get("route_calls", [])
+                if route_calls:
+                    return self._route_row_html(route_calls)
+
+        # Incoming chat blocks can include the local callsign in a transport
+        # header (for example "REMOTE,LOCAL>ROOM").  The generic renderer treats
+        # that as an own-origin fallback, which is wrong for a received message.
+        # For incoming messages, resolve explicit message/UDP route data without
+        # the local-callsign fallback; if no relay list exists, show the UDP
+        # source callsign, matching the working "Alle" view.
+        existing = self._message_path_html(plain, own_callsign if outgoing else "")
+        if "nicht übermittelt / unbekannt" not in existing:
+            return existing
+
+        if not outgoing and sender_key:
+            return self._route_row_html([sender_key])
+
+        # Only our own outgoing message may use the configured callsign as its
+        # origin when no explicit route was supplied.
+        if outgoing and own:
+            return self._route_row_html([own])
+        return existing
+
+    @classmethod
     def _render_chat_blocks(cls, blocks, own_callsign="", outgoing_messages=None):
         """Render only normal room/private chats as modern message cards.
 
@@ -8473,6 +8623,7 @@ renderStations(initialStations,true);
                     💬 <b>Nachricht:</b><br>
                     <span style="white-space:pre-wrap;">{cls._make_clickable(cls._chat_escape(body))}</span>
                   </div>
+                  {cls._message_path_html(plain, own)}
                 </td>
               </tr>
             </table>"""
@@ -8630,7 +8781,8 @@ renderStations(initialStations,true);
                 html_msg = (f"<div style='font-size:13px;'>{header}</div>"
                             f"<div style='margin-top:4px;font-size:12px;'><b>Nach:</b> {target_html}"
                             f"{(' &nbsp;•&nbsp; ' + meta_html) if meta_html else ''}</div>"
-                            f"<div style='margin-top:5px;font-size:14px;'><b>{body_html}</b></div>")
+                            f"<div style='margin-top:5px;font-size:14px;'><b>{body_html}</b></div>"
+                            f"{self._message_path_html_for_chat(plain, sender, target, body, outgoing, own)}")
                 unique.append({"html": html_msg, "outgoing": outgoing})
 
             # HARD 120-SECOND FREEZE: after the live window expires, a periodic
