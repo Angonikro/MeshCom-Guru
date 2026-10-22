@@ -1,4 +1,15 @@
-## 🚀 v0.5.8 – Privat-Chat-Pfad-Fix
+# Changelog
+
+## 0.5.9 — Bildanbieter-Auswahl und imgdb.io
+- 📎 **Anbieter vor Dateiauswahl:** Beim Klick auf die Büroklammer kann zuerst zwischen imgdb.io und picrd.com gewählt werden; erst danach öffnet sich der Dateidialog.
+- 🖼️ **imgdb.io-Upload:** Neuer Anbieter über die getestete API `https://imgdb.io/api/v1/upload` mit Formularfeld `file`.
+- ♾️ **Speicherdauer:** Guru versucht zunächst `ttl=0`; wenn dieser Versuch fehlschlägt, wird einmal ohne TTL-Parameter erneut hochgeladen. Eine unbegrenzte Speicherung hängt weiterhin von den Regeln des Anbieters ab.
+- 📦 **Dateigröße:** Für imgdb.io ist die clientseitige Upload-Grenze auf 16 MiB gesetzt. picrd.com behält seine eigene Upload-Grenze.
+- 🔗 **Linkprüfung:** Der erfolgreiche Test bestätigte HTTP 201 beim Upload und HTTP 200 beim Abruf einer imgdb.io-Bild-URL. Das ist kein Ersatz für Tests jeder Anwendungssituation.
+- 🧭 **Privatpfad:** Der Privatpfad-Fix aus dem vorherigen Stand bleibt Grundlage; keine absichtlichen Änderungen an ACK/Echo, Räumen, Monitor, Karte oder Weltweit.
+- 📚 **Dokumentation:** README und GitHub-Release-Notizen aktualisiert. Die übersetzten PDF-Handbücher bleiben auf ihrem bisherigen Stand.
+
+## 0.5.8
 
 - 🧭 **Privat-Chats:** Aufbauend auf dem v0.5.7-Pfad-Fix wird die Pfadzuordnung für Privatnachrichten weitergeführt.
 - 🛡️ **Versionspflege:** Keine absichtlichen Änderungen an ACK/Echo, Räumen, Monitor, Karte oder Weltweit.

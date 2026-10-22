@@ -1,19 +1,27 @@
-# 🚀 MeshCom-Guru v0.5.8
+# MeshCom-Guru v0.5.9
 
-## ✨ Änderungen in v0.5.8
+## Änderungen in v0.5.9
 
-- 🧭 **Chat-Pfad:** Die Pfadanzeige in Raum- und Privat-Chats übernimmt nach Möglichkeit den vorhandenen Pfad aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“.
-- 📨 **Raumzustellung:** Die Änderung ist auf die Anzeige des Nachrichtenpfads begrenzt.
-- 🛡️ **Bestehende Funktionen:** ACK/Echo, Monitor, Karte, „Alle“, Weltweit und die bestehenden Poll-Funktionen bleiben erhalten.
-- 📚 **Dokumentation:** README und CHANGELOG führen v0.5.8 an erster Stelle; die vollständige Versionshistorie bleibt erhalten.
+- **Bildanbieter vor Dateiauswahl:** Beim Klick auf die Büroklammer zuerst `imgdb.io` oder `picrd.com` auswählen; anschließend die Bilddatei auswählen.
+- **imgdb.io integriert:** Verwendet `https://imgdb.io/api/v1/upload` mit dem Formularfeld `file`.
+- **Speicherdauer-Option:** Zuerst wird `ttl=0` übermittelt. Bei fehlgeschlagenem Versuch erfolgt genau ein erneuter Upload ohne TTL-Parameter. Eine dauerhafte Speicherung kann der Anbieter nicht garantiert werden.
+- **Upload-Limit:** In Guru sind für imgdb.io maximal 16 MiB pro Bild vorgesehen.
+- **Privatpfad-Fix beibehalten:** Der funktionierende Stand aus v0.5.8 bleibt die Grundlage; ACK/Echo, Räume, Monitor, Karte und Weltweit wurden nicht absichtlich umgebaut.
 
-## 📦 Release-Dateien
+## Testhinweise
 
-- **Version:** `0.5.8`
-- **Debian-Paket:** `meshcom-guru_0.5.8_all.deb`
-- **GitHub-Archiv:** `MeshCom-Guru_v0.5.8_GITHUB.zip`
-- **Debian-Architektur:** `all`
+- Externer API-Test für imgdb.io erfolgreich: Upload mit HTTP 201.
+- Abruf der zurückgegebenen Bild-URL erfolgreich: HTTP 200 und `image/jpeg`.
+- Der direkte picrd-Upload lieferte zum Zeitpunkt der Tests HTTP 500, auch außerhalb von MeshCom-Guru. Das ist eine Momentaufnahme und keine Aussage über den aktuellen Dienststatus.
+- Diese Tests bestätigen nicht automatisch jeden Upload über die installierte Anwendung. Bitte den Ablauf in Guru mit einer unkritischen Testdatei prüfen.
 
-## 🧪 Lokale Prüfungen
+## Release-Dateien
 
-Python-Syntax, ZIP-Integrität und Debian-Paketmetadaten werden lokal geprüft. Diese Prüfungen ersetzen keinen Live-Test mit einem realen MeshCom-Node oder EXTUDP-Datenstrom. Ein vollständiger Relay-Pfad kann nur angezeigt werden, wenn die empfangenen Daten die entsprechenden Informationen enthalten.
+- Version: `0.5.9`
+- GitHub-Archiv: `MeshCom-Guru_v0.5.9_GITHUB.zip`
+- Debian-Architektur des separaten Pakets: `all`
+
+## Hinweise
+
+- Die acht PDF-Handbücher bleiben auf dem bisherigen Dokumentationsstand v0.5.2.
+- Das ZIP enthält den Projektordner `MeshCom/` als obersten Ordner und keine Python-Cache-Dateien.

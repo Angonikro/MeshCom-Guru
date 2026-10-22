@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**🚀 Aktuelle Version: 0.5.8**
+**🚀 Aktuelle Version: 0.5.9**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -35,7 +24,8 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
 - **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
-- **Bildvorschau für Picrd-Links:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
+- **Bildanbieter vor dem Auswählen wählbar (imgdb.io / picrd.com):** Bilder können über imgdb.io (bis 16 MB, `ttl=0` wird zuerst versucht) oder picrd.com hochgeladen werden. **Bildvorschau für Bildlinks:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
+
 
 ### Dokumentation
 
@@ -49,6 +39,14 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇪🇸 `docs/MeshCom-Guru_Manual_de_Usuario_v0.5.2_ES.pdf`
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
+
+## Version 0.5.9  Bild-Upload
+
+- Beim Klick auf die Büroklammer zuerst den Bildanbieter auswählen: **imgdb.io** oder **picrd.com**. Danach öffnet sich die Dateiauswahl.
+- **imgdb.io:** Upload über `https://imgdb.io/api/v1/upload`, Formularfeld `file`, maximale Dateigröße in Guru **16 MiB**.
+- Guru versucht zunächst `ttl=0`. Wenn dieser Upload-Versuch fehlschlägt, wird einmal ohne TTL-Parameter erneut versucht. Ob eine längere oder unbegrenzte Speicherung angeboten wird, entscheidet der Dienst; `ttl=0` ist keine Garantie dauerhafter Verfügbarkeit.
+- **picrd.com:** bleibt als auswählbarer Anbieter enthalten. Während des hier dokumentierten Tests lieferte picrd beim direkten Upload HTTP 500; der Zustand kann sich ändern.
+- **Teststatus:** imgdb.io wurde außerhalb der Anwendung erfolgreich getestet (Upload HTTP 201, Bild-URL-Abruf HTTP 200). Der integrierte Ablauf sollte nach Installation auf dem Zielsystem ebenfalls getestet werden.
 
 ## Version 0.5.8 – Privat-Chat-Pfad-Fix
 
@@ -521,7 +519,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.8**  
+**MeshCom-Guru v0.5.9**  
 **By Goldisoft 2026**
 
 
@@ -533,11 +531,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.8 verbessert die Zuordnung der Pfadanzeige in Raum- und Privat-Chats. Die acht PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.9 ergänzt die Anbieterauswahl für Bild-Uploads und den imgdb.io-Upload; der Privat-Chat-Pfad-Fix aus 0.5.8 bleibt erhalten. Die acht PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG  Andreas

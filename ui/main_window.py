@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QInputDialog,
     QListWidget,
     QListWidgetItem,
     QSlider,
@@ -4031,12 +4032,24 @@ class MainWindow(QMainWindow):
                 self.dashboard_chat_title.setText(ui_text("💬 Alle – Nachrichten aus deinen Räumen"))
 
     def _select_picrd_image(self):
-        """Select an image and upload it directly to picrd in the background."""
+        """Ask for the hosting provider first, then select and upload an image."""
+        providers = ["imgdb.io", "picrd.com"]
+        provider, accepted = QInputDialog.getItem(
+            self,
+            ui_text("Bildanbieter auswählen"),
+            ui_text("Welchen Anbieter möchtest du für dieses Bild verwenden?"),
+            providers,
+            0,
+            False,
+        )
+        if not accepted or not provider:
+            return
+
         path, _ = QFileDialog.getOpenFileName(
             self,
             ui_text("Bild auswählen"),
             str(Path.home()),
-            "Bilder (*.png *.jpg *.jpeg *.webp *.gif);;Alle Dateien (*)",
+            "Bilder (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.avif);;Alle Dateien (*)",
         )
         if not path:
             return
@@ -4049,7 +4062,8 @@ class MainWindow(QMainWindow):
         self._picrd_target_input = target
         self._picrd_set_buttons_enabled(False)
         self.status.setText(ui_text("Bild wird hochgeladen …"))
-        self._picrd_uploader.upload(path)
+        provider_key = "imgdb" if provider == "imgdb.io" else "picrd"
+        self._picrd_uploader.upload(path, provider_key)
 
     def _picrd_set_buttons_enabled(self, enabled):
         for name in ("paperclip_button", "dashboard_paperclip_button"):
