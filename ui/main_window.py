@@ -8421,55 +8421,61 @@ renderStations(initialStations,true);
                 "<b>📡 Nachrichtenpfad:</b> nicht übermittelt / unbekannt</div>")
 
     def _message_path_html_for_chat(self, plain, sender, target, body, outgoing, own_callsign):
-        """Resolve a chat path from the exact MSG row when the chat block lacks it.
+        """Own outgoing messages always show the callsign configured in the app."""
+        text = str(plain or "")
+        # Important: never borrow another station's route for our own message.
+        # This remains true after an ACK refreshes/re-renders the message.
+        if outgoing:
+            own = self._normalize_callsign(str(own_callsign or "").strip())
+            if own:
+                return self._route_row_html([own])
+        # First: if the room/private message itself carries the complete path
+        # in its header, display it verbatim.
+        header = re.search(
+            r"(?P<left>[A-Z]{1,3}[0-9][A-Z0-9-]{0,8}(?:\s*,\s*[A-Z]{1,3}[A-Z0-9-]{0,8})*)"
+            r"\s*>\s*(?:\d{1,8}|ALL|\*)",
+            text, re.IGNORECASE
+        )
+        if header:
+            calls = [self._normalize_callsign(x.strip()) or x.strip()
+                     for x in header.group("left").split(",") if x.strip()]
+            if len(calls) > 1:
+                return self._route_row_html(calls)
 
-        Keep the working consolidated "Alle" path logic untouched.  For normal
-        room/private cards, only use a monitor row that matches sender, target,
-        and message body; own messages may use the configured local callsign.
-        """
-        # Resolve incoming messages against the exact locally received UDP MSG
-        # row BEFORE trusting any path text embedded in the WebService/chat
-        # block. That block can contain the local callsign as a fallback even
-        # when UDP has the actual source/relay path. Keep the consolidated
-        # "Alle" renderer untouched; use its source data only for this chat.
-        own = str(own_callsign or "").strip().upper()
-        sender_key = str(sender or "").strip().upper()
+        # Otherwise reuse the existing message-ID cache, the same cache used by
+        # the standard path renderer.
+        msg_id = self._chat_field(text, "MsgId") or self._chat_field(text, "MSGID")
+        if msg_id:
+            route = MainWindow._message_routes_by_id.get(str(msg_id).strip().upper(), [])
+            if route:
+                return self._route_row_html(route)
+
+        # Last, borrow route_calls from the existing "Alle" live rows for the
+        # same message body and, when possible, the same room. This function
+        # only renders the path; it does not filter, add, remove, or move chat
+        # messages, so room delivery remains untouched.
+        normalize = getattr(self, "_path_match_text", None)
+        if not callable(normalize):
+            def normalize(value):
+                value = re.sub(r"^#\d{1,6}\s*", "", str(value or "").strip())
+                return re.sub(r"\s+", " ", value).casefold()
+        body_key = normalize(body)
         target_key = str(target or "").strip().upper()
-        body_key = re.sub(r"^#\d{1,6}\s*", "", str(body or "").strip()).casefold()
-        if not outgoing and sender_key and body_key:
-            for row in reversed(list(getattr(self, "monitor_all_rows", []))):
-                if not isinstance(row, dict) or str(row.get("type", "")).upper() != "MSG":
-                    continue
-                if str(row.get("src", "")).strip().upper() != sender_key:
-                    continue
-                row_target = str(row.get("dst", "") or "").strip().upper()
-                if target_key and row_target and row_target != target_key:
-                    continue
-                row_body = re.sub(r"^#\d{1,6}\s*", "", str(row.get("detail", "") or "").strip()).casefold()
-                if row_body != body_key:
-                    continue
-                route_calls = row.get("route_calls", [])
-                if route_calls:
-                    return self._route_row_html(route_calls)
-
-        # Incoming chat blocks can include the local callsign in a transport
-        # header (for example "REMOTE,LOCAL>ROOM").  The generic renderer treats
-        # that as an own-origin fallback, which is wrong for a received message.
-        # For incoming messages, resolve explicit message/UDP route data without
-        # the local-callsign fallback; if no relay list exists, show the UDP
-        # source callsign, matching the working "Alle" view.
-        existing = self._message_path_html(plain, own_callsign if outgoing else "")
-        if "nicht übermittelt / unbekannt" not in existing:
-            return existing
-
-        if not outgoing and sender_key:
-            return self._route_row_html([sender_key])
-
-        # Only our own outgoing message may use the configured callsign as its
-        # origin when no explicit route was supplied.
-        if outgoing and own:
-            return self._route_row_html([own])
-        return existing
+        rows = [r for r in getattr(self, "monitor_all_rows", [])
+                if isinstance(r, dict) and str(r.get("type", "")).upper() == "MSG"]
+        matches = []
+        for row in rows:
+            if body_key and normalize(row.get("detail", "")) == body_key:
+                matches.append(row)
+        if target_key:
+            same_target = [r for r in matches
+                           if str(r.get("dst", "") or "").strip().upper() == target_key]
+            if same_target:
+                matches = same_target
+        for row in reversed(matches):
+            if row.get("route_calls"):
+                return self._route_row_html(row["route_calls"])
+        return self._route_row_html([])
 
     @classmethod
     def _render_chat_blocks(cls, blocks, own_callsign="", outgoing_messages=None):

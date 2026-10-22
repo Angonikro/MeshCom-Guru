@@ -1,19 +1,19 @@
-# MeshCom-Guru v0.5.6 – Nachrichtenpfade in Chats
+# 🚀 MeshCom-Guru v0.5.7
 
-## Neu in v0.5.6
+## ✨ Änderungen in v0.5.7
 
-- Pfadzeilen unter Nachrichten in „Alle“, Raum-Chats und Privat-Chats.
-- Vorhandene EXTUDP-/WebService-Pfadinformationen werden für die passende Nachricht verwendet, soweit sie vom Datenstrom bereitgestellt werden.
-- Bei eigenen ausgehenden Nachrichten kann das in der App eingestellte Rufzeichen als Ursprung dienen, wenn kein expliziter Pfad mitgeliefert wurde.
-- POS-/TEL-Pfadanzeige bleibt erhalten.
-- Die Karten-Verbindungshistorie wird nicht als Beweis für den Pfad einer einzelnen Nachricht verwendet.
-- Die Pfadzeile verwendet die Chat-Textfarbe; vorhandene Pfadzeilen werden nicht absichtlich ein zweites Mal ergänzt.
+- 🧭 **Chat-Pfad:** Die Pfadanzeige in Raum- und Privat-Chats übernimmt nach Möglichkeit den vorhandenen Pfad aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“.
+- 📨 **Raumzustellung:** Die Änderung ist auf die Anzeige des Nachrichtenpfads begrenzt.
+- 🛡️ **Bestehende Funktionen:** ACK/Echo, Monitor, Karte, „Alle“, Weltweit und die bestehenden Poll-Funktionen bleiben erhalten.
+- 📚 **Dokumentation:** README und CHANGELOG führen v0.5.7 an erster Stelle; die vollständige Versionshistorie bleibt erhalten.
 
-**Version:** 0.5.6  
-**Paket:** `meshcom-guru_0.5.6_all.deb`  
-**GitHub-Archiv:** `MeshCom-Guru_v0.5.6_GITHUB.zip`  
-**Architektur des Debian-Pakets:** `all`
+## 📦 Release-Dateien
 
-## Prüfung und Testhinweis
+- **Version:** `0.5.7`
+- **Debian-Paket:** `meshcom-guru_0.5.7_all.deb`
+- **GitHub-Archiv:** `MeshCom-Guru_v0.5.7_GITHUB.zip`
+- **Debian-Architektur:** `all`
 
-Vor der Paketierung werden die Python-Dateien auf Syntax geprüft, das ZIP-Archiv auf Integrität geprüft und die Debian-Metadaten kontrolliert. Ein Live-Test mit einem realen MeshCom-Node/EXTUDP-Datenstrom gehört nicht zu diesen lokalen Prüfungen; deshalb kann die Verfügbarkeit vollständiger Relay-Pfade nur angezeigt werden, wenn die empfangenen Daten sie tatsächlich enthalten.
+## 🧪 Lokale Prüfungen
+
+Python-Syntax, ZIP-Integrität und Debian-Paketmetadaten werden lokal geprüft. Diese Prüfungen ersetzen keinen Live-Test mit einem realen MeshCom-Node oder EXTUDP-Datenstrom. Ein vollständiger Relay-Pfad kann nur angezeigt werden, wenn die empfangenen Daten die entsprechenden Informationen enthalten.

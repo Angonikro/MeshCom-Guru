@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**Aktuelle Version: 0.5.6**
+**🚀 Aktuelle Version: 0.5.7**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -50,6 +39,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
+## Version 0.5.7 – Chat-Pfad gezielt zugeordnet
+
+- 🧭 **Pfad im Raum- und Privat-Chat:** Die Chatansicht versucht, den Pfad der passenden Nachricht aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“ zu übernehmen.
+- 📨 **Raumzustellung geschützt:** Die Änderung beschränkt sich auf die Anzeige der Pfadzeile. Raumfilterung und Nachrichtenverteilung werden nicht durch die neue Pfadfunktion verändert.
+- 🛡️ **Bestehende Funktionen:** ACK/Echo, Monitor, Karte, „Alle“, Weltweit und die vorhandenen Poll-Funktionen bleiben Bestandteil des Releases.
+- 📦 **Sauberes GitHub-Archiv:** ZIP enthält den Projektordner `MeshCom/` und keine Python-Cache-Dateien.
+
 ## Version 0.5.6 – Nachrichtenpfad-Anzeige in Chats
 
 - 📡 **Pfadübernahme:** Pfadinformationen aus den empfangenen EXTUDP-/WebService-Nachrichtendatensätzen werden der jeweiligen Chat-Nachricht zugeordnet, soweit die gelieferten Daten diese Information enthalten.
@@ -57,8 +53,8 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🧭 **Fremde Nachrichten:** Vorhandene Relay-Pfade haben Vorrang; fehlende Pfade werden nicht aus der Karten-Verbindungshistorie erfunden.
 - 🌦️ **POS/TEL:** Die Pfadanzeige für Positions- und Telemetriedaten bleibt erhalten.
 - 🎨 **Darstellung:** Die Pfadzeile nutzt die Chat-Textfarbe und wird nicht doppelt angehängt, wenn sie bereits im Nachrichtenblock enthalten ist.
-- 🛡️ **Bestehende Funktionen:** Die Versionsnummer bleibt 0.5.6; die bewährte Nachrichten-, ACK/Echo-, Monitor-, Karten- und Poll-Verarbeitung wurde nicht absichtlich umgebaut.
-- 📖 **Dokumentation:** README, GitHub-Release-Notizen und Versionsangaben sind auf 0.5.6 abgestimmt. Die PDF-Handbücher bleiben bewusst auf v0.5.2.
+- 🛡️ **Bestehende Funktionen:** Die bewährte Nachrichten-, ACK/Echo-, Monitor-, Karten- und Poll-Verarbeitung wurde nicht absichtlich umgebaut.
+- 📖 **Dokumentation:** README, GitHub-Release-Notizen und Versionsangaben wurden für diesen damaligen Release auf 0.5.6 abgestimmt. Die PDF-Handbücher bleiben bewusst auf v0.5.2.
 
 ## Version 0.5.5 – Bildvorschau nach dem Laden aktualisiert
 
@@ -365,7 +361,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.6**
+**Version 0.5.7**
 
 **By Goldisoft 2026**
 
@@ -509,7 +505,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.6**  
+**MeshCom-Guru v0.5.7**  
 **By Goldisoft 2026**
 
 
@@ -521,11 +517,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.6 ergänzt die Pfadanzeige unter Chat-Nachrichten; der vorhandene Bild-Refresh-Fix bleibt erhalten.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.7 verbessert die Zuordnung der Pfadanzeige in Raum- und Privat-Chats. Die acht PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 do DO2QG Andreas

@@ -1,3 +1,11 @@
+## 🚀 v0.5.7 – Chat-Pfad gezielt zugeordnet
+
+- 🧭 **Pfadübernahme im Chat:** Die Pfadanzeige nutzt nach Möglichkeit die vorhandene Information aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“.
+- 📨 **Raumzustellung im Fokus:** Die Änderung ist auf die Darstellung der Pfadzeile begrenzt; die Raumfilterung und Verteilung der Nachrichten werden nicht absichtlich verändert.
+- 🛡️ **Bewährte Funktionen:** ACK/Echo, Monitor, Karte, „Alle“, Weltweit und die vorhandenen Poll-Funktionen bleiben erhalten.
+- 📦 **Release-Paket:** GitHub-ZIP und Debian-Paket tragen Version 0.5.7; das Debian-Paket verwendet Architektur `all`.
+- 🧪 **Prüfumfang:** Python-Syntax, ZIP-Integrität und Debian-Metadaten wurden lokal geprüft. Ein Live-Test mit einem MeshCom-Node ist damit nicht bestätigt.
+
 ## v0.5.6 – Nachrichtenpfade in „Alle“, Raum- und Privat-Chats
 
 - 📡 **Pfadübernahme:** Pfadinformationen aus den empfangenen EXTUDP-/WebService-Nachrichtendatensätzen werden der jeweiligen Chat-Nachricht zugeordnet, soweit die gelieferten Daten diese Information enthalten.
