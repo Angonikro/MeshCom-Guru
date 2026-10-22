@@ -55,7 +55,7 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - Privat-Chat-Pfad-Fix auf Basis von v0.5.7.
 - Bestehende Funktionen sollen unverändert bleiben.
 
-## Version 0.5.8 – Chat-Pfad gezielt zugeordnet
+## Version 0.5.7 – Chat-Pfad gezielt zugeordnet
 
 - 🧭 **Pfad im Raum- und Privat-Chat:** Die Chatansicht versucht, den Pfad der passenden Nachricht aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“ zu übernehmen.
 - 📨 **Raumzustellung geschützt:** Die Änderung beschränkt sich auf die Anzeige der Pfadzeile. Raumfilterung und Nachrichtenverteilung werden nicht durch die neue Pfadfunktion verändert.
