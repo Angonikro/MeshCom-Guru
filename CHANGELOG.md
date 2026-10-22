@@ -1,3 +1,10 @@
+## 🚀 v0.5.8 – Privat-Chat-Pfad-Fix
+
+- 🧭 **Privat-Chats:** Aufbauend auf dem v0.5.7-Pfad-Fix wird die Pfadzuordnung für Privatnachrichten weitergeführt.
+- 🛡️ **Versionspflege:** Keine absichtlichen Änderungen an ACK/Echo, Räumen, Monitor, Karte oder Weltweit.
+- 📦 **Pakete:** GitHub-ZIP und Debian-Paket auf Version 0.5.8 aktualisiert.
+- 🧪 **Hinweis:** Lokale Paket-/Syntaxprüfung ersetzt keinen Live-Test mit MeshCom-Hardware.
+
 ## 🚀 v0.5.7 – Chat-Pfad gezielt zugeordnet
 
 - 🧭 **Pfadübernahme im Chat:** Die Pfadanzeige nutzt nach Möglichkeit die vorhandene Information aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“.

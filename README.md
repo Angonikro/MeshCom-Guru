@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**🚀 Aktuelle Version: 0.5.7**
+**🚀 Aktuelle Version: 0.5.8**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru2.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -50,7 +39,12 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
-## Version 0.5.7 – Chat-Pfad gezielt zugeordnet
+## Version 0.5.8 – Privat-Chat-Pfad-Fix
+
+- Privat-Chat-Pfad-Fix auf Basis von v0.5.7.
+- Bestehende Funktionen sollen unverändert bleiben.
+
+## Version 0.5.8 – Chat-Pfad gezielt zugeordnet
 
 - 🧭 **Pfad im Raum- und Privat-Chat:** Die Chatansicht versucht, den Pfad der passenden Nachricht aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“ zu übernehmen.
 - 📨 **Raumzustellung geschützt:** Die Änderung beschränkt sich auf die Anzeige der Pfadzeile. Raumfilterung und Nachrichtenverteilung werden nicht durch die neue Pfadfunktion verändert.
@@ -372,7 +366,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.7**
+**Version 0.5.8**
 
 **By Goldisoft 2026**
 
@@ -516,7 +510,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.7**  
+**MeshCom-Guru v0.5.8**  
 **By Goldisoft 2026**
 
 
@@ -528,11 +522,9 @@ Der ZIP-Inhalt beginnt mit dem Ordner `MeshCom/`.
 Die Projektdateien, Dokumentation, Startdateien, Desktop-Launcher,
 Anleitung und das Programm-Icon sind im Projekt enthalten.
 
-Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.7 verbessert die Zuordnung der Pfadanzeige in Raum- und Privat-Chats. Die acht PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand.
+Die integrierte Anleitung in **Hilfe → Anleitung** ist die aktuelle, mehrsprachige Anleitung. Die mitgelieferten PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand. Version 0.5.8 verbessert die Zuordnung der Pfadanzeige in Raum- und Privat-Chats. Die acht PDF-Handbücher bleiben bewusst auf dem v0.5.2-Dokumentationsstand.
 
 
 ## Hilfe und Info
 
 In der Menüleiste gibt es **Hilfe → Anleitung** mit einer integrierten Kurzanleitung sowie **Hilfe → Info** mit Programmname, Version und Urheberhinweis.
-
-73 de DO2QG Andreas

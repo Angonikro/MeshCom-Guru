@@ -8450,31 +8450,36 @@ renderStations(initialStations,true);
             if route:
                 return self._route_row_html(route)
 
-        # Last, borrow route_calls from the existing "Alle" live rows for the
-        # same message body and, when possible, the same room. This function
-        # only renders the path; it does not filter, add, remove, or move chat
-        # messages, so room delivery remains untouched.
-        normalize = getattr(self, "_path_match_text", None)
-        if not callable(normalize):
-            def normalize(value):
-                value = re.sub(r"^#\d{1,6}\s*", "", str(value or "").strip())
-                return re.sub(r"\s+", " ", value).casefold()
-        body_key = normalize(body)
-        target_key = str(target or "").strip().upper()
-        rows = [r for r in getattr(self, "monitor_all_rows", [])
-                if isinstance(r, dict) and str(r.get("type", "")).upper() == "MSG"]
-        matches = []
-        for row in rows:
-            if body_key and normalize(row.get("detail", "")) == body_key:
-                matches.append(row)
-        if target_key:
-            same_target = [r for r in matches
-                           if str(r.get("dst", "") or "").strip().upper() == target_key]
-            if same_target:
-                matches = same_target
-        for row in reversed(matches):
-            if row.get("route_calls"):
-                return self._route_row_html(row["route_calls"])
+        # Match a received private packet by original sender, destination and
+        # message text. Never borrow a different station's relay route.
+        def norm(value):
+            value = html.unescape(str(value or ""))
+            value = re.sub(r"^#\d{1,6}\s*", "", value.strip())
+            return re.sub(r"\s+", " ", value).casefold()
+        body_key = norm(body)
+        sender_key = self._normalize_callsign(sender)
+        target_key = self._normalize_callsign(target)
+        for row in reversed(getattr(self, "monitor_all_rows", [])):
+            if not isinstance(row, dict) or str(row.get("type", "")).upper() != "MSG":
+                continue
+            row_sender = self._normalize_callsign(row.get("src", ""))
+            row_target = self._normalize_callsign(row.get("dst", ""))
+            if not sender_key or row_sender != sender_key:
+                continue
+            if target_key and row_target not in (target_key, "", "*"):
+                continue
+            detail = norm(row.get("detail", ""))
+            if not body_key or not (detail == body_key or detail.endswith(" " + body_key)):
+                continue
+            route = row.get("route_calls") or []
+            if route:
+                return self._route_row_html(route)
+            # The received packet's own sender is known even if EXTUDP
+            # supplies no relay chain; do not label that sender unknown.
+            return self._route_row_html([sender_key])
+        # The private transport header itself identifies the origin.
+        if sender_key:
+            return self._route_row_html([sender_key])
         return self._route_row_html([])
 
     @classmethod
