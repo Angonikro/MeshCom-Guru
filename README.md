@@ -1,20 +1,9 @@
 # MeshCom-Guru
 
-**🧙‍♂️ Aktuelle Version: 0.5.9**
+**🧙‍♂️ Aktuelle Version: 0.5.10**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
-![MeshCom-Guru](meshcom-guru2.png)
-
-![MeshCom-Guru](meshcom-guru1.png)
-
-![MeshCom-Guru](meshcom-guru.png)
-
-![MeshCom-Guru](meshcom-guru0.png)
-
-![MeshCom-Guru](guru3.png)
-
-[Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
 
 ## Inhalt
 
@@ -51,6 +40,8 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
+## Version 0.5.10 Sommerzeit fix
+
 ## Version 0.5.9  Bild-Upload
 
 - Beim Klick auf die Büroklammer zuerst den Bildanbieter auswählen: **imgdb.io** oder **picrd.com**. Danach öffnet sich die Dateiauswahl.
@@ -58,81 +49,6 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - Guru versucht zunächst `ttl=0`. Wenn dieser Upload-Versuch fehlschlägt, wird einmal ohne TTL-Parameter erneut versucht. Ob eine längere oder unbegrenzte Speicherung angeboten wird, entscheidet der Dienst; `ttl=0` ist keine Garantie dauerhafter Verfügbarkeit.
 - **picrd.com:** bleibt als auswählbarer Anbieter enthalten. Während des hier dokumentierten Tests lieferte picrd beim direkten Upload HTTP 500; der Zustand kann sich ändern.
 - **Teststatus:** imgdb.io wurde außerhalb der Anwendung erfolgreich getestet (Upload HTTP 201, Bild-URL-Abruf HTTP 200). Der integrierte Ablauf sollte nach Installation auf dem Zielsystem ebenfalls getestet werden.
-
-## Version 0.5.8 – Privat-Chat-Pfad-Fix
-
-- Privat-Chat-Pfad-Fix auf Basis von v0.5.7.
-- Bestehende Funktionen sollen unverändert bleiben.
-
-## Version 0.5.7 – Chat-Pfad gezielt zugeordnet
-
-- 🧭 **Pfad im Raum- und Privat-Chat:** Die Chatansicht versucht, den Pfad der passenden Nachricht aus dem Nachrichtenkopf, der Nachrichten-ID oder einer passenden MSG-Zeile aus „Alle“ zu übernehmen.
-- 📨 **Raumzustellung geschützt:** Die Änderung beschränkt sich auf die Anzeige der Pfadzeile. Raumfilterung und Nachrichtenverteilung werden nicht durch die neue Pfadfunktion verändert.
-- 🛡️ **Bestehende Funktionen:** ACK/Echo, Monitor, Karte, „Alle“, Weltweit und die vorhandenen Poll-Funktionen bleiben Bestandteil des Releases.
-- 📦 **Sauberes GitHub-Archiv:** ZIP enthält den Projektordner `MeshCom/` und keine Python-Cache-Dateien.
-
-## Version 0.5.6 – Nachrichtenpfad-Anzeige in Chats
-
-- 📡 **Pfadübernahme:** Pfadinformationen aus den empfangenen EXTUDP-/WebService-Nachrichtendatensätzen werden der jeweiligen Chat-Nachricht zugeordnet, soweit die gelieferten Daten diese Information enthalten.
-- 📨 **Eigene Nachrichten:** Fehlt bei einer eigenen ausgehenden MSG ein expliziter Pfad, kann das aktuell in der App eingestellte Rufzeichen als Ursprung angezeigt werden.
-- 🧭 **Fremde Nachrichten:** Vorhandene Relay-Pfade haben Vorrang; fehlende Pfade werden nicht aus der Karten-Verbindungshistorie erfunden.
-- 🌦️ **POS/TEL:** Die Pfadanzeige für Positions- und Telemetriedaten bleibt erhalten.
-- 🎨 **Darstellung:** Die Pfadzeile nutzt die Chat-Textfarbe und wird nicht doppelt angehängt, wenn sie bereits im Nachrichtenblock enthalten ist.
-- 🛡️ **Bestehende Funktionen:** Die bewährte Nachrichten-, ACK/Echo-, Monitor-, Karten- und Poll-Verarbeitung wurde nicht absichtlich umgebaut.
-- 📖 **Dokumentation:** README, GitHub-Release-Notizen und Versionsangaben wurden für diesen damaligen Release auf 0.5.6 abgestimmt. Die PDF-Handbücher bleiben bewusst auf v0.5.2.
-
-## Version 0.5.5 – Bildvorschau nach dem Laden aktualisiert
-
-- 🖼️ **Bildvorschau bereinigt:** Nach Abschluss des Ladens einer verlinkten Bildvorschau wird „Alle“ einmal neu aufgebaut, sodass die Darstellung nicht bis zur nächsten Nachricht doppelt bleibt.
-- 🔄 **Raumfilter-Fix erhalten:** Vorhandene Wetter-/Telemetriedaten werden beim Aktivieren und Deaktivieren des Filters sofort neu dargestellt.
-- ⚡ **POLL-FIX erhalten:** Unveränderte 5-Sekunden-WebService-Antworten verlassen den Verarbeitungspfad frühzeitig.
-- 🛡️ **Bestätigungslogik erhalten:** Der Bild-Refresh nutzt das vorhandene Qt-Signal; ACK/Echo und Nachrichtenverarbeitung wurden nicht absichtlich verändert.
-- 📦 **GitHub-ZIP bereinigt:** Kein Debian-Paket und keine Python-Cache-Dateien im Archiv.
-
-## Version 0.5.4 – Sofortiger Neuaufbau beim Raumfilter
-
-- 🔄 **Filterwechsel sofort sichtbar:** Beim Aktivieren und Deaktivieren des Raumfilters wird die Ansicht „Alle“ einmal neu aufgebaut.
-- 🌡️ **Wetter-/Telemetriedaten aktualisiert:** Bereits vorhandene Wetterdaten werden sofort entsprechend dem neuen Filterzustand dargestellt, ohne auf eine weitere Nachricht warten zu müssen.
-- 🛡️ **Status- und Poll-Logik erhalten:** Der 5-Sekunden-POLL-FIX sowie die vorhandene Echo-/ACK-Bestätigungslogik wurden nicht verändert.
-- 📄 **PDF-Handbücher:** Die acht mitgelieferten Handbücher bleiben auf v0.5.2, da sich keine neue Bedienfunktion oder Benutzeroberfläche geändert hat.
-
-## Version 0.5.3 – Optimierter 5-Sekunden-Poll
-
-- ⚡ **Früher Unverändert-Check:** Bei einem identischen WebService-Ergebnis wird die Verarbeitung bereits anhand der unveränderten Rohantwort beendet, bevor die einzelnen Nachrichtenblöcke erneut geparst und signiert werden.
-- 🧊 **Weniger GUI-Arbeit bei Leerlauf:** Bei unveränderten 5-Sekunden-Abfragen werden bestehende Chatinhalte und Nachrichten nicht erneut verarbeitet.
-- 🛡️ **Bestehende Statuslogik erhalten:** ACK/Echo, 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten, Monitor und Karte bleiben unverändert.
-- 🧩 **Gezielte Performance-Änderung:** „Alle“ und Monitor wurden in dieser Version bewusst noch nicht auf einen inkrementellen Neuaufbau umgestellt.
-
-## Version 0.5.2 – 5-Sekunden-Refresh und ACK/Echo-Optimierung
-
-- ⚡ **Weniger unnötige Arbeit bei 5-Sekunden-Refreshs:** Der WebService wird weiterhin regelmäßig abgefragt, aber der lokale Nachrichtenbestand wird nicht mehr bei jedem unveränderten Abruf erneut vollständig sortiert.
-- 💤 **Unveränderte Chatansichten:** Wenn sich der sichtbare Inhalt nicht geändert hat, werden die vorhandenen Chat-Bubbles nicht erneut aufgebaut. Das reduziert die GUI-Arbeit besonders bei vielen Nachrichten in **Alle** und den Räumen.
-- ✓ **Echo/ACK als eigene Statusänderung:** Eine Bestätigung ist keine neue Chatnachricht und wird deshalb separat behandelt. Der Status einer vorhandenen Nachricht kann dadurch auch ohne weitere Nachricht sichtbar auf **✓/✓✓** wechseln.
-- 🏠 **Mehrere offene Sendungen:** Echo und ACK werden der passenden offenen Nachricht zugeordnet und nicht nur der zuletzt gesendeten Nachricht. Dadurch funktionieren Bestätigungen auch bei Nachrichten in mehreren Räumen.
-- 📡 **Monitor unabhängig:** Die Chat-Bestätigung hängt nicht davon ab, ob im Monitor gerade eine ACK-Zeile sichtbar ist.
-- 🛡️ **Bestehende Funktionen erhalten:** 120-Sekunden-Statusfenster, Hard-Freeze, Räume, Privat-Chats, Favoriten/Online-Status, Karte und WebService bleiben erhalten.
-- ⭐ **Favoriten mit Namen:** Im Favoriten-Manager kann zu jedem Rufzeichen optional ein Name gespeichert und später geändert werden. Name und Rufzeichen werden auch in der Online-Anzeige und im Online-Popup gemeinsam angezeigt.
-
-## Version 0.5.1 – Favoriten und Online-Status
-
-- ⭐ **Favoriten:** Rufzeichen können direkt aus „Alle“ sowie im Favoriten-Manager zu den Favoriten hinzugefügt und wieder entfernt werden.
-- 🟢 **Online-Favoriten:** Ein dauerhaft sichtbarer **🟢 Online**-Button zeigt neu online gekommene Favoriten.
-- 🎨 **Statusfarben:** Der Online-Status kann über frei einstellbare Zeitgrenzen für Grün, Gelb und Orange bewertet werden; danach wird der Favorit als 🔴 offline dargestellt.
-- 🔔 **Signalton:** Für das erstmalige Online-Kommen eines Favoriten kann der bereits in MeshCom-Guru eingestellte Signalton verwendet oder deaktiviert werden.
-- 🪟 **Online-Popup:** Beim neuen Online-Kommen eines Favoriten erscheint ein Popup. Die Anzeigedauer ist von 0 bis 60 Sekunden einstellbar; 0 deaktiviert das Popup.
-- 🕒 **Direkte Zeitreferenz:** Beim Hinzufügen eines Rufzeichens aus „Alle“ wird die Zeit der angeklickten Nachricht als letzte Aktivität übernommen. Beim manuellen Hinzufügen wird vorhandene lokale Empfangsaktivität als Referenz verwendet.
-- 🌍 **Acht Sprachen:** Die neuen Favoriten-, Online-, Popup- und Statusfunktionen sind in Deutsch, Englisch, Italienisch, Niederländisch, Französisch, Spanisch, Schwedisch und Polnisch dokumentiert.
-- 📖 **Dokumentation:** Integrierte Anleitung und alle acht PDF-Handbücher wurden auf v0.5.1 erweitert.
-
-## Version 0.5.0 – 120-Sekunden-Statusfenster und Hard-Freeze
-
-- ⏳ **120-Sekunden-Bestätigungsfenster:** Eine neu gesendete oder empfangene Nachricht darf bis zu 120 Sekunden ihren Status aktualisieren. Dadurch haben auch weiter entfernte Stationen mehr Zeit für Echo und ACK.
-- 🔒 **Hard-Freeze nach 120 Sekunden:** Nach Ablauf des Zeitfensters wird die Nachricht vollständig eingefroren. Spätere ACKs, Echos, Refreshs oder Neuaufbauten dürfen ihren Status nicht mehr verändern.
-- 🧊 **Kein späterer Status-Neuaufbau:** Bereits eingefrorene Nachrichten werden bei späteren Aktualisierungen nicht erneut in einen offenen Status zurückgesetzt.
-- ♾️ **Kein 100-Nachrichten-Limit:** Die bisherige Begrenzung auf 100 Nachrichten bleibt entfernt.
-- 🧭 **Navigation erhalten:** Der funktionierende ursprüngliche Chat-Aufbau und die Navigation zwischen „Alle“, Räumen und privaten Chats bleiben erhalten.
-- 🛡️ **Stabilitätsprinzip:** Die Änderung beschränkt sich auf das Status-Zeitfenster; die übrigen getesteten Funktionen werden nicht verändert.
-- 📖 **Dokumentation:** Die v0.5.0-Funktionsbeschreibung bleibt Bestandteil der aktuellen Dokumentation.
 
 # Sprache / Language
 
@@ -386,7 +302,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.8**
+**Version 0.5.10**
 
 **By Goldisoft 2026**
 
@@ -530,7 +446,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.9**  
+**MeshCom-Guru v0.5.10**  
 **By Goldisoft 2026**
 
 

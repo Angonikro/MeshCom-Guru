@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.10 — Chat-Zeit automatisch nach Sommer-/Winterzeit
+
+- 🕒 **Chat-Zeitkorrektur:** Zeitstempel aus MeshCom-Chats werden jetzt zentral in die aktuelle lokale Zeitzone umgerechnet.
+- ❄️ **Winterzeit-Fix:** Nachrichten, einschließlich eigener gesendeter und anschließend vom WebService zurückgelieferter Nachrichten, werden nach der Sommerzeitumstellung nicht mehr eine Stunde zu spät angezeigt.
+- ☀️ **Sommerzeit:** Während der Sommerzeit bleibt die Anzeige unverändert korrekt.
+- 📦 **Versionspflege:** VERSION, version.py, README, Changelog und Release-Pakete auf 0.5.10 aktualisiert.
+
 ## 0.5.9 — Bildanbieter-Auswahl und imgdb.io
 - 📎 **Anbieter vor Dateiauswahl:** Beim Klick auf die Büroklammer kann zuerst zwischen imgdb.io und picrd.com gewählt werden; erst danach öffnet sich der Dateidialog.
 - 🖼️ **imgdb.io-Upload:** Neuer Anbieter über die getestete API `https://imgdb.io/api/v1/upload` mit Formularfeld `file`.

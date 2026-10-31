@@ -13,7 +13,7 @@ import time
 import urllib.request
 import urllib.error
 from urllib.parse import urljoin
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt, QUrl, Signal, QPointF, QRectF, QTranslator, QLibraryInfo, QObject, QThread
@@ -7643,8 +7643,7 @@ class MainWindow(QMainWindow):
         """
         dt = cls._datetime_from_block(block)
         if dt is not None:
-            if dt.tzinfo is not None:
-                dt = dt.astimezone()
+            dt = cls._normalize_meshcom_datetime(dt)
             return dt.strftime('%H:%M:%S')
 
         plain = cls._plain(block)
@@ -7652,6 +7651,23 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m.group(1)}:{m.group(2)}:{m.group(3) or '00'}"
         return ''
+
+    @staticmethod
+    def _normalize_meshcom_datetime(dt):
+        """Convert MeshCom timestamps to the computer's current local timezone.
+
+        The WebService sometimes supplies a timestamp without an offset but
+        keeps it on the fixed CEST (UTC+2) clock after the DST change.  That
+        made the main window clock correct while chat messages, including our
+        own echoed messages, were still one hour ahead in winter.  Offset-aware
+        timestamps are converted normally.  Offset-less MeshCom timestamps are
+        interpreted as the service's UTC+2 transport clock and then converted
+        to the local timezone; this is unchanged in summer and automatically
+        becomes one hour earlier in German winter time.
+        """
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone(timedelta(hours=2)))
+        return dt.astimezone()
 
     @classmethod
     def _datetime_from_block(cls, block):
@@ -7685,7 +7701,7 @@ class MainWindow(QMainWindow):
         """Return a chronological key, preserving correct order across midnight."""
         dt = cls._datetime_from_block(block)
         if dt is not None:
-            return (0, dt.timestamp())
+            return (0, cls._normalize_meshcom_datetime(dt).timestamp())
 
         # Legacy cards may contain only HH:MM:SS. Keep that as a fallback.
         plain = cls._plain(block)
