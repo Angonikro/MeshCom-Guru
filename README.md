@@ -1,6 +1,6 @@
 # MeshCom-Guru
 
-**🧙‍♂️ Aktuelle Version: 0.5.10**
+**🧙‍♂️ Aktuelle Version: 0.5.11**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
@@ -15,6 +15,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 ![MeshCom-Guru](guru3.png)
 
 [Github Seite](https://github.com/Angonikro/MeshCom-Guru/)
+
 
 ## Inhalt
 
@@ -35,8 +36,7 @@ MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachricht
 - Nachrichtenfeld mit einer maximalen Länge von **149 Zeichen**
 - Live-Zeichenzähler im Nachrichtenfeld (`0/149` bis `149/149`)
 - **Emoji-Auswahl** direkt am Nachrichtenfeld mit automatischem Schließen nach der Auswahl
-- **Bildanbieter vor dem Auswählen wählbar (imgdb.io / picrd.com):** Bilder können über imgdb.io (bis 16 MB, `ttl=0` wird zuerst versucht) oder picrd.com hochgeladen werden. **Bildvorschau für Bildlinks:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
-
+- **Bildanbieter vor dem Auswählen wählbar (imgdb.io / Catbox.moe):** Bilder können über imgdb.io (bis 16 MB, `ttl=0` wird zuerst versucht) oder Catbox.moe hochgeladen werden. **Bildvorschau für Bildlinks:** Erkannte Bildlinks werden direkt im Chat als Vorschau angezeigt; normale Internetlinks bleiben unverändert anklickbar.
 
 ### Dokumentation
 
@@ -51,15 +51,13 @@ Im Release sind acht PDF-Handbücher enthalten. Alle acht wurden auf den Stand v
 - 🇸🇪 `docs/MeshCom-Guru_Anvandarmanual_v0.5.2_SV.pdf`
 - 🇵🇱 `docs/MeshCom-Guru_Podrecznik_Uzytkownika_v0.5.2_PL.pdf`
 
-## Version 0.5.10 Sommerzeit fix
+## Version 0.5.11 – Catbox statt picrd.com
 
-## Version 0.5.9  Bild-Upload
-
-- Beim Klick auf die Büroklammer zuerst den Bildanbieter auswählen: **imgdb.io** oder **picrd.com**. Danach öffnet sich die Dateiauswahl.
-- **imgdb.io:** Upload über `https://imgdb.io/api/v1/upload`, Formularfeld `file`, maximale Dateigröße in Guru **16 MiB**.
-- Guru versucht zunächst `ttl=0`. Wenn dieser Upload-Versuch fehlschlägt, wird einmal ohne TTL-Parameter erneut versucht. Ob eine längere oder unbegrenzte Speicherung angeboten wird, entscheidet der Dienst; `ttl=0` ist keine Garantie dauerhafter Verfügbarkeit.
-- **picrd.com:** bleibt als auswählbarer Anbieter enthalten. Während des hier dokumentierten Tests lieferte picrd beim direkten Upload HTTP 500; der Zustand kann sich ändern.
-- **Teststatus:** imgdb.io wurde außerhalb der Anwendung erfolgreich getestet (Upload HTTP 201, Bild-URL-Abruf HTTP 200). Der integrierte Ablauf sollte nach Installation auf dem Zielsystem ebenfalls getestet werden.
+- picrd.com wurde aus der Bildanbieter-Auswahl entfernt und durch **Catbox.moe** ersetzt.
+- Catbox-Upload ohne API-Key und Registrierung über `https://catbox.moe/user/api.php`.
+- Maximale Bildgröße für Catbox in MeshCom-Guru: **200 MiB pro Bild**.
+- **imgdb.io** bleibt als zweiter Anbieter erhalten (16 MiB).
+- Die Chat-Bildvorschau bleibt erhalten.
 
 # Sprache / Language
 
@@ -119,7 +117,7 @@ Damit ist sofort sichtbar, wie viele Zeichen noch zur Verfügung stehen.
 
 Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Links dargestellt. Ein Klick auf einen Link mit `http://` oder `https://` öffnet die Adresse im Standard-Webbrowser des Systems.
 
-**Picrd-Bildlinks** werden zusätzlich geprüft. Wenn das Linkziel ein Bild bereitstellt, zeigt MeshCom-Guru eine kleine Bildvorschau direkt im Chat. Der ursprüngliche Link bleibt unter der Vorschau anklickbar. Links ohne Bildziel werden weiterhin ganz normal dargestellt. Bereits angezeigte Vorschauen werden bei späteren Chat-Aktualisierungen nicht doppelt eingefügt.
+**Bildlinks** werden zusätzlich geprüft. Wenn das Linkziel ein Bild bereitstellt, zeigt MeshCom-Guru eine kleine Bildvorschau direkt im Chat. Der ursprüngliche Link bleibt unter der Vorschau anklickbar. Links ohne Bildziel werden weiterhin ganz normal dargestellt. Bereits angezeigte Vorschauen werden bei späteren Chat-Aktualisierungen nicht doppelt eingefügt.
 
 ## Chat-Export
 
@@ -313,7 +311,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.10**
+**Version 0.5.11**
 
 **By Goldisoft 2026**
 
@@ -457,7 +455,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.10**  
+**MeshCom-Guru v0.5.11**  
 **By Goldisoft 2026**
 
 

@@ -1,14 +1,15 @@
-# MeshCom-Guru v0.5.10
+# MeshCom-Guru v0.5.11
 
-## Änderungen in v0.5.10
+## Änderungen in v0.5.11
 
-- **Chat-Zeit automatisch korrigiert:** MeshCom-Zeitstempel werden zentral in die aktuelle lokale Zeitzone umgerechnet.
-- **Winterzeit-Fix:** Nach der Sommerzeitumstellung werden Chat-Nachrichten nicht mehr eine Stunde zu spät angezeigt.
-- **Eigene Nachrichten:** Auch selbst gesendete und später vom WebService zurückgelieferte Nachrichten verwenden die korrekte aktuelle Ortszeit.
-- **Sommerzeit bleibt korrekt:** Während der Sommerzeit erfolgt keine unerwünschte Verschiebung.
+- picrd.com als Bildanbieter entfernt und durch Catbox.moe ersetzt.
+- Anonymer Catbox-Upload ohne API-Key und Registrierung.
+- Maximale Bildgröße für Catbox in MeshCom-Guru: 200 MiB.
+- imgdb.io bleibt als zweiter Anbieter verfügbar (16 MiB).
+- README und integrierte Anleitung aktualisiert.
 
 ## Release-Dateien
 
-- Version: `0.5.10`
-- GitHub-ZIP: `MeshCom-Guru_v0.5.10_GITHUB.zip`
-- Debian-Paket: `meshcom-guru_0.5.10_all.deb`
+- Version: `0.5.11`
+- GitHub-ZIP: `MeshCom-Guru_v0.5.11_GITHUB.zip`
+- Debian-Paket: `meshcom-guru_0.5.11_all.deb`

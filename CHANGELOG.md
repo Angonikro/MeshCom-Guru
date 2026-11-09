@@ -1,6 +1,14 @@
+## 0.5.11 — Catbox statt picrd.com
+
+- 🖼️ **Bildanbieter ersetzt:** picrd.com wurde vollständig aus der Anbieterauswahl entfernt und durch Catbox.moe ersetzt.
+- 🔗 **Catbox-Upload:** Anonymer Upload über `https://catbox.moe/user/api.php` mit `reqtype=fileupload` und `fileToUpload`; kein API-Key und keine Registrierung erforderlich.
+- 📦 **Dateigrößenlimit:** Catbox-Uploads sind in MeshCom-Guru bis 200 MiB pro Bild möglich; imgdb.io bleibt mit 16 MiB erhalten.
+- 📚 **Dokumentation:** README, integrierte Anleitung und GitHub-Release-Notizen aktualisiert.
+- 🛡️ **Bestehende Funktionen:** Die Chat-Bildvorschau und der bestehende imgdb.io-Upload bleiben erhalten.
+
 # Changelog
 
-## 0.5.10 — Chat-Zeit automatisch nach Sommer-/Winterzeit
+## 0.5.11 — Chat-Zeit automatisch nach Sommer-/Winterzeit
 
 - 🕒 **Chat-Zeitkorrektur:** Zeitstempel aus MeshCom-Chats werden jetzt zentral in die aktuelle lokale Zeitzone umgerechnet.
 - ❄️ **Winterzeit-Fix:** Nachrichten, einschließlich eigener gesendeter und anschließend vom WebService zurückgelieferter Nachrichten, werden nach der Sommerzeitumstellung nicht mehr eine Stunde zu spät angezeigt.
