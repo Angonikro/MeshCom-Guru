@@ -1,3 +1,5 @@
+# Changelog
+
 ## 0.5.11 — Catbox statt picrd.com
 
 - 🖼️ **Bildanbieter ersetzt:** picrd.com wurde vollständig aus der Anbieterauswahl entfernt und durch Catbox.moe ersetzt.
@@ -6,9 +8,7 @@
 - 📚 **Dokumentation:** README, integrierte Anleitung und GitHub-Release-Notizen aktualisiert.
 - 🛡️ **Bestehende Funktionen:** Die Chat-Bildvorschau und der bestehende imgdb.io-Upload bleiben erhalten.
 
-# Changelog
-
-## 0.5.11 — Chat-Zeit automatisch nach Sommer-/Winterzeit
+## 0.5.10 — Chat-Zeit automatisch nach Sommer-/Winterzeit
 
 - 🕒 **Chat-Zeitkorrektur:** Zeitstempel aus MeshCom-Chats werden jetzt zentral in die aktuelle lokale Zeitzone umgerechnet.
 - ❄️ **Winterzeit-Fix:** Nachrichten, einschließlich eigener gesendeter und anschließend vom WebService zurückgelieferter Nachrichten, werden nach der Sommerzeitumstellung nicht mehr eine Stunde zu spät angezeigt.

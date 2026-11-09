@@ -97,16 +97,6 @@ Die persönliche Konfiguration wird benutzerbezogen unter folgendem Pfad gespeic
 
 Die Programmdateien selbst bleiben unter `/usr/share/MeshCom`. Beim ersten Start werden nur neutrale Standardwerte angelegt; persönliche Rufzeichen, Hotspot-IP und Räume werden nicht fest in den Programmdateien vorgegeben.
 
-# Debian-Paket
-
-Das Debian-Paket installiert MeshCom-Guru direkt unter:
-
-```text
-/usr/share/MeshCom
-```
-
-Es wird **keine eigene virtuelle Python-Umgebung** angelegt und während der Paketinstallation werden keine Python-Pakete per `pip` installiert. Das Paket bringt einen Menüeintrag und das Programm-Icon mit.
-
 # Nachrichtenlänge
 
 MeshCom-Nachrichten dürfen maximal **149 Zeichen** enthalten. Das Nachrichtenfeld begrenzt die Eingabe automatisch auf 149 Zeichen. Rechts im Eingabefeld zeigt ein Live-Zähler jederzeit die aktuelle Länge an, zum Beispiel `0/149`, `24/149`, `57/149` oder `149/149`.
@@ -126,6 +116,38 @@ Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Link
 ---
 
 # Installation unter Linux
+
+## DEB-Paket installieren (Debian / Raspberry Pi)
+
+Lade `meshcom-guru_0.5.11_all.deb` herunter und öffne ein Terminal im Download-Ordner. Installiere das Paket mit:
+
+```bash
+sudo apt install ./meshcom-guru_0.5.11_all.deb
+```
+
+`apt` installiert dabei auch die in der DEB-Datei angegebenen Debian-Abhängigkeiten. Wenn du die Datei in einem anderen Ordner gespeichert hast, passe den Pfad entsprechend an.
+
+Nach der Installation findest du **MeshCom-Guru** im Anwendungsmenü. Alternativ kannst du das Programm im Terminal starten:
+
+```bash
+meshcom-guru
+```
+
+Zum Entfernen verwendest du:
+
+```bash
+sudo apt remove meshcom-guru
+```
+
+Deine persönlichen Einstellungen unter `~/.MeshCom/` bleiben beim Entfernen des Programms erhalten.
+
+Das Debian-Paket installiert MeshCom-Guru systemweit unter:
+
+```text
+/usr/share/meshcom-guru
+```
+
+Es wird **keine eigene virtuelle Python-Umgebung** angelegt und während der Paketinstallation werden keine Python-Pakete per `pip` installiert. Die in der DEB-Datei angegebenen Debian-Abhängigkeiten werden vom Paketmanager aufgelöst. Das Paket bringt einen Menüeintrag und das Programm-Icon mit.
 
 ## 1. ZIP-Datei entpacken
 
