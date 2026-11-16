@@ -1,3 +1,8 @@
+## MeshCom-Guru 0.5.12
+
+- Lesbares Rechtsklick-Kontextmenü direkt auf Chat-Sprechblasen (Kopieren / Alles markieren).
+- Empfangs-, Chat- und Verbindungslogik unverändert gegenüber 0.5.11.
+
 # MeshCom-Guru v0.5.11
 
 ## Änderungen in v0.5.11

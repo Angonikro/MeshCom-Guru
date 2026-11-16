@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.12 — Lesbares Sprechblasen-Kontextmenü
+
+- 🖱️ Rechtsklick direkt auf Nachrichtentext in Chat-Sprechblasen öffnet ein eigenes, kontrastreiches Menü.
+- 📋 Aktionen: „Kopieren“ (bei markiertem Text).
+- 🎨 Menüfarben sind unabhängig vom Desktop-Theme gut lesbar.
+- 🛡️ Ausschließlich BubbleWidget geändert; WebService-Empfang, Chat-Öffnung und Verbindungslogik bleiben gegenüber 0.5.11 unverändert.
+
 ## 0.5.11 — Catbox statt picrd.com
 
 - 🖼️ **Bildanbieter ersetzt:** picrd.com wurde vollständig aus der Anbieterauswahl entfernt und durch Catbox.moe ersetzt.
@@ -617,3 +624,7 @@
 - Node-Info-Seitenleiste verbessert.
 - GitHub- und Debian-Release-Struktur eingeführt.
 
+
+- 🖱️ **Chat-Kontextmenü:** Kopieren und Alles markieren verwenden jetzt die tatsächlich unterstützten QLabel-Auswahl-/Zwischenablage-APIs.
+
+- 🖱️ **Alles markieren:** Auswahlbereich wird anhand des sichtbaren Rich-Text-Inhalts berechnet, nicht anhand der HTML-Zeichenfolge.

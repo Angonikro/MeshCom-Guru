@@ -29,7 +29,7 @@ try:
     from PySide6.QtMultimedia import QSoundEffect
 except Exception:
     QSoundEffect = None
-from PySide6.QtGui import QAction, QActionGroup, QTextCursor, QDesktopServices, QColor, QPainter, QPen, QPolygonF, QPixmap, QIcon, QCursor
+from PySide6.QtGui import QAction, QActionGroup, QTextCursor, QTextDocument, QDesktopServices, QColor, QPainter, QPen, QPolygonF, QPixmap, QIcon, QCursor
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -396,6 +396,10 @@ class BubbleWidget(QWidget):
         self.label.setOpenExternalLinks(False)
         self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         self.label.setStyleSheet("background: transparent; color: #081018; border: none;")
+        # Rechtsklick-Menü ausschließlich für den Text der Chat-Sprechblase.
+        # Keine Eingriffe in WebService-/Empfangs- oder Verbindungsabläufe.
+        self.label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.label.customContextMenuRequested.connect(self._show_text_context_menu)
         self.label.linkActivated.connect(self._link_activated)
         self._content_html = ""
         layout = QVBoxLayout(self)
@@ -412,6 +416,27 @@ class BubbleWidget(QWidget):
         w = self.window()
         if hasattr(w, "_bubble_link_activated"):
             w._bubble_link_activated(url)
+
+    def _show_text_context_menu(self, pos):
+        """Lesbares Text-Kontextmenü der Sprechblase; Empfang bleibt unberührt."""
+        menu = QMenu(self.label)
+        menu.setStyleSheet(
+            "QMenu { background-color: #252a33; color: #f2f4f8; "
+            "border: 1px solid #687386; padding: 5px; }"
+            "QMenu::item { background: transparent; color: #f2f4f8; "
+            "padding: 7px 28px; }"
+            "QMenu::item:selected { background-color: #46566f; color: #ffffff; }"
+            "QMenu::item:disabled { color: #9299a5; }"
+            "QMenu::separator { height: 1px; background: #596273; margin: 4px 8px; }"
+        )
+        copy_action = menu.addAction("Kopieren")
+        copy_action.setEnabled(self.label.hasSelectedText())
+        chosen = menu.exec(self.label.mapToGlobal(pos))
+        if chosen is copy_action:
+            # Copy the selected text through the application clipboard.
+            selected = self.label.selectedText()
+            if selected:
+                QApplication.clipboard().setText(selected)
 
     def set_content(self, text, max_width):
         self._content_html = str(text)

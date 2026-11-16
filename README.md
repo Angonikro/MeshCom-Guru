@@ -1,6 +1,6 @@
 # MeshCom-Guru
 
-**🧙‍♂️ Aktuelle Version: 0.5.11**
+**🧙‍♂️ Aktuelle Version: 0.5.12**
 
 MeshCom-Guru ist eine eigenständige Anwendung zur Anzeige von MeshCom-Nachrichten, Node-Informationen und Positionsdaten.
 
@@ -119,10 +119,10 @@ Internetlinks in empfangenen Nachrichten werden automatisch als anklickbare Link
 
 ## DEB-Paket installieren (Debian / Raspberry Pi)
 
-Lade `meshcom-guru_0.5.11_all.deb` herunter und öffne ein Terminal im Download-Ordner. Installiere das Paket mit:
+Lade `meshcom-guru_0.5.12_all.deb` herunter und öffne ein Terminal im Download-Ordner. Installiere das Paket mit:
 
 ```bash
-sudo apt install ./meshcom-guru_0.5.11_all.deb
+sudo apt install ./meshcom-guru_0.5.12_all.deb
 ```
 
 `apt` installiert dabei auch die in der DEB-Datei angegebenen Debian-Abhängigkeiten. Wenn du die Datei in einem anderen Ordner gespeichert hast, passe den Pfad entsprechend an.
@@ -333,7 +333,7 @@ Der Tab **🌐 Weltweit** befindet sich direkt neben **Karte** und öffnet die �
 Öffnet ein kleines Informationsfenster mit:
 
 **MeshCom-Guru**  
-**Version 0.5.11**
+**Version 0.5.12**
 
 **By Goldisoft 2026**
 
@@ -477,7 +477,7 @@ starten.
 
 ---
 
-**MeshCom-Guru v0.5.11**  
+**MeshCom-Guru v0.5.12**  
 **By Goldisoft 2026**
 
 
